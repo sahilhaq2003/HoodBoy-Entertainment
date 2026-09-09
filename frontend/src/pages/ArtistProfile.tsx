@@ -1,0 +1,622 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import {
+  ArrowLeft, Edit, Music, DollarSign, TrendingUp, MapPin, Phone,
+  Mail, Globe, AtSign, Video, MessageCircle, Music2, FileText, CheckCircle,
+  XCircle, Clock, Send, Trash2, ExternalLink, User, Calendar,
+  Star, Camera, Shield, CreditCard, Building2,
+} from 'lucide-react';
+import toast from 'react-hot-toast';
+import { artistsApi } from '../services/api';
+import OnboardingProgress from '../components/onboarding/OnboardingProgress';
+import StatusBadge from '../components/ui/StatusBadge';
+import LoadingSpinner from '../components/ui/LoadingSpinner';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
+import { formatCurrency, formatNumber, formatDate, getAvatarColor, getInitials } from '../utils/helpers';
+import type { Artist } from '../types';
+
+const ArtistProfile: React.FC = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [artist, setArtist] = useState<Artist | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [rejectNotes, setRejectNotes] = useState('');
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [approveNotes, setApproveNotes] = useState('');
+  const [uploadingImage, setUploadingImage] = useState<string | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const profileInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (id) loadArtist(id);
+  }, [id]);
+
+  const loadArtist = async (artistId: string) => {
+    setLoading(true);
+    try {
+      const res = await artistsApi.getById(artistId);
+      setArtist(res.data.data);
+    } catch (e) {
+      toast.error('Failed to load artist');
+      navigate('/artists');
+    }
+    setLoading(false);
+  };
+
+  const handleApprove = async () => {
+    if (!artist) return;
+    setActionLoading(true);
+    try {
+      const res = await artistsApi.approve(artist._id, approveNotes);
+      setArtist(res.data.data);
+      setApproveNotes('');
+      toast.success('Artist onboarding approved!');
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Failed to approve');
+    }
+    setActionLoading(false);
+  };
+
+  const handleReject = async () => {
+    if (!artist) return;
+    setActionLoading(true);
+    try {
+      const res = await artistsApi.reject(artist._id, rejectNotes);
+      setArtist(res.data.data);
+      setShowRejectModal(false);
+      setRejectNotes('');
+      toast.success('Artist onboarding rejected');
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Failed to reject');
+    }
+    setActionLoading(false);
+  };
+
+  const handleDelete = async () => {
+    if (!artist) return;
+    try {
+      await artistsApi.delete(artist._id);
+      toast.success('Artist deleted');
+      navigate('/artists');
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Failed to delete');
+    }
+  };
+
+  const handleImageUpload = async (file: File, field: 'image' | 'coverPhoto') => {
+    if (!artist) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('field', field);
+    setUploadingImage(field);
+    try {
+      const res = await artistsApi.uploadImage(artist._id, formData);
+      setArtist(res.data.data);
+      toast.success(field === 'image' ? 'Profile photo updated' : 'Cover photo updated');
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Upload failed');
+    }
+    setUploadingImage(null);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-16">
+        <LoadingSpinner size={28} text="Loading artist profile..." />
+      </div>
+    );
+  }
+
+  if (!artist) return null;
+
+  const displayName = artist.artistName || artist.stageName || artist.name;
+  const legalDisplay = artist.legalName || artist.name;
+
+  return (
+    <div className="space-y-6 max-w-5xl mx-auto">
+      {/* Cover Photo & Header */}
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        {/* Cover Photo */}
+        <div className="relative h-40 md:h-52">
+          {artist.coverPhoto ? (
+            <img
+              src={artist.coverPhoto}
+              alt="Cover"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div
+              className="w-full h-full"
+              style={{
+                background: `linear-gradient(135deg, ${getAvatarColor(displayName)}30 0%, ${getAvatarColor(displayName)}10 100%)`,
+              }}
+            />
+          )}
+          <div
+            className="absolute inset-0"
+            style={{
+              background: 'linear-gradient(to top, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.3) 50%, transparent 100%)',
+            }}
+          />
+
+          {/* Cover photo upload button */}
+          <input
+            ref={coverInputRef}
+            type="file"
+            accept="image/*"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleImageUpload(file, 'coverPhoto');
+            }}
+            className="hidden"
+          />
+          <button
+            onClick={() => coverInputRef.current?.click()}
+            disabled={uploadingImage === 'coverPhoto'}
+            className="absolute top-3 right-3 p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-white/80 transition-colors shadow-sm"
+            title="Change cover photo"
+          >
+            <Camera size={16} />
+          </button>
+
+          {/* Back button */}
+          <button
+            onClick={() => navigate('/artists')}
+            className="absolute top-3 left-3 p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-white/80 transition-colors shadow-sm"
+          >
+            <ArrowLeft size={18} />
+          </button>
+        </div>
+
+        {/* Artist Info Bar */}
+        <div className="px-6 pb-5 -mt-12 relative">
+          <div className="flex items-end gap-4">
+            {/* Profile Photo */}
+            <div className="relative">
+              <input
+                ref={profileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleImageUpload(file, 'image');
+                }}
+                className="hidden"
+              />
+              <div
+                className="w-24 h-24 md:w-28 md:h-28 rounded-2xl flex items-center justify-center text-white font-bold text-2xl flex-shrink-0 cursor-pointer relative overflow-hidden shadow-lg"
+                style={{
+                  background: getAvatarColor(displayName),
+                  border: '4px solid #FFFFFF',
+                }}
+                onClick={() => profileInputRef.current?.click()}
+              >
+                {artist.image ? (
+                  <img src={artist.image} alt={displayName} className="w-full h-full object-cover" />
+                ) : (
+                  getInitials(displayName)
+                )}
+                <div className="absolute inset-0 bg-black/30 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity">
+                  <Camera size={20} className="text-white" />
+                </div>
+              </div>
+              {uploadingImage === 'image' && (
+                <div className="absolute inset-0 rounded-2xl bg-white/60 flex items-center justify-center">
+                  <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
+            </div>
+
+            {/* Name & Status */}
+            <div className="flex-1 pb-1">
+              <div className="flex items-center gap-3 flex-wrap">
+                <h1 className="text-2xl font-bold text-gray-900">{displayName}</h1>
+                <StatusBadge status={artist.status} />
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide ${
+                  artist.onboardingStatus === 'approved' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                  artist.onboardingStatus === 'rejected' ? 'bg-red-50 text-red-700 border border-red-200' :
+                  artist.onboardingStatus === 'pending_approval' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                  artist.onboardingStatus === 'in_progress' ? 'bg-cyan-50 text-cyan-700 border border-cyan-200' :
+                  'bg-gray-100 text-gray-600 border border-gray-200'
+                }`}>
+                  {artist.onboardingStatus?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                </span>
+              </div>
+              {legalDisplay !== displayName && (
+                <p className="text-sm text-gray-500 mt-1">Legal: {legalDisplay}</p>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2 pb-1">
+              <button
+                onClick={() => navigate(`/artists/onboarding/${artist._id}`)}
+                className="px-4 py-2 bg-white text-gray-600 font-medium rounded-lg text-sm border border-gray-200 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300 transition-all duration-200 flex items-center gap-2"
+              >
+                <Edit size={14} /> Edit
+              </button>
+              <button onClick={() => setDeleteConfirmOpen(true)} className="px-4 py-2 bg-white text-gray-600 font-medium rounded-lg text-sm border border-gray-200 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300 transition-all duration-200 flex items-center gap-2 text-red-500 hover:text-red-600 hover:border-red-300">
+                <Trash2 size={14} /> Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Onboarding Progress */}
+      {(artist.onboardingStatus === 'in_progress' || artist.onboardingStatus === 'not_started') && (
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+          <OnboardingProgress currentStep={artist.onboardingStep} onboardingStatus={artist.onboardingStatus} />
+        </div>
+      )}
+
+      {/* Admin Actions (for pending approval) */}
+      {artist.onboardingStatus === 'pending_approval' && (
+        <div className="bg-white rounded-2xl border border-amber-200 shadow-sm p-5">
+          <div className="flex items-center gap-3 mb-4">
+            <Clock size={18} className="text-amber-500" />
+            <h3 className="font-semibold text-gray-900">Pending Approval</h3>
+          </div>
+
+          {/* Approval notes */}
+          <div className="mb-4">
+            <label className="block text-sm text-gray-500 mb-1.5">Approval Notes (optional)</label>
+            <textarea
+              value={approveNotes}
+              onChange={(e) => setApproveNotes(e.target.value)}
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 w-full h-16 resize-none text-sm"
+              placeholder="Add notes for this approval..."
+            />
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleApprove}
+              disabled={actionLoading}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors"
+            >
+              <CheckCircle size={14} /> Approve
+            </button>
+            <button
+              onClick={() => setShowRejectModal(true)}
+              disabled={actionLoading}
+              className="px-4 py-2 bg-white text-gray-600 font-medium rounded-lg text-sm border border-gray-200 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300 transition-all duration-200 flex items-center gap-2 text-red-500 hover:text-red-600 hover:border-red-300"
+            >
+              <XCircle size={14} /> Reject
+            </button>
+            <button
+              onClick={() => navigate(`/artists/onboarding/${artist._id}`)}
+              className="px-4 py-2 bg-white text-gray-600 font-medium rounded-lg text-sm border border-gray-200 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300 transition-all duration-200 flex items-center gap-2"
+            >
+              <Send size={14} /> Review Details
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Content */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Bio */}
+          {artist.bio && (
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+              <h3 className="text-sm font-semibold text-gray-500 mb-3">Biography</h3>
+              <p className="text-sm text-gray-700 leading-relaxed">{artist.bio}</p>
+            </div>
+          )}
+
+          {/* Social Links */}
+          {artist.socialLinks && Object.values(artist.socialLinks).some(Boolean) && (
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+              <h3 className="text-sm font-semibold text-gray-500 mb-3">Social Media</h3>
+              <div className="flex flex-wrap gap-2">
+                {artist.socialLinks.instagram && (
+                  <a href={artist.socialLinks.instagram} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-pink-600 bg-pink-50 border border-pink-200 hover:bg-pink-100 transition-colors"
+                  >
+                    <AtSign size={12} /> Instagram <ExternalLink size={10} />
+                  </a>
+                )}
+                {artist.socialLinks.tiktok && (
+                  <a href={artist.socialLinks.tiktok} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-cyan-600 bg-cyan-50 border border-cyan-200 hover:bg-cyan-100 transition-colors"
+                  >
+                    <Globe size={12} /> TikTok <ExternalLink size={10} />
+                  </a>
+                )}
+                {artist.socialLinks.youtube && (
+                  <a href={artist.socialLinks.youtube} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-red-600 bg-red-50 border border-red-200 hover:bg-red-100 transition-colors"
+                  >
+                    <Video size={12} /> YouTube <ExternalLink size={10} />
+                  </a>
+                )}
+                {artist.socialLinks.spotify && (
+                  <a href={artist.socialLinks.spotify} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-green-600 bg-green-50 border border-green-200 hover:bg-green-100 transition-colors"
+                  >
+                    <Music2 size={12} /> Spotify <ExternalLink size={10} />
+                  </a>
+                )}
+                {artist.socialLinks.twitter && (
+                  <a href={artist.socialLinks.twitter} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 hover:bg-blue-100 transition-colors"
+                  >
+                    <MessageCircle size={12} /> Twitter <ExternalLink size={10} />
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Music Info */}
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+            <h3 className="text-sm font-semibold text-gray-500 mb-3 flex items-center gap-2">
+              <Music size={14} /> Music Information
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-xs">
+                <span className="text-gray-500 block mb-1">Genre</span>
+                <span className="text-gray-700 font-medium">{artist.genre || '-'}</span>
+              </div>
+              <div className="text-xs">
+                <span className="text-gray-500 block mb-1">PRO Affiliation</span>
+                <span className="text-gray-700 font-medium">{artist.proAffiliation || '-'}</span>
+              </div>
+              <div className="text-xs">
+                <span className="text-gray-500 block mb-1">Publisher</span>
+                <span className="text-gray-700 font-medium">{artist.publisher?.name || '-'}</span>
+              </div>
+              <div className="text-xs">
+                <span className="text-gray-500 block mb-1">Catalog Ownership</span>
+                <span className="text-gray-700 font-medium">{artist.catalogOwnership || '-'}</span>
+              </div>
+            </div>
+            {artist.previousReleases && (
+              <div className="mt-3 pt-3 border-t border-gray-100">
+                <span className="text-xs text-gray-500 block mb-1">Previous Releases</span>
+                <p className="text-xs text-gray-700 leading-relaxed">{artist.previousReleases}</p>
+              </div>
+            )}
+            {artist.musicLinks && artist.musicLinks.length > 0 && (
+              <div className="mt-4 pt-3 border-t border-gray-100">
+                <span className="text-xs text-gray-500 block mb-2">Music Links</span>
+                <div className="space-y-1">
+                  {artist.musicLinks.filter(Boolean).map((link, i) => (
+                    <a key={i} href={link} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-xs text-indigo-600 hover:text-indigo-700"
+                    >
+                      <ExternalLink size={10} /> {link}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Documents */}
+          {artist.documents && artist.documents.length > 0 && (
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+              <h3 className="text-sm font-semibold text-gray-500 mb-3 flex items-center gap-2">
+                <FileText size={14} /> Documents ({artist.documents.length})
+              </h3>
+              <div className="space-y-2">
+                {artist.documents.map((doc) => (
+                  <div key={doc._id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 border border-gray-100">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <FileText size={16} className="text-indigo-500 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <div className="text-sm text-gray-900 font-medium truncate">{doc.name}</div>
+                        <div className="text-xs text-gray-500">
+                          {doc.type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                          {' · '}{formatDate(doc.uploadedAt)}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide text-[10px] ${
+                        doc.status === 'approved' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                        doc.status === 'rejected' ? 'bg-red-50 text-red-700 border border-red-200' :
+                        'bg-amber-50 text-amber-700 border border-amber-200'
+                      }`}>
+                        {doc.status}
+                      </span>
+                      <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer"
+                        className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1 flex-shrink-0"
+                      >
+                        <ExternalLink size={12} /> View
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-6">
+          {/* Stats */}
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+            <h3 className="text-sm font-semibold text-gray-500 mb-3">Performance</h3>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-cyan-50">
+                  <TrendingUp size={14} className="text-cyan-600" />
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">Total Streams</div>
+                  <div className="text-sm font-bold text-gray-900">{formatNumber(artist.totalStreams || 0)}</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-amber-50">
+                  <DollarSign size={14} className="text-amber-600" />
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">Total Revenue</div>
+                  <div className="text-sm font-bold text-gray-900">{formatCurrency(artist.totalRevenue || 0)}</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-purple-50">
+                  <Star size={14} className="text-purple-600" />
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">Royalty Rate</div>
+                  <div className="text-sm font-bold text-gray-900">{artist.royaltyRate || 15}%</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Contact */}
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+            <h3 className="text-sm font-semibold text-gray-500 mb-3">Contact</h3>
+            <div className="space-y-2">
+              {artist.email && (
+                <div className="flex items-center gap-2 text-xs text-gray-600">
+                  <Mail size={12} className="text-gray-400" /> {artist.email}
+                </div>
+              )}
+              {artist.phone && (
+                <div className="flex items-center gap-2 text-xs text-gray-600">
+                  <Phone size={12} className="text-gray-400" /> {artist.phone}
+                </div>
+              )}
+              {artist.address && artist.address.city && (
+                <div className="flex items-center gap-2 text-xs text-gray-600">
+                  <MapPin size={12} className="text-gray-400" />
+                  {[artist.address.street, artist.address.city, artist.address.state, artist.address.country].filter(Boolean).join(', ')}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Contract Info */}
+          {(artist.contractStart || artist.contractEnd) && (
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+              <h3 className="text-sm font-semibold text-gray-500 mb-3 flex items-center gap-2">
+                <Calendar size={14} /> Contract
+              </h3>
+              <div className="space-y-2 text-xs">
+                {artist.contractStart && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Start</span>
+                    <span className="text-gray-700 font-medium">{formatDate(artist.contractStart)}</span>
+                  </div>
+                )}
+                {artist.contractEnd && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">End</span>
+                    <span className="text-gray-700 font-medium">{formatDate(artist.contractEnd)}</span>
+                  </div>
+                )}
+                {artist.manager && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Manager</span>
+                    <span className="text-gray-700 font-medium">{artist.manager.name}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Emergency Contact */}
+          {artist.emergencyContact?.name && (
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+              <h3 className="text-sm font-semibold text-gray-500 mb-3 flex items-center gap-2">
+                <Shield size={14} /> Emergency Contact
+              </h3>
+              <div className="space-y-1 text-xs">
+                <div className="text-gray-900 font-medium">{artist.emergencyContact.name}</div>
+                <div className="text-gray-500">{artist.emergencyContact.relationship}</div>
+                <div className="text-gray-600">{artist.emergencyContact.phone}</div>
+                {artist.emergencyContact.email && (
+                  <div className="text-gray-600">{artist.emergencyContact.email}</div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Business Info */}
+          {(artist.paymentInfo?.method || artist.taxInfo?.taxFormType) && (
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+              <h3 className="text-sm font-semibold text-gray-500 mb-3 flex items-center gap-2">
+                <CreditCard size={14} /> Business Info
+              </h3>
+              <div className="space-y-2 text-xs">
+                {artist.paymentInfo?.method && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Payment</span>
+                    <span className="text-gray-700 font-medium capitalize">{artist.paymentInfo.method.replace(/_/g, ' ')}</span>
+                  </div>
+                )}
+                {artist.paymentInfo?.bankName && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Bank</span>
+                    <span className="text-gray-700 font-medium">{artist.paymentInfo.bankName}</span>
+                  </div>
+                )}
+                {artist.taxInfo?.taxFormType && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Tax Form</span>
+                    <span className="text-gray-700 font-medium">{artist.taxInfo.taxFormType}</span>
+                  </div>
+                )}
+                {artist.taxInfo?.filingStatus && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Filing</span>
+                    <span className="text-gray-700 font-medium capitalize">{artist.taxInfo.filingStatus.replace(/_/g, ' ')}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Reject Modal */}
+      {showRejectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setShowRejectModal(false)} />
+          <div className="relative z-10 w-full max-w-md bg-white rounded-2xl border border-gray-200 shadow-xl p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Reject Onboarding</h3>
+            <p className="text-sm text-gray-500 mb-4">Please provide a reason for rejecting this artist's onboarding.</p>
+            <textarea
+              value={rejectNotes}
+              onChange={(e) => setRejectNotes(e.target.value)}
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 w-full h-24 resize-none mb-4"
+              placeholder="Reason for rejection..."
+            />
+            <div className="flex items-center gap-3 justify-end">
+              <button onClick={() => setShowRejectModal(false)} className="px-4 py-2 bg-white text-gray-600 font-medium rounded-lg text-sm border border-gray-200 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300 transition-all duration-200">Cancel</button>
+              <button
+                onClick={handleReject}
+                disabled={actionLoading || !rejectNotes.trim()}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-red-600 bg-red-50 border border-red-200 hover:bg-red-100 transition-colors disabled:opacity-50"
+              >
+                Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        isOpen={deleteConfirmOpen}
+        title="Delete Artist"
+        message="Are you sure you want to delete this artist? This action cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={() => { setDeleteConfirmOpen(false); handleDelete(); }}
+        onCancel={() => setDeleteConfirmOpen(false)}
+      />
+    </div>
+  );
+};
+
+export default ArtistProfile;
