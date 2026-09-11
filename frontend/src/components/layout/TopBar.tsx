@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Menu, LogOut, User, Settings, ChevronDown, Search, CalendarDays, Command } from 'lucide-react';
+import { Menu, LogOut, User, Settings, ChevronDown, Search, CalendarDays, Command, Sun, Moon } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import NotificationBell from '../notifications/NotificationBell';
@@ -57,7 +57,17 @@ const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    return (localStorage.getItem('hbe_theme') as 'light' | 'dark') || 'light';
+  });
   const userMenuRef = useRef<HTMLDivElement>(null);
+
+  const toggleTheme = () => {
+    const next = theme === 'light' ? 'dark' : 'light';
+    setTheme(next);
+    localStorage.setItem('hbe_theme', next);
+    document.documentElement.classList.toggle('dark', next === 'dark');
+  };
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -116,6 +126,14 @@ const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
       </div>
 
       <NotificationBell />
+
+      <button
+        onClick={toggleTheme}
+        className="header-icon-button"
+        title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+      >
+        {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+      </button>
 
       <div className="relative" ref={userMenuRef}>
         <button

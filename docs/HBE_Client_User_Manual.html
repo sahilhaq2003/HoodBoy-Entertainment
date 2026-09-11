@@ -1,0 +1,713 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HoodBoy Entertainment - Lnkup Label Management Platform Client User Manual</title>
+<style>
+  @page { size: A4; margin: 17mm 15mm 17mm 15mm; }
+  @page:first { margin: 0; }
+  :root { --ink:#172033; --muted:#5e6879; --purple:#6d28d9; --purple2:#8b5cf6; --line:#dfe3eb; --soft:#f5f3ff; --green:#15803d; --amber:#b45309; --red:#b91c1c; --blue:#0369a1; }
+  * { box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  body { margin:0; color:var(--ink); font:10.2pt/1.48 "Segoe UI", Arial, sans-serif; background:white; }
+  h1,h2,h3,h4 { color:#111827; margin:0 0 8px; line-height:1.18; page-break-after:avoid; }
+  h1 { font-size:25pt; letter-spacing:-.5px; }
+  h2 { font-size:18pt; border-bottom:2px solid #ede9fe; padding-bottom:6px; margin-top:6px; }
+  h3 { font-size:13.5pt; color:#4c1d95; margin-top:14px; }
+  h4 { font-size:10.8pt; margin-top:10px; }
+  p { margin:5px 0 9px; }
+  ul,ol { margin:5px 0 10px 20px; padding:0; }
+  li { margin:2px 0; }
+  a { color:var(--purple); text-decoration:none; }
+  table { width:100%; border-collapse:collapse; margin:8px 0 13px; font-size:8.7pt; break-inside:auto; }
+  tr { break-inside:avoid; }
+  th { background:#ede9fe; color:#3b2167; text-align:left; font-weight:700; }
+  th,td { border:1px solid #d9dce5; padding:5px 6px; vertical-align:top; }
+  .compact td,.compact th { padding:3.5px 5px; }
+  .center { text-align:center; }
+  .yes { color:var(--green); font-weight:700; } .read { color:var(--blue); font-weight:700; } .no { color:#9ca3af; }
+  .page { page-break-before:always; }
+  .keep { break-inside:avoid; }
+  .cover { height:297mm; padding:22mm 20mm; color:white; background:linear-gradient(145deg,#24103f 0%,#4c1d95 42%,#7c3aed 74%,#c084fc 100%); display:flex; flex-direction:column; position:relative; overflow:hidden; }
+  .cover:before,.cover:after { content:""; position:absolute; border-radius:50%; border:1px solid rgba(255,255,255,.16); }
+  .cover:before { width:160mm;height:160mm;right:-65mm;top:-50mm; }
+  .cover:after { width:120mm;height:120mm;left:-60mm;bottom:-42mm; }
+  .brand { display:flex; align-items:center; gap:12px; position:relative; z-index:1; }
+  .brand img { width:31mm;height:31mm;object-fit:contain;filter:drop-shadow(0 6px 12px rgba(0,0,0,.25)); }
+  .brand-name { font-size:20pt;font-weight:800;letter-spacing:-.4px; }
+  .brand-sub { font-size:9pt;text-transform:uppercase;letter-spacing:1.6px;color:#e9d5ff; }
+  .cover-main { margin:auto 0; position:relative;z-index:1;max-width:155mm; }
+  .eyebrow { display:inline-block;border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.11);border-radius:99px;padding:5px 11px;font-size:8.5pt;font-weight:700;text-transform:uppercase;letter-spacing:1.4px;margin-bottom:14px; }
+  .cover h1 { color:white;font-size:37pt;line-height:1.05;margin-bottom:14px; }
+  .cover-lead { font-size:15pt;color:#f3e8ff;max-width:132mm; }
+  .cover-meta { position:relative;z-index:1;display:flex;justify-content:space-between;border-top:1px solid rgba(255,255,255,.22);padding-top:10px;color:#eadcff;font-size:9pt; }
+  .chapter { display:flex;align-items:center;gap:9px;margin-bottom:12px; }
+  .chapter-num { width:29px;height:29px;border-radius:9px;background:linear-gradient(135deg,#6d28d9,#a855f7);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800; }
+  .callout { padding:9px 11px;border-left:4px solid var(--purple);background:#f5f3ff;margin:9px 0 12px;border-radius:0 8px 8px 0; break-inside:avoid; }
+  .callout.note { border-color:#0284c7;background:#f0f9ff; }
+  .callout.warn { border-color:#d97706;background:#fffbeb; }
+  .callout.danger { border-color:#dc2626;background:#fef2f2; }
+  .callout strong { display:block;margin-bottom:2px; }
+  .steps { counter-reset:step;list-style:none;margin-left:0; }
+  .steps li { counter-increment:step;position:relative;padding:5px 0 7px 31px;min-height:25px; }
+  .steps li:before { content:counter(step);position:absolute;left:0;top:3px;width:22px;height:22px;border-radius:7px;background:#ede9fe;color:#5b21b6;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:8.5pt; }
+  .workflow { display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin:10px 0 13px;break-inside:avoid; }
+  .workflow span { padding:5px 8px;border-radius:7px;background:#f5f3ff;border:1px solid #ddd6fe;color:#4c1d95;font-weight:650;font-size:8.5pt; }
+  .workflow b { color:#a78bfa; }
+  .tag { display:inline-block;padding:2px 6px;border-radius:99px;background:#f3f4f6;color:#4b5563;font-size:7.8pt;font-weight:700;margin:1px; }
+  .toc { columns:2;column-gap:20mm; }
+  .toc a { display:flex;justify-content:space-between;border-bottom:1px dotted #c9cdd6;padding:4px 0;break-inside:avoid;color:#273147; }
+  .toc small { color:#7c3aed;font-weight:700; }
+  .module-head { padding:12px 14px;border-radius:12px;background:linear-gradient(135deg,#faf9ff,#f0ebff);border:1px solid #ddd6fe;margin-bottom:12px;break-inside:avoid; }
+  .module-head h2 { border:0;padding:0;margin:0 0 4px; }
+  .access { color:#5b21b6;font-size:8.8pt;font-weight:650; }
+  .columns { display:grid;grid-template-columns:1fr 1fr;gap:11px; }
+  .card { border:1px solid var(--line);border-radius:9px;padding:9px 10px;break-inside:avoid; }
+  .card h4 { color:#4c1d95;margin-top:0; }
+  .fine { color:var(--muted);font-size:8.5pt; }
+  .footer-note { color:#6b7280;font-size:8pt;margin-top:14px;border-top:1px solid #e5e7eb;padding-top:6px; }
+  .checklist { list-style:none;margin-left:0; }
+  .checklist li:before { content:"\2610";color:#7c3aed;margin-right:7px; }
+  code { font:8.5pt Consolas,monospace;background:#f3f4f6;padding:1px 4px;border-radius:4px; }
+  @media print { a { color:inherit; } .screen-only { display:none; } }
+</style>
+</head>
+<body>
+
+<section class="cover">
+  <div class="brand"><img src="../frontend/public/logo.png" alt="HoodBoy Entertainment logo"><div><div class="brand-name">HoodBoy Entertainment</div><div class="brand-sub">Lnkup Label Management Platform</div></div></div>
+  <div class="cover-main"><div class="eyebrow">Client User Manual</div><h1>Complete Platform<br>User &amp; Workflow Guide</h1><p class="cover-lead">A practical reference for every role, dashboard, module, workflow, status, form, and day-to-day operating procedure in the platform.</p></div>
+  <div class="cover-meta"><span>Version 1.0</span><span>Prepared 10 September 2026</span><span>HoodBoy Entertainment</span></div>
+</section>
+
+<section class="page">
+  <div class="chapter"><span class="chapter-num">i</span><h1>About this manual</h1></div>
+  <p>This manual documents the client-facing behavior of the current HoodBoy Entertainment Lnkup Label Management Platform. It is written for administrators, managers, artists, finance staff, marketing staff, and operational users.</p>
+  <table>
+    <tr><th>Document</th><td>Client User &amp; Workflow Manual</td><th>Version</th><td>1.0</td></tr>
+    <tr><th>System</th><td>Lnkup Label Management Platform</td><th>Review date</th><td>10 September 2026</td></tr>
+    <tr><th>Audience</th><td colspan="3">HoodBoy Entertainment staff, artists, finance and marketing users, system administrators, and approved client stakeholders</td></tr>
+    <tr><th>Source of truth</th><td colspan="3">Current application routes, page behavior, authorization policy, data models, validations, and file-handling rules in the supplied web application</td></tr>
+  </table>
+  <h3>How to read it</h3>
+  <p>Start with Chapters 1-4 for access and navigation. Use Chapters 5-8 for end-to-end operating workflows. Chapters 9-31 are the module-by-module reference. The appendices contain status definitions, troubleshooting, security practices, and current-deployment notes.</p>
+  <div class="callout note"><strong>Role-dependent interface</strong>The left navigation and available actions change after sign-in. If a button or page described here is not visible, first confirm that the signed-in account has the required role and write permission.</div>
+  <div class="callout warn"><strong>Production responsibility</strong>Records involving money, rights, tax, contracts, approvals, and irreversible deletion should be reviewed by the responsible business owner. The system records operational data; it does not replace legal, accounting, or tax advice.</div>
+  <h3>Conventions</h3>
+  <table class="compact">
+    <tr><th>Term</th><th>Meaning</th></tr>
+    <tr><td><b>Read</b></td><td>View lists, details, dashboards, validation results, and reports.</td></tr>
+    <tr><td><b>Write</b></td><td>Create, edit, delete, approve, upload, advance a phase, or record a transaction.</td></tr>
+    <tr><td><b>Required field</b></td><td>Usually shown with an asterisk. Saving is prevented if a required or validated value is missing.</td></tr>
+    <tr><td><b>Danger action</b></td><td>A delete or other irreversible action. Read the confirmation dialog before proceeding.</td></tr>
+  </table>
+</section>
+
+<section class="page">
+  <div class="chapter"><span class="chapter-num">ii</span><h1>Contents</h1></div>
+  <div class="toc">
+    <a href="#overview"><span>1. Platform overview</span><small>Start</small></a>
+    <a href="#login"><span>2. Sign in and sign out</span><small>Access</small></a>
+    <a href="#navigation"><span>3. Navigation and shared controls</span><small>Basics</small></a>
+    <a href="#roles"><span>4. Roles and permissions</span><small>Access</small></a>
+    <a href="#dashboards"><span>5. Role dashboards</span><small>Overview</small></a>
+    <a href="#artist-lifecycle"><span>6. Artist onboarding workflow</span><small>Workflow</small></a>
+    <a href="#music-lifecycle"><span>7. Music-to-release workflow</span><small>Workflow</small></a>
+    <a href="#money-lifecycle"><span>8. Finance-to-royalty workflow</span><small>Workflow</small></a>
+    <a href="#artists"><span>9. Artists and profiles</span><small>Catalog</small></a>
+    <a href="#songs"><span>10. Music Catalog</span><small>Catalog</small></a>
+    <a href="#metadata"><span>11. Metadata Manager</span><small>Catalog</small></a>
+    <a href="#ownership"><span>12. Ownership Tracker</span><small>Rights</small></a>
+    <a href="#releases"><span>13. Releases</span><small>Catalog</small></a>
+    <a href="#projects"><span>14. Projects</span><small>Operations</small></a>
+    <a href="#tasks"><span>15. Tasks</span><small>Operations</small></a>
+    <a href="#weekly"><span>16. Weekly Report</span><small>Operations</small></a>
+    <a href="#development"><span>17. Artist Development</span><small>Operations</small></a>
+    <a href="#lnkup"><span>18. The Lnk Up</span><small>Content</small></a>
+    <a href="#campaigns"><span>19. Campaigns</span><small>Marketing</small></a>
+    <a href="#contacts"><span>20. Contacts</span><small>Marketing</small></a>
+    <a href="#contracts"><span>21. Contracts</span><small>Legal</small></a>
+    <a href="#templates"><span>22. Contract Templates</span><small>Legal</small></a>
+    <a href="#finance"><span>23. Finance and Budgets</span><small>Finance</small></a>
+    <a href="#royalties"><span>24. Royalties</span><small>Finance</small></a>
+    <a href="#balances"><span>25. Artist Balances</span><small>Finance</small></a>
+    <a href="#tax"><span>26. Tax Calendar</span><small>Finance</small></a>
+    <a href="#analytics"><span>27. Analytics</span><small>Insights</small></a>
+    <a href="#songanalytics"><span>28. Per-Song Analytics</span><small>Insights</small></a>
+    <a href="#files"><span>29. File Manager</span><small>Files</small></a>
+    <a href="#team"><span>30. Team Management</span><small>Admin</small></a>
+    <a href="#settings"><span>31. Settings and notifications</span><small>Admin</small></a>
+    <a href="#operations"><span>32. Operating standards</span><small>Governance</small></a>
+    <a href="#troubleshooting"><span>33. Troubleshooting</span><small>Help</small></a>
+    <a href="#glossary"><span>Appendix A. Status glossary</span><small>Reference</small></a>
+    <a href="#deployment"><span>Appendix B. Deployment notes</span><small>Reference</small></a>
+  </div>
+</section>
+
+<section id="overview" class="page">
+  <div class="chapter"><span class="chapter-num">1</span><h1>Platform overview</h1></div>
+  <p>The platform centralizes the label's artist roster, catalog creation, releases, rights, legal documents, projects, tasks, campaigns, contacts, finance, royalties, tax dates, analytics, files, and team access.</p>
+  <div class="columns">
+    <div class="card"><h4>Catalog &amp; rights</h4><p>Artists, songs, versions, metadata, ownership splits, clearances, signatures, and release readiness.</p></div>
+    <div class="card"><h4>Operations</h4><p>Projects, task Kanban, weekly reporting, development plans, scorecards, and show episodes.</p></div>
+    <div class="card"><h4>Finance &amp; legal</h4><p>Transactions, budgets, contracts, templates, royalty calculations, balances, payments, and tax deadlines.</p></div>
+    <div class="card"><h4>Marketing &amp; insights</h4><p>Campaign plans, content calendars, contacts, performance metrics, dashboards, and CSV reports.</p></div>
+  </div>
+  <h3>Typical information flow</h3>
+  <div class="workflow"><span>Artist</span><b>&rarr;</b><span>Song</span><b>&rarr;</b><span>Metadata + Ownership</span><b>&rarr;</b><span>Release</span><b>&rarr;</b><span>Campaign</span><b>&rarr;</b><span>Revenue</span><b>&rarr;</b><span>Royalty + Artist Balance</span></div>
+  <p>Projects and tasks can coordinate the work across this lifecycle. The File Manager stores related business assets, while dashboards and analytics summarize the resulting records.</p>
+  <h3>Record-management pattern</h3>
+  <ol class="steps">
+    <li>Open a module from the left navigation.</li>
+    <li>Use search, filters, tabs, or cards to locate a record.</li>
+    <li>Select a record to view details; use the pencil/edit action to change it.</li>
+    <li>Complete required fields, save, and confirm the success notification.</li>
+    <li>Use delete only after confirming dependencies and retention requirements.</li>
+  </ol>
+</section>
+
+<section id="login" class="page">
+  <div class="chapter"><span class="chapter-num">2</span><h1>Sign in and sign out</h1></div>
+  <h3>Sign in</h3>
+  <ol class="steps"><li>Open the platform login page.</li><li>Enter the email address assigned by the administrator.</li><li>Enter the password. Use the eye icon to show or hide it.</li><li>Select <b>Sign In</b>. A confirmation screen appears while the correct role dashboard loads.</li></ol>
+  <div class="callout"><strong>First-time access</strong>Accounts are created and roles are assigned in Team Management by an administrator. The administrator should provide the login address and temporary password through an approved secure channel.</div>
+  <h3>Login errors</h3>
+  <table>
+    <tr><th>Message or symptom</th><th>Meaning / action</th></tr>
+    <tr><td>Invalid credentials</td><td>Re-enter the email and password exactly. Confirm Caps Lock and keyboard language.</td></tr>
+    <tr><td>Account is deactivated</td><td>Ask an administrator to reactivate the member in Team Management.</td></tr>
+    <tr><td>Returned to login during work</td><td>The stored session may be expired or stale. Sign in again. Unsaved form content may need to be re-entered.</td></tr>
+  </table>
+  <h3>Sign out</h3>
+  <p>Select the user avatar at the top right and choose <b>Sign out</b>, or select <b>Sign Out</b> at the bottom of the sidebar. Signing out clears locally stored account, navigation, access, and session details.</p>
+  <div class="callout warn"><strong>Shared devices</strong>Always sign out after use. Closing the browser alone is not a substitute because the platform stores the session locally until sign-out or expiry.</div>
+</section>
+
+<section id="navigation" class="page">
+  <div class="chapter"><span class="chapter-num">3</span><h1>Navigation and shared controls</h1></div>
+  <table>
+    <tr><th>Control</th><th>What it does</th></tr>
+    <tr><td>Left sidebar</td><td>Shows only the pages assigned to the signed-in role, grouped into Overview, Catalog, Operations, Finance, Insights, and Account.</td></tr>
+    <tr><td>Mobile menu</td><td>On smaller screens, select the menu icon to open the sidebar; select the shaded background or X to close it.</td></tr>
+    <tr><td>Page title</td><td>The top bar identifies the current page.</td></tr>
+    <tr><td>Notification bell</td><td>Shows unread count, the latest 20 notifications, priority, relative time, mark-read, mark-all-read, delete, and linked navigation.</td></tr>
+    <tr><td>Theme button</td><td>Switches between light and dark mode and remembers the selection on that browser.</td></tr>
+    <tr><td>User menu</td><td>Displays name, email, role, Profile, Settings, and Sign out.</td></tr>
+    <tr><td>Toast messages</td><td>Short success or error messages appear at the upper right after actions.</td></tr>
+    <tr><td>Confirmation dialog</td><td>Requires confirmation before destructive actions such as deleting records.</td></tr>
+  </table>
+  <h3>Common list controls</h3>
+  <p><span class="tag">Search</span> narrows records by keywords. <span class="tag">Filter</span> limits status, type, role, year, artist, or period. <span class="tag">View</span> opens detail. <span class="tag">Edit</span> opens a populated form. <span class="tag">Delete</span> removes the record after confirmation. Many dashboards use clickable cards that lead to the relevant module.</p>
+  <div class="callout note"><strong>Search scope</strong>Use each module's own search field for working searches. The top-bar workspace search is currently a visual control and does not execute a cross-module search in this release.</div>
+</section>
+
+<section id="roles" class="page">
+  <div class="chapter"><span class="chapter-num">4</span><h1>Roles and permissions</h1></div>
+  <p><b>RW</b> = read and write; <b>R</b> = read only; dash = no authorized module access. Administrator has full system access.</p>
+  <table class="compact">
+    <tr><th>Module</th><th>Admin</th><th>Manager</th><th>Artist</th><th>Finance</th><th>Marketing</th></tr>
+    <tr><td>Dashboard</td><td class="yes">RW</td><td class="yes">RW</td><td class="yes">RW</td><td class="yes">RW</td><td class="yes">RW</td></tr>
+    <tr><td>Artists</td><td class="yes">RW</td><td class="yes">RW</td><td class="no">-</td><td class="read">R</td><td class="read">R</td></tr>
+    <tr><td>Songs / Releases</td><td class="yes">RW</td><td class="yes">RW</td><td class="read">Listed links*</td><td class="no">-/R release</td><td class="read">R</td></tr>
+    <tr><td>The Lnk Up</td><td class="yes">RW</td><td class="yes">RW</td><td class="no">-</td><td class="no">-</td><td class="no">-</td></tr>
+    <tr><td>Projects / Development / Tasks</td><td class="yes">RW</td><td class="yes">RW</td><td class="read">Dashboard / listed task link*</td><td class="no">-</td><td class="no">-</td></tr>
+    <tr><td>Contracts</td><td class="yes">RW</td><td class="read">R</td><td class="no">-</td><td class="read">R</td><td class="no">-</td></tr>
+    <tr><td>Contract Templates</td><td class="yes">RW</td><td class="no">-</td><td class="no">-</td><td class="yes">RW</td><td class="no">-</td></tr>
+    <tr><td>Finance / Budgets / Royalties / Balances / Tax</td><td class="yes">RW</td><td class="no">-</td><td class="read">Royalty link listed*</td><td class="yes">RW</td><td class="no">-</td></tr>
+    <tr><td>Analytics</td><td class="read">R</td><td class="read">R</td><td class="no">-</td><td class="read">R</td><td class="read">R</td></tr>
+    <tr><td>Per-Song Analytics</td><td class="yes">RW</td><td class="no">-</td><td class="no">-</td><td class="yes">RW</td><td class="read">R</td></tr>
+    <tr><td>Campaigns / Contacts</td><td class="yes">RW</td><td class="yes">RW</td><td class="no">-</td><td class="no">-</td><td class="yes">RW</td></tr>
+    <tr><td>Ownership</td><td class="yes">RW</td><td class="read">R</td><td class="no">-</td><td class="no">-</td><td class="no">-</td></tr>
+    <tr><td>Files / Metadata</td><td class="yes">RW</td><td class="yes">RW</td><td class="no">-</td><td class="no">-</td><td class="no">-</td></tr>
+    <tr><td>Weekly Reports</td><td class="yes">RW</td><td class="yes">RW</td><td class="no">-</td><td class="no">-</td><td class="no">-</td></tr>
+    <tr><td>Team / Settings</td><td class="yes">RW</td><td class="no">-</td><td class="no">-</td><td class="no">-</td><td class="no">-</td></tr>
+  </table>
+  <p class="fine">*Artist navigation includes My Music, My Releases, Royalties, Tasks, and Profile, but the current backend matrix denies the general songs, releases, royalties, and tasks resources. The Artist Dashboard is the dependable current source; see Appendix B.</p>
+  <h3>Role summaries</h3>
+  <ul><li><b>Administrator:</b> full system, user, configuration, operational, financial, and approval control.</li><li><b>Manager:</b> roster and day-to-day catalog/operations management plus campaigns, contacts, files, metadata, and analytics.</li><li><b>Artist:</b> personal dashboard and own-facing music, release, royalty, task, and profile views.</li><li><b>Finance:</b> finance, budgets, royalties, artist balances, tax calendar, templates, and read-only related information.</li><li><b>Marketing:</b> campaigns, contacts, analytics, per-song analytics, and read-only artists/songs/releases.</li></ul>
+</section>
+
+<section id="dashboards" class="page">
+  <div class="chapter"><span class="chapter-num">5</span><h1>Role dashboards</h1></div>
+  <table>
+    <tr><th>Dashboard</th><th>Main information and intended use</th></tr>
+    <tr><td><b>Administrator / Executive</b></td><td>Label performance overview; financial breakdown; task distribution; artist roster; approval queue; project momentum; items needing attention; release schedule; campaign runway; recent activity; contract alerts; portfolio snapshot. Use it to triage approvals, deadlines, financial position, and risk.</td></tr>
+    <tr><td><b>Manager</b></td><td>Managed artists, projects, tasks, upcoming releases, overdue work, priorities, and operational progress. Use it for daily production and A&amp;R coordination.</td></tr>
+    <tr><td><b>Artist</b></td><td>Artist identity and performance snapshot plus My Songs, My Releases, My Tasks, and Royalty History. Use it as the personal work and performance home page.</td></tr>
+    <tr><td><b>Finance</b></td><td>Income, expenses, profit, payment status, cash-flow indicators, artist liabilities, and finance shortcuts. Use it for reconciliation and payment planning.</td></tr>
+    <tr><td><b>Marketing</b></td><td>Active campaigns, budgets/spend, engagement, content progress, results, and marketing workload. Use it to spot pacing or overspend issues.</td></tr>
+  </table>
+  <h3>Recommended daily routine</h3>
+  <ol class="steps"><li>Read high-priority notifications.</li><li>Review overdue, approval, release, contract, and budget warnings on the dashboard.</li><li>Open the relevant module and update the source record.</li><li>Confirm changes appear in the next refreshed summary.</li><li>Use Tasks and Weekly Report to record ownership and follow-through.</li></ol>
+</section>
+
+<section id="artist-lifecycle" class="page">
+  <div class="chapter"><span class="chapter-num">6</span><h1>Artist onboarding workflow</h1></div>
+  <div class="workflow"><span>Create artist</span><b>&rarr;</b><span>Personal details</span><b>&rarr;</b><span>Music/business data</span><b>&rarr;</b><span>Documents</span><b>&rarr;</b><span>Package acknowledgment</span><b>&rarr;</b><span>Submit</span><b>&rarr;</b><span>Approve / Reject</span></div>
+  <ol class="steps">
+    <li>Administrator or Manager opens <b>Artists &gt; Add Artist</b>.</li>
+    <li>Complete required legal name, stage name, email, phone, and primary genre. Add contact, biography, social and image information.</li>
+    <li>Save the first step. The artist record must exist before profile/cover images and documents can be attached.</li>
+    <li>Add music links, previous releases, existing catalog ownership, PRO/publisher, payment, tax, contract dates, manager, royalty rate, and notes as applicable.</li>
+    <li>Upload every required onboarding document and download/deliver the onboarding package.</li>
+    <li>Confirm that the artist received and reviewed the package. Add onboarding notes and select <b>Submit for Approval</b>.</li>
+    <li>An Administrator or Manager opens the profile, reviews all data/documents, and selects <b>Approve</b> or <b>Reject</b>. Rejection should include a clear reason.</li>
+    <li>If rejected, reopen onboarding, correct the record, replace documents if needed, and resubmit.</li>
+  </ol>
+  <h3>Required document set</h3>
+  <p>Artist agreement, tax form, NDA, image release, payment instructions, code of conduct, social media expectations, recording delivery requirements, and existing contract where applicable. Document status can be pending, approved, or rejected.</p>
+  <div class="callout warn"><strong>Approval gate</strong>Submission is blocked until required onboarding documents are present and the package acknowledgment is confirmed.</div>
+</section>
+
+<section id="music-lifecycle" class="page">
+  <div class="chapter"><span class="chapter-num">7</span><h1>Music-to-release workflow</h1></div>
+  <div class="workflow"><span>Create song</span><b>&rarr;</b><span>12 production steps</span><b>&rarr;</b><span>Versions + credits</span><b>&rarr;</b><span>Metadata validation</span><b>&rarr;</b><span>Ownership validation</span><b>&rarr;</b><span>Create release</span><b>&rarr;</b><span>4 release phases</span></div>
+  <ol class="steps">
+    <li>Create the song with artist, status, priority, production information, credits, and beat information.</li>
+    <li>Move each production step through pending, in progress, completed, or blocked; document blockers in notes.</li>
+    <li>Upload alternate deliverables such as explicit/clean masters, instrumental, performance, a cappella, radio edit, stems, high-quality WAV, and reference MP3.</li>
+    <li>Create metadata, complete identifiers/rights/technical/platform fields, and run validation. Resolve every listed error.</li>
+    <li>Create the ownership record. Enter all writers, publishers, producer, featured artists, beat license, samples, and required signatures. Ensure the combined percentage equals 100%.</li>
+    <li>Validate ownership; obtain signatures and clear samples. Approve ownership only when release-ready.</li>
+    <li>Create the release with at least one song, date, type, status, platform delivery information, and readiness flags.</li>
+    <li>Complete the current phase checklist, then advance: Preparation &rarr; Distribution &rarr; Marketing &rarr; Post-Release &rarr; Completed.</li>
+  </ol>
+  <div class="callout danger"><strong>Do not force a phase casually</strong>The phase-advance control may offer a forced advance when checklist requirements are incomplete. Use it only with documented approval because it bypasses the intended operational gate.</div>
+</section>
+
+<section id="money-lifecycle" class="page">
+  <div class="chapter"><span class="chapter-num">8</span><h1>Finance-to-royalty workflow</h1></div>
+  <div class="workflow"><span>Record income/expense</span><b>&rarr;</b><span>Attach evidence</span><b>&rarr;</b><span>Monitor budget</span><b>&rarr;</b><span>Create royalty period</span><b>&rarr;</b><span>Calculate</span><b>&rarr;</b><span>Approve</span><b>&rarr;</b><span>Pay</span><b>&rarr;</b><span>Reconcile balance</span></div>
+  <ol class="steps">
+    <li>Finance user records income and expenses with dates, category, counterparty, links to artist/project/release, payment status, method, invoice/receipt, account reference, and tax classification.</li>
+    <li>Maintain budgets and line items. Compare budgeted against spent; investigate overruns.</li>
+    <li>Create the royalty period for an artist and optionally link the release, song, contract, ownership, finance transactions, and supporting files.</li>
+    <li>Enter gross income by source, fees, approved deductions, recoupable expense position, and split percentages. Source income must equal gross income; artist plus label must equal 100%.</li>
+    <li>Select <b>Calculate</b>. Review net income, shares, recoupment, producer/featured allocations, and remaining balance.</li>
+    <li>Approve only after the underlying contract, ownership, source reports, deductions, and bank/payment information have been checked.</li>
+    <li>Generate the statement record, issue payment, and record amount, date, method, reference, and notes. The platform updates paid and remaining amounts.</li>
+    <li>Update the artist balance period and add supporting income, expense, advance, payment, or adjustment transactions; reconcile and approve under the label's financial controls.</li>
+  </ol>
+  <div class="callout warn"><strong>Separation of duties</strong>Where staffing permits, the person entering a calculation should not be the only person approving and paying it. Keep source evidence in the File Manager.</div>
+</section>
+
+<section id="artists" class="page">
+  <div class="module-head"><h2>9. Artists and artist profiles</h2><div class="access">Access: Administrator RW; Manager RW; Finance R; Marketing R</div></div>
+  <h3>Roster page</h3>
+  <p>Search artists, filter by lifecycle/onboarding state, review roster and onboarding statistics, open a profile, continue onboarding, create a new artist, or delete a record if authorized. Profile cards summarize identity, genre, contact, status, streams/revenue, and onboarding progress.</p>
+  <h3>Artist record fields</h3>
+  <table class="compact">
+    <tr><th>Group</th><th>Fields</th></tr>
+    <tr><td>Identity</td><td>Profile photo, cover photo, legal name*, artist/stage name*, email*, phone*, date of birth.</td></tr>
+    <tr><td>Contact</td><td>Street, city, state, ZIP, country; emergency contact name, relationship, phone, email.</td></tr>
+    <tr><td>Profile</td><td>Biography; Instagram, TikTok, YouTube, Spotify, Twitter/X.</td></tr>
+    <tr><td>Music</td><td>Primary genre*, multiple music links, previous releases, existing catalog ownership.</td></tr>
+    <tr><td>Business</td><td>PRO affiliation; publisher name/contact; payment method, bank/account/routing or PayPal; tax ID, tax form type, filing status.</td></tr>
+    <tr><td>Relationship</td><td>Artist status, contract start/end, manager, royalty rate, onboarding notes.</td></tr>
+  </table>
+  <h3>Profile actions</h3>
+  <p>View biography, social links, onboarding details/documents, performance, contact, business/payment/tax data, contract relationship, and dates. Authorized users can change images, continue onboarding, approve/reject pending onboarding, or delete the artist.</p>
+  <p><b>Artist status:</b> active, inactive, on hold, upcoming. <b>Onboarding:</b> not started, in progress, pending approval, approved, rejected.</p>
+  <div class="callout danger"><strong>Delete carefully</strong>Before deleting an artist, check linked songs, releases, projects, contracts, royalties, balances, campaigns, development plans, files, and analytics. Deletion is presented as irreversible.</div>
+</section>
+
+<section id="songs" class="page">
+  <div class="module-head"><h2>10. Music Catalog</h2><div class="access">Access: Administrator RW; Manager RW; Marketing R; artist link is listed but currently restricted</div></div>
+  <h3>Create or edit a song</h3>
+  <p>Enter title*, artist*, album, genre, status, priority, release date, duration, producer, writer, ISRC, notes, credits, and beat/license information. Credit roles include songwriter, composer, producer, engineer, mixer, masterer, featured artist, vocalist, musician, and other.</p>
+  <p><b>Statuses:</b> demo, in production, mixing, mastering, awaiting approval, approved, released, shelved. <b>Priorities:</b> low, medium, high, critical.</p>
+  <h3>Production workflow</h3>
+  <table class="compact"><tr><th>#</th><th>Step</th><th>#</th><th>Step</th></tr>
+    <tr><td>1</td><td>Beat Selected</td><td>7</td><td>Editing Completed</td></tr><tr><td>2</td><td>Beat Ownership Verified</td><td>8</td><td>Mixing Completed</td></tr><tr><td>3</td><td>Song Concept Approved</td><td>9</td><td>Mastering Completed</td></tr><tr><td>4</td><td>Lyrics Written</td><td>10</td><td>Alternate Versions Created</td></tr><tr><td>5</td><td>Demo Recorded</td><td>11</td><td>Files Backed Up</td></tr><tr><td>6</td><td>Final Vocals Recorded</td><td>12</td><td>Credits Confirmed</td></tr>
+  </table>
+  <p>Each step supports status (pending, in progress, completed, blocked) and notes. Completion records time and user. New songs receive this workflow automatically.</p>
+  <h3>Song versions</h3>
+  <p>Upload, edit notes/type, and delete: explicit master, clean master, instrumental, performance version, a cappella, radio edit, stems, WAV high quality, and reference MP3. The upload records file name, size, format, date, and uploader.</p>
+  <div class="callout note"><strong>Best practice</strong>Do not mark Credits Confirmed or Files Backed Up until the matching ownership and File Manager records have been checked.</div>
+</section>
+
+<section id="metadata" class="page">
+  <div class="module-head"><h2>11. Metadata Manager</h2><div class="access">Access: Administrator RW; Manager RW</div></div>
+  <p>The Metadata Manager creates one metadata record per song, displays validity statistics, supports individual/bulk validation, editing, deletion, and export.</p>
+  <table class="compact">
+    <tr><th>Group</th><th>Fields</th></tr>
+    <tr><td>Core</td><td>Song, title, version, artist, album, genre/subgenre, mood, BPM, musical key, language, label, release date, lyrics, contact name/email/phone.</td></tr>
+    <tr><td>Identifiers &amp; rights</td><td>ISRC, UPC, ISWC, copyright, owner, year, publisher, PRO affiliation, writer split, publisher entries with percentage/PRO/IPI.</td></tr>
+    <tr><td>Platforms</td><td>Spotify URI/ID, Apple Music ID/URI, YouTube Music, Amazon Music, Tidal ID/URL, Deezer, SoundCloud, pre-save link.</td></tr>
+    <tr><td>Distribution/technical</td><td>Distribution date/platform, pre-save date, audio format, sample rate, bit depth, explicit flag.</td></tr>
+    <tr><td>Credits</td><td>Name, role, percentage for writers, composers, producers, engineers, mixer/masterer, featured artists, vocalists, musicians, other.</td></tr>
+  </table>
+  <h3>Validation rules</h3>
+  <ul><li>Required: title, version, artist, genre, language, label, ISRC, UPC, copyright owner, release date, lyrics, BPM, key, and contact email.</li><li>ISRC must normalize to 12 valid characters; UPC must contain 12 or 13 digits.</li><li>At least one writer/composer and at least one producer are required.</li><li>Writer percentages must total 100%; at least one publisher (including self-published) and publisher percentages totaling 100% are required.</li></ul>
+  <p><b>Validation states:</b> valid, incomplete, needs review, unvalidated. Export records the format and time when supported.</p>
+</section>
+
+<section id="ownership" class="page">
+  <div class="module-head"><h2>12. Ownership Tracker</h2><div class="access">Access: Administrator RW; Manager R</div></div>
+  <p>Use Ownership Tracker to verify rights before distribution. Dashboard figures show total, complete/incomplete, approved/pending, with samples, release-ready, and average percentage.</p>
+  <table class="compact">
+    <tr><th>Area</th><th>Information</th></tr>
+    <tr><td>Master</td><td>Song* and master owner.</td></tr>
+    <tr><td>Composition</td><td>Writers (name, percentage, songwriter/composer/lyricist/arranger); publishers (name, percentage, admin/co-publishing/sub-publishing/mechanical).</td></tr>
+    <tr><td>Other participants</td><td>Producer and percentage; featured artists and percentages.</td></tr>
+    <tr><td>Beat license</td><td>Exclusive/non-exclusive/lease/work-for-hire/none, producer, cost, terms, dates, license number, territory, usage limit, document URL.</td></tr>
+    <tr><td>Samples</td><td>Title, original artist, owner, percentage, clearance status/document, notes.</td></tr>
+    <tr><td>Signatures</td><td>Party, role, pending/signed status, document URL, signed date, notes.</td></tr>
+    <tr><td>Registration</td><td>Copyright status/number, PRO status/name/IPI, distribution status, notes.</td></tr>
+  </table>
+  <h3>Validate and approve</h3>
+  <ol class="steps"><li>Open or create the ownership record for the song.</li><li>Add every participant and clearance; save.</li><li>Run validation and correct every displayed error.</li><li>Confirm total allocation equals exactly 100%, all required signatures are signed, and samples are cleared or not applicable.</li><li>Administrator selects approval only when release-ready.</li></ol>
+  <p><b>Distribution states:</b> ready, pending metadata, pending approval, distributed, on hold. <b>Copyright:</b> registered, pending, not registered, disputed.</p>
+</section>
+
+<section id="releases" class="page">
+  <div class="module-head"><h2>13. Releases</h2><div class="access">Access: Administrator RW; Manager RW; Finance R; Marketing R; artist link is listed but currently restricted</div></div>
+  <h3>Release fields</h3>
+  <p>Title*, artist*, one or more songs*, project, release date*, type, status, current phase, ownership/master/artwork/metadata readiness flags, distribution platforms and links, marketing budget, cover art URL, UPC, assigned user, priority, genre, language, explicit flag, pre-save link, press release URL, and notes.</p>
+  <p><b>Types:</b> album, EP, single, mixtape, compilation. <b>Statuses:</b> scheduled, in preparation, submitted, approved, released, delayed, cancelled.</p>
+  <h3>Phase operation</h3>
+  <div class="workflow"><span>Preparation</span><b>&rarr;</b><span>Distribution</span><b>&rarr;</b><span>Marketing</span><b>&rarr;</b><span>Post-Release</span><b>&rarr;</b><span>Completed</span></div>
+  <p>Open release detail to update each current-phase checklist item. Checklist statuses are pending, in progress, completed, blocked, or skipped and can include assignee, due date, completion time, notes, and order. Select <b>Advance Phase</b> after the phase requirements are satisfied.</p>
+  <h3>Platform delivery</h3>
+  <p>Add one row per distributor/store. Record platform name, pending/submitted/live/rejected state, and store link. Submitted and live timestamps are tracked when status changes.</p>
+  <div class="callout warn"><strong>Minimum release content</strong>The system rejects a release with no songs. Before approval, confirm ownership, master, artwork, and metadata flags against the underlying records rather than treating them as stand-alone checkboxes.</div>
+</section>
+
+<section id="projects" class="page">
+  <div class="module-head"><h2>14. Projects</h2><div class="access">Access: Administrator RW; Manager RW</div></div>
+  <p>Projects group songs and operational work around an album, EP, single, mixtape, or compilation. The project list supports status/priority tracking and create, edit, and delete actions.</p>
+  <table class="compact"><tr><th>Field</th><th>Use</th></tr>
+    <tr><td>Name* / Type*</td><td>Business-facing project name and release format.</td></tr>
+    <tr><td>Artist*</td><td>Primary artist responsible for the project.</td></tr>
+    <tr><td>Status / Priority</td><td>Not started, in progress, waiting approval, completed, delayed, cancelled; low, medium, high, critical.</td></tr>
+    <tr><td>Dates</td><td>Start date and intended release date.</td></tr>
+    <tr><td>Budget / Spent</td><td>High-level project values. Use Finance Budgets for detailed financial control.</td></tr>
+    <tr><td>Assigned To</td><td>Responsible team member.</td></tr>
+    <tr><td>Completion</td><td>0-100% manual completion percentage.</td></tr>
+    <tr><td>Description / Notes</td><td>Scope, context, decisions, blockers, and handoff information.</td></tr>
+  </table>
+  <h3>Recommended workflow</h3>
+  <ol class="steps"><li>Create the project before assigning its operational tasks.</li><li>Link songs and the responsible artist/user.</li><li>Set dates, budget, priority, and scope.</li><li>Update status, spent, and completion consistently during review meetings.</li><li>Move to waiting approval when the deliverable is ready; mark completed only after final acceptance.</li></ol>
+</section>
+
+<section id="tasks" class="page">
+  <div class="module-head"><h2>15. Tasks &amp; Responsibilities</h2><div class="access">Access: Administrator RW; Manager RW; artist link is listed but currently restricted</div></div>
+  <p>The task board is a Kanban workflow with summary statistics and team-performance information. Columns are Not Started, In Progress, Waiting Approval, Blocked, Delayed, and Completed.</p>
+  <h3>Create a task</h3>
+  <p>Complete title*, description, assignee, related project, related artist, deadline*, status, priority, category, deliverable, tags, and notes. Categories: production, marketing, finance, legal, distribution, and general.</p>
+  <h3>Operate the board</h3>
+  <ol class="steps"><li>Create the task with a specific deliverable and accountable assignee.</li><li>Open a card for full details or change its status from the detail view.</li><li>Move it to In Progress only when work has begun.</li><li>Use Blocked with a note describing the blocker and needed owner; use Delayed when the committed date is missed or formally moved.</li><li>Use Waiting Approval for submitted work and Completed only after acceptance. Completion time is recorded automatically.</li></ol>
+  <p>Statistics include total, by status, by priority, overdue, and due this week. Team performance includes completed, delayed, in-progress, critical, on-time, completion rate, and on-time rate.</p>
+  <div class="callout note"><strong>Task hygiene</strong>Use one clear outcome per task. A task title should be understandable without opening it; the deliverable field should define what “done” means.</div>
+</section>
+
+<section id="weekly" class="page">
+  <div class="module-head"><h2>16. Weekly Report</h2><div class="access">Access: Administrator RW; Manager RW (route available; see deployment notes)</div></div>
+  <p>The platform creates/returns the current reporting week and provides a structured check-in with a completion meter. The History tab lists prior reports, author, date range, completeness, and delete action.</p>
+  <h3>Seven reporting prompts</h3>
+  <ol><li>What was completed?</li><li>What is still open?</li><li>What is blocked?</li><li>What needs approval?</li><li>What is due this week?</li><li>What is the biggest risk?</li><li>Who owns next action?</li></ol>
+  <p>An Additional Notes area captures context that does not fit the seven prompts. All fields are recommended; the completion meter is the percentage of the seven prompts containing text.</p>
+  <ol class="steps"><li>Open the current week.</li><li>Write concise bullets or short paragraphs under each prompt.</li><li>Name the owner and the exact next action.</li><li>Select <b>Save Report</b> and confirm the success message.</li><li>Use History for review; delete only in the case of a duplicate or approved retention action.</li></ol>
+</section>
+
+<section id="development" class="page">
+  <div class="module-head"><h2>17. Artist Development &amp; Scorecards</h2><div class="access">Access: Administrator RW; Manager RW</div></div>
+  <p>Create a development plan for an artist, define focus areas and goals, and record monthly scorecards. Dashboard views summarize plan counts, artists tracked, skill averages, latest result per artist, and monthly trends.</p>
+  <h3>Development plan</h3>
+  <p>Artist*, title*, description, status (active, completed, paused, archived), focus areas, notes, and goals. Goals can include category, title, description, target date, progress 0-100%, completion, notes, and milestones with due date/completion.</p>
+  <h3>Scorecard</h3>
+  <table class="compact"><tr><th>Skill ratings (1-10)</th><th>Activity/metric scores</th></tr>
+    <tr><td>Music quality; songwriting; vocal ability; stage performance; branding; visual identity; social media consistency; interview skills; fan engagement; professional behavior.</td><td>Songs completed; content posted; engagement growth; rehearsals completed; deadlines met; revenue generated; audience growth; team cooperation (1-10).</td></tr>
+  </table>
+  <p>Add month/year, goals, improvements, comments, and overall score. The artist detail page compares scorecards, calculates averages and growth, and shows current/latest performance.</p>
+  <div class="callout note"><strong>Fair evaluation</strong>Score against agreed evidence and use comments to explain changes. Keep qualitative coaching notes separate from numerical metrics where possible.</div>
+</section>
+
+<section id="lnkup" class="page">
+  <div class="module-head"><h2>18. The Lnk Up</h2><div class="access">Access: Administrator RW; Manager RW</div></div>
+  <p>Tracks episodes for The Lnk Up TV/show property. Statistics and an upcoming-episodes panel support production planning.</p>
+  <table class="compact"><tr><th>Field</th><th>Values / purpose</th></tr>
+    <tr><td>Episode identity</td><td>Title*, season, episode number, featured artist, comma-separated guests.</td></tr>
+    <tr><td>Status</td><td>Planned, casting, recorded, editing, scheduled, aired, cancelled.</td></tr>
+    <tr><td>Distribution</td><td>Air date; YouTube, TV, streaming, podcast, live, or other platform.</td></tr>
+    <tr><td>Editorial</td><td>Description/synopsis, thumbnail URL, tags, internal production notes, featured flag.</td></tr>
+    <tr><td>Performance</td><td>Views, likes, and stored watch time.</td></tr>
+  </table>
+  <p>Search by title, artist, or tag. Create/edit the episode as production advances; mark Aired only after publication/broadcast. Delete after confirmation.</p>
+</section>
+
+<section id="campaigns" class="page">
+  <div class="module-head"><h2>19. Campaign Manager</h2><div class="access">Access: Administrator RW; Manager RW; Marketing RW</div></div>
+  <p>Campaign Manager combines campaign strategy, budget pacing, content scheduling, A/B advertising tests, and performance reporting.</p>
+  <table class="compact">
+    <tr><th>Group</th><th>Fields</th></tr>
+    <tr><td>Basics</td><td>Name*, type, artist, project, release, status, start/end dates*, assigned user, tags, notes.</td></tr>
+    <tr><td>Strategy</td><td>Objective, target audience, main story, goals, content themes, calls to action, release date, platforms, content categories, content target.</td></tr>
+    <tr><td>Budget/results</td><td>Budget, spent, reach, impressions, clicks, conversions, engagement, attributed revenue. Profit, CPC, cost per conversion, and ROI are calculated.</td></tr>
+    <tr><td>Control</td><td>Approval required/notes, budget alert threshold (default 80%), content progress based on published items versus target.</td></tr>
+  </table>
+  <p><b>Campaign types:</b> social media, email, radio, PR, influencer, paid ads, event, content, sync, brand, other. <b>Status:</b> planned, active, paused, completed, cancelled.</p>
+  <h3>Content items</h3>
+  <p>Add/edit/delete title, platform, content type, category, scheduled/published date, draft/scheduled/published/cancelled status, caption, media URL, link, impressions, clicks, likes, shares, comments, and conversions.</p>
+  <h3>Advertising tests</h3>
+  <p>Create test name, platform, audience, creative variation, call to action, budget/spend, impressions/clicks/conversions, result, and planned/running/completed/stopped state.</p>
+  <div class="callout warn"><strong>Budget alert</strong>The alert activates when spent as a percentage of budget reaches the configured threshold. A zero budget cannot produce a useful pacing percentage.</div>
+</section>
+
+<section id="contacts" class="page">
+  <div class="module-head"><h2>20. Contacts</h2><div class="access">Access: Administrator RW; Manager RW; Marketing RW</div></div>
+  <p>Contacts is the relationship-management area for industry partners. Search/filter the directory, favorite important contacts, open detailed relationship history, create reminders, and log interactions.</p>
+  <table class="compact"><tr><th>Area</th><th>Fields</th></tr>
+    <tr><td>Identity</td><td>Name*, job role, email, phone, company, required category, subcategory, source.</td></tr>
+    <tr><td>Relationship</td><td>New/contacted/warm/strong/inactive/archived, strength 0-10, genre preference, follow-up date, what was sent, response.</td></tr>
+    <tr><td>Address/social</td><td>Full postal address; Instagram, LinkedIn, Twitter/X, TikTok, YouTube, website.</td></tr>
+    <tr><td>Organization</td><td>Related artists/contracts, assigned user, tags, notes, favorite.</td></tr>
+  </table>
+  <p>Categories include A&amp;R, manager, lawyer, accountant, producer, engineer, publicist, radio promoter, distribution, streaming, sync, brand, media, studio, touring, DJ, playlist curator, journalist, blogger, podcaster, promoter, venue owner, photographer, videographer, sync agent, music supervisor, brand representative, and other.</p>
+  <h3>Interactions and reminders</h3>
+  <p>Interactions record call/email/meeting/message/event/other, subject, date, notes, outcome, material sent, response, and follow-up. Reminders record title*, date*, follow-up/birthday/contract renewal/meeting/payment/other type, notes, and completion. Use Upcoming Reminders to plan outreach.</p>
+</section>
+
+<section id="contracts" class="page">
+  <div class="module-head"><h2>21. Contracts</h2><div class="access">Access: Administrator RW; Manager R; Finance R</div></div>
+  <p>Contracts stores commercial terms, files, dates, renewal and option information. The page includes contract statistics and expiring/expired/renewal-due alerts.</p>
+  <table class="compact"><tr><th>Group</th><th>Fields</th></tr>
+    <tr><td>Identity</td><td>Title*, artist, type, status, parties (name/role/entity), tags.</td></tr>
+    <tr><td>Dates</td><td>Signed, start*, end*, renewal date/deadline, notice days, auto-renew.</td></tr>
+    <tr><td>Commercial</td><td>Value, royalty %, ownership terms, full terms, notes, managing user.</td></tr>
+    <tr><td>Recoupment</td><td>None/recoupable/partially recoupable/cross-collateralized; advance amount/paid, recoupment rate, notes.</td></tr>
+    <tr><td>Payment</td><td>Advance, advance-paid, monthly/quarterly/semiannual/annual royalty frequency, minimum guarantee, notes.</td></tr>
+    <tr><td>Options</td><td>Label, duration months, exercise deadline, exercised flag/time, notes.</td></tr>
+    <tr><td>Evidence</td><td>Uploaded contract file and file name.</td></tr>
+  </table>
+  <p><b>Types:</b> artist/producer agreement, beat license, split sheet, featured artist, work for hire, video/photo release, contractor, NDA, sync, merchandise, recording, publishing, distribution, management, licensing, endorsement. <b>Status:</b> draft, pending signature, active, expired, terminated, renewed.</p>
+  <div class="callout warn"><strong>Date and percentage validation</strong>End date cannot be before start date, and royalty percentage must be 0-100. Treat the uploaded signed document as the authoritative executed copy.</div>
+</section>
+
+<section id="templates" class="page">
+  <div class="module-head"><h2>22. Contract Templates</h2><div class="access">Access: Administrator RW; Finance RW</div></div>
+  <p>Create, edit, activate/deactivate, preview/use, and delete reusable legal templates. Track usage count and last-used time where populated.</p>
+  <table class="compact"><tr><th>Group</th><th>Fields</th></tr>
+    <tr><td>Template</td><td>Name*, type*, description, body content, active flag, tags.</td></tr>
+    <tr><td>Clauses</td><td>Title*, body*, standard/optional/conditional category, order. Add, edit, reorder through order value, or remove.</td></tr>
+    <tr><td>Default terms</td><td>Duration months, renewal term, royalty rate, advance, recoupment type, notes.</td></tr>
+  </table>
+  <p>Template types cover artist and producer agreements, beat license, split sheet, featured artist, work for hire, video/photo releases, contractor, NDA, sync license, and merchandise.</p>
+  <div class="callout danger"><strong>Legal review required</strong>A template is a starting point, not automatically an executed agreement. Confirm current law, parties, deal terms, version, and authorized signatures before use.</div>
+</section>
+
+<section id="finance" class="page">
+  <div class="module-head"><h2>23. Finance and Budgets</h2><div class="access">Access: Administrator RW; Finance RW</div></div>
+  <h3>Finance Overview</h3>
+  <p>View summary totals, cash flow, category breakdowns, charts, and transaction history. Filter by year, type, status, category, artist, project/release, date, or search as available. Create, edit, and delete transactions.</p>
+  <table class="compact"><tr><th>Transaction fields</th><th>Details</th></tr>
+    <tr><td>Core</td><td>Income/expense*, category*, subcategory, positive amount*, description, date.</td></tr>
+    <tr><td>Allocation</td><td>Artist, project, release, department, counterparty.</td></tr>
+    <tr><td>Payment</td><td>Invoice number, method, pending/paid/overdue/cancelled/partial status, due date, paid date.</td></tr>
+    <tr><td>Documents/account</td><td>Receipt upload, invoice upload, account name and last four digits.</td></tr>
+    <tr><td>Classification</td><td>Tax-deductible, tags, notes, recurring flag and weekly/monthly/quarterly/annual frequency.</td></tr>
+  </table>
+  <p>Income categories include streaming/royalty/publishing/mechanical/performance income, sync, merchandise, touring/live, partnerships/sponsorship, digital/physical sales, advances, beat sales, studio services, shows, features, YouTube, direct fan sales, and other. Expenses include production, recording, mixing/mastering, marketing, distribution, legal, studio, equipment, salaries/contractors, touring/travel, office, software, insurance, taxes, artist advances, consulting, and other.</p>
+  <h3>Budgets</h3>
+  <p>Create a budget with name*, year*, quarter, total, artist/project/release, department, draft/approved/active/closed status, and notes. Add line items with category*, label*, budgeted amount*, spent, and notes. When items exist, total budget is recalculated as the sum of their budgeted amounts. Values cannot be negative. Use Budget vs Actual to review variance.</p>
+</section>
+
+<section id="royalties" class="page">
+  <div class="module-head"><h2>24. Royalties</h2><div class="access">Access: Administrator RW; Finance RW; artist link is listed but currently restricted</div></div>
+  <p>The royalty ledger manages an artist/period from draft through calculation, approval, and payment. Search/filter entries, open detail, calculate, generate a statement record, approve, record payments, edit, or delete according to role.</p>
+  <table class="compact"><tr><th>Group</th><th>Fields and rules</th></tr>
+    <tr><td>Scope</td><td>Artist*, period*, start/end*, optional release, song, contract, ownership, finance transactions, supporting files.</td></tr>
+    <tr><td>Income</td><td>Gross income and streaming, publishing, mechanical, performance, sync, merchandise, other. Non-zero source total must equal gross.</td></tr>
+    <tr><td>Deductions</td><td>Distributor fees; itemized approved deductions with description, amount, and recoupable/non-recoupable/tax/other category.</td></tr>
+    <tr><td>Recoupment</td><td>Recoupable expenses, previously recouped, recouped this period, remaining recoupable.</td></tr>
+    <tr><td>Splits</td><td>Artist + label must equal 100%; producer + featured artist cannot exceed artist percentage.</td></tr>
+    <tr><td>Calculated</td><td>Net income, artist gross/net share, label share, producer/featured royalty, remaining balance.</td></tr>
+    <tr><td>Payments</td><td>Amount*, date*, method, reference, notes; total paid and remaining balance are tracked.</td></tr>
+  </table>
+  <p><b>Status:</b> draft, calculated, approved, paid, disputed. Period end must be on/after period start.</p>
+  <h3>Safe processing sequence</h3>
+  <ol class="steps"><li>Create and link source records.</li><li>Enter income, deductions, recoupment, and splits.</li><li>Calculate and independently review.</li><li>Resolve disputes before approval.</li><li>Approve; generate statement record.</li><li>Pay and immediately record payment details.</li></ol>
+</section>
+
+<section id="balances" class="page">
+  <div class="module-head"><h2>25. Artist Balances</h2><div class="access">Access: Administrator RW; Finance RW</div></div>
+  <p>Artist Balances gives a period-based balance view and transaction history. Search artists, create a balance record, open details, add a transaction, and delete after confirmation.</p>
+  <p>Balance data includes artist*, period*, period start/end*, opening balance, income, expenses, advances, royalty payments, closing balance, notes, and draft/reconciled/approved status. The current interface may present summary names such as current balance, total earned, total paid, total advances, and advance remaining depending on loaded data.</p>
+  <h3>Add transaction</h3>
+  <p>Select income, expense, advance, payment, or adjustment; enter a non-zero amount, required description, reference, date, and notes. The interface indicates that negative amounts may be used for debit-style adjustments. Check the updated closing balance and history after saving.</p>
+  <div class="callout warn"><strong>Reconciliation</strong>Do not use an adjustment to hide an unexplained difference. Link it to a reference and explain the business reason in notes.</div>
+</section>
+
+<section id="tax" class="page">
+  <div class="module-head"><h2>26. Tax Calendar</h2><div class="access">Access: Administrator RW; Finance RW</div></div>
+  <p>Track filing and payment obligations in calendar/list views, year filters, summary cards, and upcoming/overdue groupings. Create, edit, mark complete, extend/update, or delete events.</p>
+  <table class="compact"><tr><th>Field</th><th>Purpose</th></tr>
+    <tr><td>Title* / Type*</td><td>Filing, payment, estimated, extension, or other.</td></tr>
+    <tr><td>Description / Notes</td><td>Requirement, jurisdiction, preparation state, and evidence location.</td></tr>
+    <tr><td>Due date* / Amount</td><td>Deadline and expected/paid amount.</td></tr>
+    <tr><td>Owner</td><td>Assigned user.</td></tr>
+    <tr><td>Period</td><td>Year* and optional quarter.</td></tr>
+    <tr><td>Recurrence</td><td>Recurring flag and monthly/quarterly/annual pattern.</td></tr>
+    <tr><td>Completion</td><td>Completed flag and completion timestamp.</td></tr>
+  </table>
+  <p>The page-level display derives practical states such as upcoming, completed, overdue, and extended. A date passing does not complete an obligation; record completion only after filing/payment is actually confirmed.</p>
+</section>
+
+<section id="analytics" class="page">
+  <div class="module-head"><h2>27. Analytics &amp; Performance</h2><div class="access">Access: Administrator R; Manager R; Finance R; Marketing R</div></div>
+  <p>Analytics brings together executive, artist, release, finance, marketing, and operational insights. Use the filter controls for date/artist/release/campaign dimensions available in the selected view.</p>
+  <h3>Available analysis</h3>
+  <ul><li>Executive overview and KPIs.</li><li>Revenue versus expenses, monthly comparisons, category/artist breakdown, quarterly revenue, and growth.</li><li>Artist rankings, revenue, streams, and performance radar.</li><li>Release status/type and upcoming releases.</li><li>Marketing/campaign results.</li><li>Task completion trend, status distribution, team performance, and overdue work by assignee.</li></ul>
+  <h3>CSV export</h3>
+  <ol class="steps"><li>Set the intended filters/year/view.</li><li>Select <b>Export CSV</b> (finance report export is wired in the current page).</li><li>Save the downloaded CSV.</li><li>Open in spreadsheet software and confirm filters, date range, and totals before distributing.</li></ol>
+  <div class="callout note"><strong>Analytics timing</strong>Charts reflect the source records currently stored. Update the source module first; then refresh/reopen analytics if a recent change is not shown.</div>
+</section>
+
+<section id="songanalytics" class="page">
+  <div class="module-head"><h2>28. Per-Song Analytics</h2><div class="access">Access: Administrator RW; Finance RW; Marketing R</div></div>
+  <p>Create one analytics entry for a song and reporting period. Search by song, artist, or period; compare totals and changes; edit or delete according to permission.</p>
+  <table class="compact"><tr><th>Area</th><th>Metrics</th></tr>
+    <tr><td>Required scope</td><td>Song*, period*, period start*, period end*. Artist is derived/linked.</td></tr>
+    <tr><td>Platforms</td><td>Streams, listeners, saves, playlist additions, revenue, and playlist reach for platform rows.</td></tr>
+    <tr><td>Aggregate</td><td>Total streams, monthly listeners, saves, playlist additions, video views, watch time.</td></tr>
+    <tr><td>Audience/action</td><td>Followers gained, email subscribers, website visits, top countries.</td></tr>
+    <tr><td>Commercial</td><td>Merchandise sales, ticket sales, ad spend, cost per result, revenue, campaign profit/loss.</td></tr>
+    <tr><td>Growth/context</td><td>Streams/listeners/saves growth and notable events/impact captured by the interface.</td></tr>
+  </table>
+  <p>Use consistent reporting periods and platform definitions. Do not add cumulative lifetime values to a monthly period unless every period uses the same convention.</p>
+</section>
+
+<section id="files" class="page">
+  <div class="module-head"><h2>29. File Manager</h2><div class="access">Access: Administrator RW; Manager RW</div></div>
+  <p>The protected file library supports initialization, folders, structured artist/song trees, upload, preview, download, search, star, move, rename, delete, and verified backup to configured cloud/external destinations.</p>
+  <h3>Initialize and structure</h3>
+  <p><b>Initialize Storage</b> creates missing root folders: Artists, Releases, Publishing, Accounting, Legal, Merchandise, and Templates.</p>
+  <p><b>Artist structure</b> creates the named artist under Artists with Music, Contracts, Photos, Videos, Marketing, and Royalties. Inside an artist's Music folder, <b>Song structure</b> creates Recording Session, Beat, Stems, Rough Mixes, Final Masters, Artwork, Lyrics, Split Sheet, Producer Agreement, Metadata Sheet, and Content Assets.</p>
+  <h3>Upload and manage</h3>
+  <ol class="steps"><li>Open the destination folder.</li><li>Select/upload up to 20 supported files in a request and add category/tags/record links where offered.</li><li>Confirm each file appears and preview protected image/audio/video/PDF content where the browser supports it.</li><li>Star important files, move or rename when needed, and refresh backups after a move/rename.</li><li>Use Download for an authorized copy. Downloads are counted.</li></ol>
+  <p><b>Supported extensions:</b> PDF, DOC/DOCX, TXT, CSV, XLS/XLSX, JPG/JPEG/PNG/WEBP/GIF, MP3/WAV/FLAC/AAC/M4A/AIFF, MP4/MOV/AVI/WEBM, ZIP/RAR/7Z. Executables, HTML, scripts, and SVG are intentionally excluded. Default maximum is 500 MB per file (deployment-configurable).</p>
+  <h3>Backup indicators</h3>
+  <p>Primary, cloud, and external flags are checksum-verified; a file is “healthy” when all three are verified. Cloud/external actions require configured mounted destinations. Moving/renaming primary content invalidates old backup flags until re-backed up.</p>
+  <div class="callout danger"><strong>Deletion scope</strong>Deleting a folder can affect nested folders/files. Confirm the exact breadcrumb and business retention requirement before accepting deletion.</div>
+</section>
+
+<section id="team" class="page">
+  <div class="module-head"><h2>30. Team Management</h2><div class="access">Access: Administrator only</div></div>
+  <p>Manage accounts, roles, status, credentials, and department information. Summary cards show total, active, inactive, and department counts. Search by name/email/department and filter by role/status.</p>
+  <h3>Create or edit a member</h3>
+  <p>Enter full name*, unique email*, password* for new accounts (minimum 6 characters), role*, department, and phone. Editing can change identity and role but does not require the current password.</p>
+  <h3>Account controls</h3>
+  <table><tr><th>Action</th><th>Effect</th></tr>
+    <tr><td>Edit</td><td>Updates name, email, role, department, and phone.</td></tr>
+    <tr><td>Reset Password</td><td>Administrator assigns a new password of at least 6 characters.</td></tr>
+    <tr><td>Deactivate / Activate</td><td>Deactivated users are refused at login; the record remains available for administration.</td></tr>
+    <tr><td>Delete</td><td>Permanently removes the account after confirmation. Reassign operational ownership first.</td></tr>
+  </table>
+  <div class="callout warn"><strong>Role changes</strong>A changed role alters navigation and access at the next sign-in. Ask the user to sign out and back in. Apply least privilege: grant only what the person needs.</div>
+</section>
+
+<section id="settings" class="page">
+  <div class="module-head"><h2>31. Settings and notifications</h2><div class="access">Settings page: Administrator only. Notification bell: all roles with notification read access.</div></div>
+  <h3>Profile</h3>
+  <p>Change name, phone, department, and avatar; email and role are displayed but disabled. Images must be under 3 MB in the client and are stored as an image data URI within the server limit. Remove the photo with X and select <b>Save Changes</b>.</p>
+  <h3>Security</h3>
+  <p>Change password with current password, new password, and confirmation; minimum length is 6. Two-factor authentication is displayed but not enabled in this deployment.</p>
+  <h3>Notification preferences</h3>
+  <p>Toggle and save task deadline alerts, release reminders, contract expiry warnings, approval requests, finance reports, and campaign updates. The bell polls unread count every minute and loads the latest 20 items when opened.</p>
+  <h3>Appearance, integrations, permissions</h3>
+  <p>The top-bar theme toggle actively persists light/dark mode. The Settings appearance choices (Light, Light Indigo, Light Warm and font size) are currently local preview controls and are not applied by a dedicated save routine. Integrations currently show no configured connections. Permissions provides an overview and a link to Team Management.</p>
+  <h3>Notification actions</h3>
+  <p>Select an item to follow its link; use the check to mark one read, <b>Mark all read</b> for all, or trash to delete where authorized. High-priority alerts use a red priority dot and are counted in the footer.</p>
+</section>
+
+<section id="operations" class="page">
+  <div class="chapter"><span class="chapter-num">32</span><h1>Operating standards</h1></div>
+  <h3>Data quality</h3>
+  <ul class="checklist"><li>Use consistent artist and project naming; search before creating a duplicate.</li><li>Enter ISO identifiers exactly and use metadata validation before distribution.</li><li>Keep split totals at 100% and store executed rights documents.</li><li>Use reporting period names consistently (for example <code>2026-Q3</code> or <code>2026-09</code>).</li><li>Record money as positive transaction amounts with type/category defining direction, except explicit adjustment workflows that state otherwise.</li><li>Use references on payments, adjustments, invoices, and deductions.</li><li>Update status as soon as the business state changes.</li></ul>
+  <h3>Approval and audit discipline</h3>
+  <ul class="checklist"><li>Review source files before marking ownership, contract, release, royalty, or balance approved.</li><li>Explain forced phase advances, overrides, rejections, and adjustments in notes.</li><li>Do not share passwords or reuse a departing employee's account.</li><li>Deactivate access promptly, then reassign tasks, projects, contracts, campaigns, and files before deletion.</li></ul>
+  <h3>File naming recommendation</h3>
+  <p><code>Artist_Project_DocumentType_YYYY-MM-DD_v01.ext</code>, for example <code>AvaRay_NightDrive_SplitSheet_2026-09-10_v02.pdf</code>. Keep the final executed copy clearly distinguishable from drafts.</p>
+  <h3>Suggested cadence</h3>
+  <table class="compact"><tr><th>Cadence</th><th>Actions</th></tr>
+    <tr><td>Daily</td><td>Notifications, overdue tasks, release gates, active campaigns, urgent finance/tax items.</td></tr>
+    <tr><td>Weekly</td><td>Weekly Report, project percentages, task ownership, campaign pacing, upcoming releases/contracts.</td></tr>
+    <tr><td>Monthly</td><td>Finance reconciliation, artist balances, royalty inputs, analytics, development scorecards, backup health.</td></tr>
+    <tr><td>Quarterly</td><td>Royalty approval/payment, access review, contract renewals, tax plan, retention and backup restore test.</td></tr>
+  </table>
+</section>
+
+<section id="troubleshooting" class="page">
+  <div class="chapter"><span class="chapter-num">33</span><h1>Troubleshooting</h1></div>
+  <table>
+    <tr><th>Problem</th><th>Checks and resolution</th></tr>
+    <tr><td>Page or action is missing</td><td>Confirm role in the user menu and the access matrix. Ask an administrator to correct the role. Sign out/in after a role change.</td></tr>
+    <tr><td>Save button does nothing / error toast</td><td>Check all asterisk fields, dates, numeric totals, and percentages. Scroll the whole modal for errors. Correct the first invalid field and retry once.</td></tr>
+    <tr><td>Unexpected return to login</td><td>Session is expired/stale or authorization failed. Sign in again. If repeated, report the page, action, time, account role, and exact message.</td></tr>
+    <tr><td>New data not in dashboard/chart</td><td>Confirm source save succeeded, refresh the page, verify year/period/filter, and confirm record status/date places it in the metric.</td></tr>
+    <tr><td>Metadata will not validate</td><td>Read every validation error; check ISRC/UPC, BPM/key, contact email, required credits, and writer/publisher totals.</td></tr>
+    <tr><td>Ownership not release-ready</td><td>Check total equals 100%, master owner, beat license, sample clearances, signatures, registration, and distribution state.</td></tr>
+    <tr><td>Release phase cannot advance</td><td>Complete or explicitly skip permitted checklist items and meet readiness gates. Do not force without authorization.</td></tr>
+    <tr><td>Royalty will not calculate/save</td><td>Check dates, source sum equals gross, artist+label = 100%, producer+featured does not exceed artist %, and non-negative controlled fields.</td></tr>
+    <tr><td>Upload rejected</td><td>Confirm permitted extension and true MIME type, size below configured maximum, no more than 20 files, valid destination, and stable connection.</td></tr>
+    <tr><td>Cloud/external backup unavailable</td><td>The server must have a configured, mounted, writable destination. Ask the system administrator; do not treat an unverified flag as a backup.</td></tr>
+    <tr><td>Dark mode looks inconsistent</td><td>Some legacy pages use light-only component styles. Toggle back to light mode for readability and report the affected page.</td></tr>
+  </table>
+  <h3>Support information to capture</h3>
+  <ul><li>Account email and role (never send the password).</li><li>Page/module and record name/ID if visible.</li><li>Exact action, error text, and local time.</li><li>Browser/device and whether refresh/re-login changed the result.</li><li>Screenshot with sensitive financial, bank, tax, and personal data redacted.</li></ul>
+</section>
+
+<section id="glossary" class="page">
+  <div class="chapter"><span class="chapter-num">A</span><h1>Status glossary</h1></div>
+  <table class="compact"><tr><th>Area</th><th>Statuses</th><th>Meaning</th></tr>
+    <tr><td>Artist</td><td>Upcoming, active, on hold, inactive</td><td>Commercial/roster lifecycle.</td></tr>
+    <tr><td>Onboarding</td><td>Not started, in progress, pending approval, approved, rejected</td><td>Intake and review lifecycle.</td></tr>
+    <tr><td>Song</td><td>Demo, in production, mixing, mastering, awaiting approval, approved, released, shelved</td><td>Recording lifecycle.</td></tr>
+    <tr><td>Production step</td><td>Pending, in progress, completed, blocked</td><td>Individual studio/workflow gate.</td></tr>
+    <tr><td>Project</td><td>Not started, in progress, waiting approval, completed, delayed, cancelled</td><td>Operational project lifecycle.</td></tr>
+    <tr><td>Task</td><td>Not started, in progress, waiting approval, blocked, delayed, completed</td><td>Kanban state.</td></tr>
+    <tr><td>Release</td><td>Scheduled, in preparation, submitted, approved, released, delayed, cancelled</td><td>Overall release state.</td></tr>
+    <tr><td>Release phase</td><td>Preparation, distribution, marketing, post-release, completed</td><td>Sequential release workflow.</td></tr>
+    <tr><td>Platform</td><td>Pending, submitted, live, rejected</td><td>Store/distributor delivery.</td></tr>
+    <tr><td>Metadata</td><td>Unvalidated, incomplete, needs review, valid</td><td>Data completeness.</td></tr>
+    <tr><td>Ownership</td><td>Complete/incomplete; pending/signed; ready/pending metadata/pending approval/distributed/on hold</td><td>Split, signature, and distribution readiness.</td></tr>
+    <tr><td>Contract</td><td>Draft, pending signature, active, expired, terminated, renewed</td><td>Legal document lifecycle.</td></tr>
+    <tr><td>Campaign</td><td>Planned, active, paused, completed, cancelled</td><td>Marketing campaign lifecycle.</td></tr>
+    <tr><td>Content</td><td>Draft, scheduled, published, cancelled</td><td>Content calendar state.</td></tr>
+    <tr><td>Finance payment</td><td>Pending, paid, overdue, cancelled, partial</td><td>Transaction settlement state.</td></tr>
+    <tr><td>Budget</td><td>Draft, approved, active, closed</td><td>Budget authorization/use.</td></tr>
+    <tr><td>Royalty</td><td>Draft, calculated, approved, paid, disputed</td><td>Royalty settlement lifecycle.</td></tr>
+    <tr><td>Balance</td><td>Draft, reconciled, approved</td><td>Artist balance control.</td></tr>
+    <tr><td>Development</td><td>Active, completed, paused, archived</td><td>Plan lifecycle.</td></tr>
+    <tr><td>The Lnk Up</td><td>Planned, casting, recorded, editing, scheduled, aired, cancelled</td><td>Episode production lifecycle.</td></tr>
+  </table>
+  <p><b>Priority used across modules:</b> low, medium, high, critical. Critical should be reserved for work that materially threatens a deadline, release, legal right, payment, compliance requirement, or key relationship.</p>
+</section>
+
+<section id="deployment" class="page">
+  <div class="chapter"><span class="chapter-num">B</span><h1>Current-deployment notes</h1></div>
+  <p>This section prevents users from mistaking visible placeholder controls for completed workflows in the audited release.</p>
+  <table>
+    <tr><th>Feature/control</th><th>Current behavior</th><th>User guidance</th></tr>
+    <tr><td>Top-bar workspace search / Command-K hint</td><td>Visual input only; no cross-module search handler is connected.</td><td>Use the search inside each module.</td></tr>
+    <tr><td>Forgot password</td><td>Visible on login but no recovery workflow is connected.</td><td>Ask an administrator to reset the password in Team Management.</td></tr>
+    <tr><td>Create an account</td><td>Visible link is intentionally non-navigating.</td><td>Administrator creates accounts in Team Management.</td></tr>
+    <tr><td>Keep me signed in</td><td>Checkbox is visual; session data is stored locally regardless until sign-out/expiry.</td><td>Always sign out on shared devices.</td></tr>
+    <tr><td>Two-factor authentication</td><td>Control reports that provider setup is not enabled.</td><td>Use strong unique passwords; enable only after deployment configuration.</td></tr>
+    <tr><td>Settings appearance tiles/font size</td><td>Selection state is shown but no persistent application routine is connected.</td><td>Use the top-bar light/dark button for the active theme feature.</td></tr>
+    <tr><td>Integrations</td><td>No streaming/distribution integrations configured in the page.</td><td>Enter data/import results through supported module workflows until integrations are commissioned.</td></tr>
+    <tr><td>Weekly Report navigation</td><td>Route and role permissions exist, but it is not currently listed in Admin/Manager sidebar navigation.</td><td>Use the direct <code>/weekly-report</code> route or request a navigation update.</td></tr>
+    <tr><td>User-menu Profile/Settings for non-admins</td><td>Both point to admin-only Settings and may redirect non-admin roles to their dashboard.</td><td>Use role-specific Profile where provided; ask Admin for account changes.</td></tr>
+    <tr><td>Artist Profile direct route</td><td>The profile page expects an artist ID; the role-specific <code>/profile</code> route does not supply one in the current implementation.</td><td>Use the Artist Dashboard information and report the missing profile load for correction.</td></tr>
+    <tr><td>Artist My Music / My Releases / Royalties / Tasks</td><td>Links are included in artist navigation, while the underlying general-resource permission matrix denies artist access; pages may redirect or fail to load their data.</td><td>Use the Artist Dashboard as the current personal summary and request reconciliation of navigation, route guards, and API permissions.</td></tr>
+    <tr><td>Backups</td><td>Cloud and external copies work only when server paths are configured and available.</td><td>Check Storage Overview configuration and verified timestamps.</td></tr>
+    <tr><td>Royalty statement</td><td>Marks/generates statement data in the ledger workflow; a downloadable formatted client PDF is not guaranteed by the current UI.</td><td>Review the returned statement information and follow the approved statement-delivery process.</td></tr>
+  </table>
+  <div class="callout note"><strong>Change control</strong>Update this manual when routes, permissions, validations, field sets, or placeholder controls change. Record the new version and review date on the document-control page.</div>
+  <h3>Client acceptance checklist</h3>
+  <ul class="checklist"><li>Each role can sign in and sees only intended navigation.</li><li>One complete test artist progresses through onboarding approval.</li><li>One song completes metadata and ownership validation and enters a release.</li><li>One finance/royalty/balance period reconciles from source to payment.</li><li>File upload, protected preview/download, and all configured backup destinations are verified.</li><li>Administrator can create, deactivate, reset, and safely reassign a test user.</li><li>Known deployment notes are accepted or scheduled for correction.</li></ul>
+  <p class="footer-note">End of manual &middot; HoodBoy Entertainment &middot; Lnkup Label Management Platform &middot; Client User Manual v1.0</p>
+</section>
+</body>
+</html>

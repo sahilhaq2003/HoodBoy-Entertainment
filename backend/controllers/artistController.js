@@ -1,4 +1,6 @@
 const Artist = require('../models/Artist');
+const User = require('../models/User');
+const crypto = require('crypto');
 
 const REQUIRED_ONBOARDING_DOCUMENTS = [
   'artist_agreement',
@@ -360,7 +362,26 @@ const approveOnboarding = async (req, res) => {
     artist.onboardingNotes = req.body.notes || '';
     await artist.save();
 
-    res.json({ success: true, data: artist });
+    // Auto-create a login account for the artist if one doesn't exist yet
+    let autoCreatedUser = null;
+    if (artist.email) {
+      let user = await User.findOne({ email: artist.email.toLowerCase() });
+      if (!user) {
+        const tempPassword = crypto.randomBytes(8).toString('hex');
+        user = await User.create({
+          name: artist.artistName || artist.legalName || artist.displayName || 'Artist',
+          email: artist.email.toLowerCase(),
+          password: tempPassword,
+          role: 'artist',
+          department: 'Artist',
+          phone: artist.phone || '',
+          isActive: true,
+        });
+        autoCreatedUser = { _id: user._id, name: user.name, email: user.email, tempPassword };
+      }
+    }
+
+    res.json({ success: true, data: artist, autoCreatedUser });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }

@@ -87,6 +87,7 @@ const FileManager: React.FC = () => {
   const [selectedFolders, setSelectedFolders] = useState<Set<string>>(new Set());
   const [contextMenu, setContextMenu] = useState<{ type: 'file' | 'folder'; id: string; x: number; y: number } | null>(null);
   const [previewFile, setPreviewFile] = useState<FileItem | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [editingFolder, setEditingFolder] = useState<string | null>(null);
   const [editFolderName, setEditFolderName] = useState('');
   const [showArtistStructure, setShowArtistStructure] = useState(false);
@@ -133,6 +134,27 @@ const FileManager: React.FC = () => {
     document.addEventListener('click', handleClick);
     return () => document.removeEventListener('click', handleClick);
   }, []);
+
+  useEffect(() => {
+    let objectUrl: string | null = null;
+    let cancelled = false;
+    const loadProtectedPreview = async () => {
+      setPreviewUrl(null);
+      if (!previewFile || !isImagePreview(previewFile.mimeType)) return;
+      try {
+        const response = await fileManagerApi.getContent(previewFile._id);
+        objectUrl = URL.createObjectURL(response.data);
+        if (!cancelled) setPreviewUrl(objectUrl);
+      } catch {
+        if (!cancelled) toast.error('Unable to load protected preview');
+      }
+    };
+    loadProtectedPreview();
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [previewFile]);
 
   const handleSearch = async (q: string) => {
     if (!q.trim()) { setIsSearching(false); setSearchResults(null); return; }
@@ -250,6 +272,21 @@ const FileManager: React.FC = () => {
     } catch (error) { toast.error(getApiErrorMessage(error, 'Backup failed')); }
   };
 
+  const handleDownload = async (file: FileItem) => {
+    try {
+      const response = await fileManagerApi.getContent(file._id, true);
+      const objectUrl = URL.createObjectURL(response.data);
+      const anchor = document.createElement('a');
+      anchor.href = objectUrl;
+      anchor.download = file.originalName || file.name;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(objectUrl);
+      toast.success('Download started');
+    } catch (error) { toast.error(getApiErrorMessage(error, 'Download failed')); }
+  };
+
   const handleInitializeStorage = async () => {
     try {
       setInitializing(true);
@@ -347,7 +384,8 @@ const FileManager: React.FC = () => {
           <button onClick={() => fileInputRef.current?.click()} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 flex items-center gap-2">
             <Upload size={15} /> Upload
           </button>
-          <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileInput} />
+          <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileInput}
+            accept=".pdf,.doc,.docx,.txt,.csv,.xls,.xlsx,.jpg,.jpeg,.png,.webp,.gif,.mp3,.wav,.flac,.aac,.m4a,.aiff,.mp4,.mov,.avi,.webm,.zip,.rar,.7z" />
         </div>
       </div>
 
@@ -695,17 +733,17 @@ const FileManager: React.FC = () => {
       {/* Create folder modal */}
       {showCreateFolder && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Create New Folder</h3>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl dark:bg-gray-900 dark:border dark:border-gray-700">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Create New Folder</h3>
             <input
               type="text" placeholder="Folder name" value={newFolderName}
               onChange={(e) => setNewFolderName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleCreateFolder()}
-              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500"
+              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
               autoFocus
             />
             <div className="flex justify-end gap-2 mt-4">
-              <button onClick={() => { setShowCreateFolder(false); setNewFolderName(''); }} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50">Cancel</button>
+              <button onClick={() => { setShowCreateFolder(false); setNewFolderName(''); }} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-700">Cancel</button>
               <button onClick={handleCreateFolder} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700">Create</button>
             </div>
           </div>
@@ -715,18 +753,18 @@ const FileManager: React.FC = () => {
       {/* Artist structure modal */}
       {showArtistStructure && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h3 className="text-lg font-bold text-gray-900 mb-1">Create Artist Folder Structure</h3>
-            <p className="text-sm text-gray-500 mb-4">Creates: Music, Contracts, Photos, Videos, Marketing, Royalties</p>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl dark:bg-gray-900 dark:border dark:border-gray-700">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">Create Artist Folder Structure</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Creates: Music, Contracts, Photos, Videos, Marketing, Royalties</p>
             <input
               type="text" placeholder="Artist name" value={artistName}
               onChange={(e) => setArtistName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleCreateArtistStructure()}
-              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500"
+              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
               autoFocus
             />
             <div className="flex justify-end gap-2 mt-4">
-              <button onClick={() => { setShowArtistStructure(false); setArtistName(''); }} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50">Cancel</button>
+              <button onClick={() => { setShowArtistStructure(false); setArtistName(''); }} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-700">Cancel</button>
               <button onClick={handleCreateArtistStructure} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700">Create</button>
             </div>
           </div>
@@ -736,18 +774,18 @@ const FileManager: React.FC = () => {
       {/* Song structure modal */}
       {showSongStructure && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h3 className="text-lg font-bold text-gray-900 mb-1">Create Song Folder Structure</h3>
-            <p className="text-sm text-gray-500 mb-4">Creates this song inside {currentFolder?.path}: Recording Session, Beat, Stems, Rough Mixes, Final Masters, Artwork, Lyrics, and more</p>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl dark:bg-gray-900 dark:border dark:border-gray-700">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">Create Song Folder Structure</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Creates this song inside {currentFolder?.path}: Recording Session, Beat, Stems, Rough Mixes, Final Masters, Artwork, Lyrics, and more</p>
             <input
               type="text" placeholder="Song name" value={songName}
               onChange={(e) => setSongName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleCreateSongStructure()}
-              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500"
+              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
               autoFocus
             />
             <div className="flex justify-end gap-2 mt-4">
-              <button onClick={() => { setShowSongStructure(false); setSongName(''); }} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50">Cancel</button>
+              <button onClick={() => { setShowSongStructure(false); setSongName(''); }} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-700">Cancel</button>
               <button onClick={handleCreateSongStructure} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700">Create</button>
             </div>
           </div>
@@ -757,17 +795,17 @@ const FileManager: React.FC = () => {
       {/* Rename folder modal */}
       {editingFolder && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Rename Folder</h3>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl dark:bg-gray-900 dark:border dark:border-gray-700">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Rename Folder</h3>
             <input
               type="text" placeholder="Folder name" value={editFolderName}
               onChange={(e) => setEditFolderName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleRenameFolder(editingFolder)}
-              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500"
+              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
               autoFocus
             />
             <div className="flex justify-end gap-2 mt-4">
-              <button onClick={() => { setEditingFolder(null); setEditFolderName(''); }} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50">Cancel</button>
+              <button onClick={() => { setEditingFolder(null); setEditFolderName(''); }} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-700">Cancel</button>
               <button onClick={() => handleRenameFolder(editingFolder)} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700">Rename</button>
             </div>
           </div>
@@ -777,35 +815,38 @@ const FileManager: React.FC = () => {
       {/* File preview modal */}
       {previewFile && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center" onClick={() => setPreviewFile(null)}>
-          <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[85vh] shadow-2xl overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[85vh] shadow-2xl overflow-hidden flex flex-col dark:bg-gray-900 dark:border dark:border-gray-700" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700">
               <div className="flex items-center gap-3">
                 {getFileIcon(previewFile.type, previewFile.mimeType)}
                 <div>
-                  <h3 className="text-base font-bold text-gray-900">{previewFile.name}</h3>
-                  <p className="text-xs text-gray-500">{formatFileSize(previewFile.size)} · {previewFile.mimeType}</p>
+                  <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">{previewFile.name}</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{formatFileSize(previewFile.size)} · {previewFile.mimeType}</p>
                 </div>
               </div>
-              <button onClick={() => setPreviewFile(null)} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400"><X size={18} /></button>
+              <button onClick={() => setPreviewFile(null)} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 dark:text-gray-500 dark:hover:bg-gray-800"><X size={18} /></button>
             </div>
             <div className="flex-1 overflow-y-auto p-6">
-              {isImagePreview(previewFile.mimeType) && (
-                <img src={previewFile.path} alt={previewFile.name} className="max-w-full rounded-lg mx-auto" />
+              {isImagePreview(previewFile.mimeType) && previewUrl && (
+                <img src={previewUrl} alt={previewFile.name} className="max-w-full rounded-lg mx-auto" />
+              )}
+              {isImagePreview(previewFile.mimeType) && !previewUrl && (
+                <div className="py-12 text-center text-sm text-gray-500 dark:text-gray-400">Loading protected preview…</div>
               )}
               {!isImagePreview(previewFile.mimeType) && (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <div className="w-20 h-20 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
                     {getFileIcon(previewFile.type, previewFile.mimeType)}
                   </div>
-                  <p className="text-sm font-semibold text-gray-900 mb-1">{previewFile.name}</p>
-                  <p className="text-xs text-gray-500 mb-6">Preview not available for this file type</p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">{previewFile.name}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-6">Preview not available for this file type</p>
                   <div className="grid grid-cols-2 gap-3 text-left w-full max-w-sm">
-                    <div><p className="text-xs text-gray-400">Type</p><p className="text-sm font-medium text-gray-700 capitalize">{previewFile.type}</p></div>
-                    <div><p className="text-xs text-gray-400">Size</p><p className="text-sm font-medium text-gray-700">{formatFileSize(previewFile.size)}</p></div>
-                    <div><p className="text-xs text-gray-400">Category</p><p className="text-sm font-medium text-gray-700 capitalize">{previewFile.category.replace(/_/g, ' ')}</p></div>
-                    <div><p className="text-xs text-gray-400">Version</p><p className="text-sm font-medium text-gray-700">{previewFile.version}</p></div>
-                    <div><p className="text-xs text-gray-400">Created</p><p className="text-sm font-medium text-gray-700">{new Date(previewFile.createdAt).toLocaleDateString()}</p></div>
-                    <div><p className="text-xs text-gray-400">Downloads</p><p className="text-sm font-medium text-gray-700">{previewFile.downloads}</p></div>
+                    <div><p className="text-xs text-gray-400 dark:text-gray-500">Type</p><p className="text-sm font-medium text-gray-700 dark:text-gray-200 capitalize">{previewFile.type}</p></div>
+                    <div><p className="text-xs text-gray-400 dark:text-gray-500">Size</p><p className="text-sm font-medium text-gray-700 dark:text-gray-200">{formatFileSize(previewFile.size)}</p></div>
+                    <div><p className="text-xs text-gray-400 dark:text-gray-500">Category</p><p className="text-sm font-medium text-gray-700 dark:text-gray-200 capitalize">{previewFile.category.replace(/_/g, ' ')}</p></div>
+                    <div><p className="text-xs text-gray-400 dark:text-gray-500">Version</p><p className="text-sm font-medium text-gray-700 dark:text-gray-200">{previewFile.version}</p></div>
+                    <div><p className="text-xs text-gray-400 dark:text-gray-500">Created</p><p className="text-sm font-medium text-gray-700 dark:text-gray-200">{new Date(previewFile.createdAt).toLocaleDateString()}</p></div>
+                    <div><p className="text-xs text-gray-400 dark:text-gray-500">Downloads</p><p className="text-sm font-medium text-gray-700 dark:text-gray-200">{previewFile.downloads}</p></div>
                   </div>
                   {previewFile.tags.length > 0 && (
                     <div className="mt-4 flex gap-1.5 flex-wrap justify-center">
@@ -817,27 +858,27 @@ const FileManager: React.FC = () => {
                 </div>
               )}
               {/* Backup status */}
-              <div className="mt-4 p-4 bg-gray-50 rounded-xl">
-                <p className="text-xs font-semibold text-gray-700 mb-2">Backup Status</p>
+              <div className="mt-4 p-4 bg-gray-50 rounded-xl dark:bg-gray-800/40">
+                <p className="text-xs font-semibold text-gray-700 dark:text-gray-200 mb-2">Backup Status</p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <div className="flex items-center gap-2">
                     {previewFile.backup.primary ? <CheckCircle size={14} className="text-green-500" /> : <AlertTriangle size={14} className="text-gray-400" />}
-                    <span className="text-xs text-gray-600">Primary</span>
+                    <span className="text-xs text-gray-600 dark:text-gray-300">Primary</span>
                     </div>
                     <p className="text-[10px] text-gray-400 mt-1">{formatVerifiedAt(previewFile.backup.primaryVerifiedAt)}</p>
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
                     {previewFile.backup.cloud ? <CheckCircle size={14} className="text-green-500" /> : <AlertTriangle size={14} className="text-gray-400" />}
-                    <span className="text-xs text-gray-600">Cloud</span>
+                    <span className="text-xs text-gray-600 dark:text-gray-300">Cloud</span>
                     </div>
                     <p className="text-[10px] text-gray-400 mt-1">{formatVerifiedAt(previewFile.backup.cloudVerifiedAt)}</p>
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
                     {previewFile.backup.external ? <CheckCircle size={14} className="text-green-500" /> : <AlertTriangle size={14} className="text-gray-400" />}
-                    <span className="text-xs text-gray-600">External</span>
+                    <span className="text-xs text-gray-600 dark:text-gray-300">External</span>
                     </div>
                     <p className="text-[10px] text-gray-400 mt-1">{formatVerifiedAt(previewFile.backup.externalVerifiedAt)}</p>
                   </div>
@@ -850,17 +891,20 @@ const FileManager: React.FC = () => {
                 )}
               </div>
             </div>
-            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
+            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 dark:border-gray-700">
               <div className="flex gap-2">
-                <button onClick={() => handleBackup(previewFile._id, 'cloud')} className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-1.5">
+                <button onClick={() => handleBackup(previewFile._id, 'cloud')} className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-1.5 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-700">
                   <Cloud size={13} /> {previewFile.backup.cloud ? 'Verify Cloud' : 'Backup to Cloud'}
                 </button>
-                <button onClick={() => handleBackup(previewFile._id, 'external')} className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-1.5">
+                <button onClick={() => handleBackup(previewFile._id, 'external')} className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-1.5 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-700">
                   <HardDrive size={13} /> {previewFile.backup.external ? 'Verify External' : 'Backup External'}
                 </button>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => { if (previewFile) setDeleteTarget({ type: 'file', id: previewFile._id }); }} className="px-3 py-2 bg-white border border-red-200 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50 flex items-center gap-1.5">
+                <button onClick={() => handleDownload(previewFile)} className="px-3 py-2 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 flex items-center gap-1.5">
+                  <Download size={13} /> Download
+                </button>
+                <button onClick={() => { if (previewFile) setDeleteTarget({ type: 'file', id: previewFile._id }); }} className="px-3 py-2 bg-white border border-red-200 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50 flex items-center gap-1.5 dark:bg-gray-800 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-500/10">
                   <Trash2 size={13} /> Delete
                 </button>
               </div>
@@ -872,62 +916,62 @@ const FileManager: React.FC = () => {
       {/* Storage stats modal */}
       {showStats && stats && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center" onClick={() => setShowStats(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl p-6 dark:bg-gray-900 dark:border dark:border-gray-700" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-bold text-gray-900">Storage Overview</h3>
-              <button onClick={() => setShowStats(false)} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400"><X size={18} /></button>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Storage Overview</h3>
+              <button onClick={() => setShowStats(false)} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 dark:text-gray-500 dark:hover:bg-gray-800"><X size={18} /></button>
             </div>
             <div className="grid grid-cols-3 gap-4 mb-6">
-              <div className="bg-indigo-50 rounded-xl p-4 text-center">
-                <p className="text-2xl font-bold text-indigo-600">{stats.totalFiles}</p>
-                <p className="text-xs text-gray-600 mt-1">Files</p>
+              <div className="bg-indigo-50 rounded-xl p-4 text-center dark:bg-indigo-500/10">
+                <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{stats.totalFiles}</p>
+                <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">Files</p>
               </div>
-              <div className="bg-purple-50 rounded-xl p-4 text-center">
-                <p className="text-2xl font-bold text-purple-600">{stats.totalFolders}</p>
-                <p className="text-xs text-gray-600 mt-1">Folders</p>
+              <div className="bg-purple-50 rounded-xl p-4 text-center dark:bg-purple-500/10">
+                <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{stats.totalFolders}</p>
+                <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">Folders</p>
               </div>
-              <div className="bg-cyan-50 rounded-xl p-4 text-center">
-                <p className="text-2xl font-bold text-cyan-600">{formatFileSize(stats.totalSize)}</p>
-                <p className="text-xs text-gray-600 mt-1">Total Size</p>
+              <div className="bg-cyan-50 rounded-xl p-4 text-center dark:bg-cyan-500/10">
+                <p className="text-2xl font-bold text-cyan-600 dark:text-cyan-400">{formatFileSize(stats.totalSize)}</p>
+                <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">Total Size</p>
               </div>
             </div>
             {/* By type */}
             <div className="mb-5">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Files by Type</p>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 dark:text-gray-400">Files by Type</p>
               <div className="space-y-2">
                 {stats.byType.map(t => (
                   <div key={t._id} className="flex items-center gap-3">
                     <div className="w-8 text-center">{getFileIcon(t._id, '')}</div>
-                    <span className="text-sm text-gray-700 capitalize flex-1">{t._id}</span>
-                    <span className="text-sm font-semibold text-gray-900">{t.count}</span>
-                    <span className="text-xs text-gray-400 w-16 text-right">{formatFileSize(t.size)}</span>
+                    <span className="text-sm text-gray-700 dark:text-gray-200 capitalize flex-1">{t._id}</span>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t.count}</span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500 w-16 text-right">{formatFileSize(t.size)}</span>
                   </div>
                 ))}
               </div>
             </div>
             {/* Backup status */}
             <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Backup Status</p>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 dark:text-gray-400">Backup Status</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="bg-green-50 rounded-lg p-3 text-center">
+                <div className="bg-green-50 rounded-lg p-3 text-center dark:bg-green-500/10">
                   <CheckCircle size={18} className="text-green-500 mx-auto mb-1" />
-                  <p className="text-sm font-bold text-green-700">{stats.backup.primary}</p>
-                  <p className="text-xs text-gray-500">Primary</p>
+                  <p className="text-sm font-bold text-green-700 dark:text-green-400">{stats.backup.primary}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Primary</p>
                 </div>
-                <div className="bg-blue-50 rounded-lg p-3 text-center">
+                <div className="bg-blue-50 rounded-lg p-3 text-center dark:bg-blue-500/10">
                   <Cloud size={18} className="text-blue-500 mx-auto mb-1" />
-                  <p className="text-sm font-bold text-blue-700">{stats.backup.cloud}</p>
-                  <p className="text-xs text-gray-500">Cloud</p>
+                  <p className="text-sm font-bold text-blue-700 dark:text-blue-400">{stats.backup.cloud}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Cloud</p>
                 </div>
-                <div className="bg-orange-50 rounded-lg p-3 text-center">
+                <div className="bg-orange-50 rounded-lg p-3 text-center dark:bg-orange-500/10">
                   <HardDrive size={18} className="text-orange-500 mx-auto mb-1" />
-                  <p className="text-sm font-bold text-orange-700">{stats.backup.external}</p>
-                  <p className="text-xs text-gray-500">External</p>
+                  <p className="text-sm font-bold text-orange-700 dark:text-orange-400">{stats.backup.external}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">External</p>
                 </div>
-                <div className="bg-emerald-50 rounded-lg p-3 text-center">
+                <div className="bg-emerald-50 rounded-lg p-3 text-center dark:bg-emerald-500/10">
                   <CheckCircle size={18} className="text-emerald-600 mx-auto mb-1" />
-                  <p className="text-sm font-bold text-emerald-700">{stats.backup.healthy}</p>
-                  <p className="text-xs text-gray-500">3 Copies</p>
+                  <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">{stats.backup.healthy}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">3 Copies</p>
                 </div>
               </div>
               <div className="mt-4 space-y-2">
@@ -935,8 +979,8 @@ const FileManager: React.FC = () => {
                   const configuration = stats.backupConfiguration[target];
                   const ready = configuration.available;
                   return (
-                    <div key={target} className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2">
-                      <span className="text-xs text-gray-600">{configuration.label}</span>
+                    <div key={target} className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2 dark:border-gray-700">
+                      <span className="text-xs text-gray-600 dark:text-gray-300">{configuration.label}</span>
                       <span className={`text-xs font-semibold ${ready ? 'text-green-600' : 'text-amber-600'}`}>
                         {ready ? 'Available' : configuration.configured ? 'Drive unavailable' : 'Not configured'}
                       </span>

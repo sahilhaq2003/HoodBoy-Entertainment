@@ -6,7 +6,7 @@ const {
   initializeStorage, getRootFolders, getFolderContents,
   createFolder, createArtistStructure, createSongStructure,
   renameFolder, deleteFolder,
-  uploadFile, uploadMultipleFiles, getFiles, getFile,
+  uploadFile, uploadMultipleFiles, getFiles, getFile, getFileContent,
   updateFile, toggleStar, moveFile, deleteFile,
   backupFile, searchFiles, getStorageStats,
 } = require('../controllers/fileManagerController');
@@ -28,6 +28,7 @@ router.delete('/folders/:id', checkPermission('files', 'write'), deleteFolder);
 router.post('/upload', checkPermission('files', 'write'), upload.single('file'), uploadFile);
 router.post('/upload-multiple', checkPermission('files', 'write'), upload.array('files', 20), uploadMultipleFiles);
 router.get('/files', checkPermission('files', 'read'), getFiles);
+router.get('/files/:id/content', checkPermission('files', 'read'), getFileContent);
 router.get('/files/:id', checkPermission('files', 'read'), getFile);
 router.put('/files/:id', checkPermission('files', 'write'), updateFile);
 router.patch('/files/:id/star', checkPermission('files', 'write'), toggleStar);

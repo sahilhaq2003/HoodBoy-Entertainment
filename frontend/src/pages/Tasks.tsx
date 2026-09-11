@@ -1,12 +1,15 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   CheckSquare, Plus, Search, Clock, AlertTriangle, Users, Calendar,
-  ChevronRight, X, RefreshCw, ArrowRight, Target, Shield,
+  ChevronRight, ChevronDown, X, RefreshCw, ArrowRight, Target, Shield,
+  Check, UserRound, Loader2, RotateCw, Send, MessageSquare, Activity,
 } from 'lucide-react';
 import { tasksApi } from '../services/api';
-import type { Task, KanbanColumns, TeamMemberPerformance, TaskStats } from '../types';
+import type { Task, KanbanColumns, TeamMemberPerformance, TaskStats, User } from '../types';
 import toast from 'react-hot-toast';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
+import { useAuth } from '../contexts/AuthContext';
+import { useSearchParams } from 'react-router-dom';
 
 const COLUMNS: { key: keyof KanbanColumns; label: string; color: string }[] = [
   { key: 'not_started', label: 'Not Started', color: '#6B7280' },
@@ -19,17 +22,170 @@ const COLUMNS: { key: keyof KanbanColumns; label: string; color: string }[] = [
 
 const PRIORITY_COLORS: Record<string, string> = { low: '#6B7280', medium: '#06B6D4', high: '#F59E0B', critical: '#EF4444' };
 
+const ROLE_STYLES: Record<string, { label: string; color: string; bg: string }> = {
+  admin: { label: 'Administrator', color: '#DC2626', bg: '#FEF2F2' },
+  manager: { label: 'Manager', color: '#7C3AED', bg: '#F5F3FF' },
+  artist: { label: 'Artist', color: '#0284C7', bg: '#F0F9FF' },
+  finance: { label: 'Finance', color: '#B45309', bg: '#FFFBEB' },
+  marketing: { label: 'Marketing', color: '#DB2777', bg: '#FDF2F8' },
+};
+
+const avatarColor = (name: string) => {
+  const colors = ['#7C3AED', '#0284C7', '#059669', '#D97706', '#DC2626', '#DB2777', '#4F46E5', '#0D9488'];
+  let hash = 0;
+  for (let i = 0; i < (name || '').length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return colors[Math.abs(hash) % colors.length];
+};
+
+const initials = (name: string) => name?.split(' ').filter(Boolean).map(part => part[0]).join('').toUpperCase().slice(0, 2) || '?';
+
+interface AssigneeSelectProps {
+  users: User[];
+  value: string;
+  onChange: (userId: string) => void;
+  currentAssignee?: User;
+  loading?: boolean;
+  error?: string;
+  onRetry?: () => void;
+}
+
+const AssigneeSelect: React.FC<AssigneeSelectProps> = ({ users, value, onChange, currentAssignee, loading, error, onRetry }) => {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const closeOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', closeOutside);
+    return () => document.removeEventListener('mousedown', closeOutside);
+  }, []);
+
+  const selected = users.find(user => user._id === value)
+    || (currentAssignee?._id === value ? currentAssignee : undefined);
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredUsers = users.filter(user => !normalizedQuery
+    || user.name.toLowerCase().includes(normalizedQuery)
+    || user.email?.toLowerCase().includes(normalizedQuery)
+    || user.role.toLowerCase().includes(normalizedQuery));
+
+  const choose = (userId: string) => {
+    onChange(userId);
+    setOpen(false);
+    setQuery('');
+  };
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(current => !current)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className={`w-full min-h-11 flex items-center gap-3 px-3 py-2 bg-white border rounded-xl text-left transition-all dark:bg-gray-800 dark:text-gray-100 ${
+          open ? 'border-indigo-500 ring-4 ring-indigo-500/10 shadow-sm' : 'border-gray-300 hover:border-indigo-300 dark:border-gray-600'
+        }`}
+      >
+        {loading ? (
+          <span className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0 dark:bg-indigo-500/10">
+            <Loader2 size={15} className="animate-spin" />
+          </span>
+        ) : selected ? (
+          <span className="w-8 h-8 rounded-lg text-white flex items-center justify-center text-[10px] font-bold flex-shrink-0 shadow-sm" style={{ background: avatarColor(selected.name) }}>
+            {initials(selected.name)}
+          </span>
+        ) : (
+          <span className="w-8 h-8 rounded-lg bg-gray-100 text-gray-400 flex items-center justify-center flex-shrink-0 dark:bg-gray-700 dark:text-gray-300">
+            <UserRound size={15} />
+          </span>
+        )}
+        <span className="min-w-0 flex-1">
+          <span className={`block text-sm font-semibold truncate ${selected ? 'text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-300'}`}>
+            {loading ? 'Loading team members...' : selected?.name || 'Select a team member'}
+          </span>
+          <span className="block text-[10px] text-gray-400 truncate dark:text-gray-500">
+            {selected ? `${ROLE_STYLES[selected.role]?.label || selected.role}${selected.email ? ` · ${selected.email}` : ''}` : error || 'Currently unassigned'}
+          </span>
+        </span>
+        <ChevronDown size={16} className={`text-gray-400 flex-shrink-0 transition-transform ${open ? 'rotate-180 text-indigo-500' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="absolute left-0 right-0 top-full mt-2 z-50 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-[0_20px_50px_rgba(15,23,42,0.18)] dark:border-gray-700 dark:bg-gray-900">
+          <div className="p-3 border-b border-gray-100 dark:border-gray-800">
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                autoFocus
+                value={query}
+                onChange={event => setQuery(event.target.value)}
+                placeholder="Search name, email, or role..."
+                className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2 pl-9 pr-3 text-xs text-gray-900 outline-none focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+              />
+            </div>
+          </div>
+
+          <div className="max-h-64 overflow-y-auto p-2" role="listbox">
+            <button
+              type="button"
+              onClick={() => choose('')}
+              className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${!value ? 'bg-indigo-50 dark:bg-indigo-500/10' : 'hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+            >
+              <span className="w-8 h-8 rounded-lg bg-gray-100 text-gray-400 flex items-center justify-center dark:bg-gray-800"><UserRound size={15} /></span>
+              <span className="flex-1"><span className="block text-sm font-semibold text-gray-700 dark:text-gray-200">Unassigned</span><span className="block text-[10px] text-gray-400">No team member is responsible</span></span>
+              {!value && <Check size={15} className="text-indigo-600" />}
+            </button>
+
+            {loading && <div className="flex items-center justify-center gap-2 py-8 text-xs text-gray-500"><Loader2 size={15} className="animate-spin text-indigo-500" /> Loading team members</div>}
+            {!loading && error && (
+              <div className="m-1 rounded-xl border border-amber-200 bg-amber-50 p-3 text-center dark:border-amber-900/60 dark:bg-amber-500/10">
+                <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">Team members could not be loaded</p>
+                <p className="mt-1 text-[10px] text-amber-700 dark:text-amber-400">{error}</p>
+                {onRetry && <button type="button" onClick={onRetry} className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-white px-2.5 py-1.5 text-[11px] font-semibold text-amber-700 shadow-sm ring-1 ring-amber-200 hover:bg-amber-100 dark:bg-gray-900 dark:ring-amber-800"><RotateCw size={11} /> Retry</button>}
+              </div>
+            )}
+            {!loading && !error && filteredUsers.map(user => {
+              const role = ROLE_STYLES[user.role] || { label: user.role, color: '#4B5563', bg: '#F3F4F6' };
+              const isSelected = value === user._id;
+              return (
+                <button key={user._id} type="button" onClick={() => choose(user._id)} role="option" aria-selected={isSelected}
+                  className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${isSelected ? 'bg-indigo-50 dark:bg-indigo-500/10' : 'hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
+                  <span className="w-8 h-8 rounded-lg text-white flex items-center justify-center text-[10px] font-bold shadow-sm" style={{ background: avatarColor(user.name) }}>{initials(user.name)}</span>
+                  <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-gray-900 truncate dark:text-gray-100">{user.name}</span><span className="block text-[10px] text-gray-400 truncate">{user.email}</span></span>
+                  <span className="rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-wide" style={{ color: role.color, background: role.bg }}>{role.label}</span>
+                  {isSelected && <Check size={15} className="text-indigo-600 flex-shrink-0" />}
+                </button>
+              );
+            })}
+            {!loading && !error && filteredUsers.length === 0 && <div className="py-8 text-center"><Users size={22} className="mx-auto text-gray-300" /><p className="mt-2 text-xs font-medium text-gray-500">No matching team members</p></div>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const Tasks: React.FC = () => {
+  const { user, canAccess } = useAuth();
+  const [searchParams] = useSearchParams();
+  const openedTaskRef = useRef('');
+  const canManageTasks = canAccess('tasks', 'write');
   const [kanban, setKanban] = useState<KanbanColumns | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [team, setTeam] = useState<TeamMemberPerformance[]>([]);
   const [stats, setStats] = useState<TaskStats | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [assignableLoading, setAssignableLoading] = useState(true);
+  const [assignableError, setAssignableError] = useState('');
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'board' | 'list' | 'team'>('board');
   const [search, setSearch] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [viewTask, setViewTask] = useState<Task | null>(null);
+  const [comment, setComment] = useState('');
+  const [sendingComment, setSendingComment] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const [form, setForm] = useState({
@@ -37,41 +193,122 @@ const Tasks: React.FC = () => {
     category: 'general', deliverable: '', notes: '',
   });
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  const loadAssignableUsers = useCallback(async () => {
+    if (!canManageTasks) {
+      setAssignableLoading(false);
+      setAssignableError('');
+      return;
+    }
+    setAssignableLoading(true);
+    setAssignableError('');
+    try {
+      const usersRes = await tasksApi.getAssignable();
+      setUsers(usersRes.data.data || []);
+    } catch (error: any) {
+      setAssignableError(error.response?.data?.message || 'Check the task service and try again.');
+    } finally {
+      setAssignableLoading(false);
+    }
+  }, [canManageTasks]);
+
+  const refreshData = useCallback(async (showError = false) => {
+    setAssignableLoading(true);
     try {
       const [kanbanRes, tasksRes, teamRes, statsRes] = await Promise.all([
         tasksApi.getKanban(), tasksApi.getAll({ limit: 100 }),
-        tasksApi.getTeam(), tasksApi.getStats(),
+        canManageTasks ? tasksApi.getTeam() : Promise.resolve(null), tasksApi.getStats(),
       ]);
       setKanban(kanbanRes.data.data);
       setTasks(tasksRes.data.data);
-      setTeam(teamRes.data.data);
+      setTeam(teamRes?.data.data || []);
       setStats(statsRes.data.data);
-    } catch { toast.error('Failed to load tasks'); }
+    } catch { if (showError) toast.error('Failed to load tasks'); }
+    try {
+      const usersRes = await tasksApi.getAssignable();
+      setUsers(usersRes.data.data || []);
+    } catch { setUsers([]); }
+    setAssignableLoading(false);
+  }, [canManageTasks]);
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    await refreshData(true);
     setLoading(false);
-  }, []);
+  }, [refreshData]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  useEffect(() => {
+    const taskId = searchParams.get('task');
+    if (!taskId || openedTaskRef.current === taskId) return;
+    openedTaskRef.current = taskId;
+    tasksApi.getById(taskId)
+      .then(response => setViewTask(response.data.data))
+      .catch((error: any) => toast.error(error.response?.data?.message || 'Unable to open this task'));
+  }, [searchParams]);
+
+  const applyTaskUpdate = (updated: Task) => {
+    setKanban(prev => {
+      if (!prev) return prev;
+      const cols = (Object.keys(prev) as (keyof KanbanColumns)[]);
+      const built: Partial<KanbanColumns> = { not_started: [], in_progress: [], waiting_approval: [], blocked: [], delayed: [], completed: [] };
+      for (const key of cols) built[key] = prev[key] ? [...prev[key]] : [];
+      for (const key of cols) {
+        const removedIndex = (built[key] || []).findIndex(t => t._id === updated._id);
+        if (removedIndex >= 0) (built[key] || []).splice(removedIndex, 1);
+      }
+      (built[updated.status as keyof KanbanColumns] || built.not_started as KanbanColumns['not_started']).unshift(updated);
+      return built as KanbanColumns;
+    });
+    setTasks(prev => prev.map(t => t._id === updated._id ? updated : t));
+  };
 
   const handleCreate = async () => {
     if (!form.title || !form.deadline) return toast.error('Title and deadline required');
     if (!form.deliverable) return toast.error('Deliverable is required');
     try {
-      await tasksApi.create(form);
+      const response = await tasksApi.create(form);
+      applyTaskUpdate(response.data.data);
       toast.success('Task created');
       setShowCreate(false);
       setForm({ title: '', description: '', assignedTo: '', deadline: '', priority: 'medium', category: 'general', deliverable: '', notes: '' });
-      loadData();
+      refreshData();
+      setActiveTab('board');
     } catch { toast.error('Failed to create task'); }
   };
 
   const handleStatusChange = async (taskId: string, newStatus: string) => {
     try {
-      await tasksApi.update(taskId, { status: newStatus });
+      const response = await tasksApi.update(taskId, { status: newStatus });
+      applyTaskUpdate(response.data.data);
+      setViewTask((previous): Task | null => previous ? { ...previous, ...response.data.data } : previous);
       toast.success('Task updated');
-      loadData();
     } catch { toast.error('Failed to update'); }
+  };
+
+  const handleAssignChange = async (taskId: string, userId: string) => {
+    try {
+      const response = await tasksApi.update(taskId, { assignedTo: userId || null });
+      applyTaskUpdate(response.data.data);
+      setViewTask(previous => previous ? { ...previous, ...response.data.data } : previous);
+      toast.success(userId ? 'Task assigned' : 'Task unassigned');
+    } catch (error: any) { toast.error(error.response?.data?.message || 'Failed to update assignee'); }
+  };
+
+  const handleAddComment = async () => {
+    const message = comment.trim();
+    if (!viewTask || !message || sendingComment) return;
+    setSendingComment(true);
+    try {
+      const response = await tasksApi.addComment(viewTask._id, message);
+      setViewTask(response.data.data);
+      setComment('');
+      toast.success('Message sent');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to send message');
+    } finally {
+      setSendingComment(false);
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -79,7 +316,14 @@ const Tasks: React.FC = () => {
       await tasksApi.delete(id);
       toast.success('Task deleted');
       setViewTask(null);
-      loadData();
+      setKanban(prev => {
+        if (!prev) return prev;
+        const cols = (Object.keys(prev) as (keyof KanbanColumns)[]);
+        const built: Partial<KanbanColumns> = { not_started: [], in_progress: [], waiting_approval: [], blocked: [], delayed: [], completed: [] };
+        for (const key of cols) built[key] = (prev[key] || []).filter(t => t._id !== id);
+        return built as KanbanColumns;
+      });
+      setTasks(prev => prev.filter(t => t._id !== id));
     } catch { toast.error('Failed to delete'); }
   };
 
@@ -128,7 +372,7 @@ const Tasks: React.FC = () => {
       {/* Tabs + Controls */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-          {(['board', 'list', 'team'] as const).map(tab => (
+          {(['board', 'list', ...(canManageTasks ? ['team'] : [])] as Array<'board' | 'list' | 'team'>).map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)}
               className={`px-4 py-2 rounded-md text-sm font-medium capitalize ${activeTab === tab ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}>
               {tab === 'team' ? 'Team' : tab}
@@ -146,10 +390,12 @@ const Tasks: React.FC = () => {
             <option value="">All Priority</option>
             {['critical', 'high', 'medium', 'low'].map(p => <option key={p} value={p}>{p}</option>)}
           </select>
-          <button onClick={() => setShowCreate(true)}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 flex items-center gap-2">
-            <Plus size={14} /> New Task
-          </button>
+          {canManageTasks && (
+            <button onClick={() => setShowCreate(true)}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 flex items-center gap-2">
+              <Plus size={14} /> New Task
+            </button>
+          )}
         </div>
       </div>
 
@@ -327,32 +573,94 @@ const Tasks: React.FC = () => {
       {/* Task Detail Modal */}
       {viewTask && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center" onClick={() => setViewTask(null)}>
-          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] shadow-2xl overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] shadow-2xl overflow-hidden flex flex-col dark:bg-gray-900 dark:border dark:border-gray-700" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700">
               <div>
-                <h3 className="text-lg font-bold text-gray-900">{viewTask.title}</h3>
-                <p className="text-xs text-gray-500 capitalize">{viewTask.category} · {viewTask.priority} priority</p>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{viewTask.title}</h3>
+                <p className="text-xs text-gray-500 capitalize dark:text-gray-400">{viewTask.category} · {viewTask.priority} priority</p>
               </div>
-              <button onClick={() => setViewTask(null)} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400"><X size={18} /></button>
+              <button onClick={() => setViewTask(null)} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 dark:text-gray-500 dark:hover:bg-gray-800"><X size={18} /></button>
             </div>
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div><p className="text-xs text-gray-400">Status</p>
+                <div><p className="text-xs text-gray-400 dark:text-gray-500">Status</p>
                   <select value={viewTask.status} onChange={e => { handleStatusChange(viewTask._id, e.target.value); setViewTask({ ...viewTask, status: e.target.value as any }); }}
-                    className="w-full mt-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm">
+                    className="w-full mt-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100">
                     {COLUMNS.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
                   </select>
                 </div>
-                <div><p className="text-xs text-gray-400">Deadline</p><p className="text-sm font-medium text-gray-900 mt-1">{new Date(viewTask.deadline).toLocaleDateString()}</p></div>
-                <div><p className="text-xs text-gray-400">Assignee</p><p className="text-sm font-medium text-gray-900 mt-1">{viewTask.assignedTo?.name || 'Unassigned'}</p></div>
-                <div><p className="text-xs text-gray-400">Deliverable</p><p className="text-sm font-medium text-gray-900 mt-1 flex items-center gap-1"><Target size={12} /> {viewTask.deliverable || '—'}</p></div>
+                <div><p className="text-xs text-gray-400 dark:text-gray-500">Deadline</p><p className="text-sm font-medium text-gray-900 mt-1 dark:text-gray-100">{new Date(viewTask.deadline).toLocaleDateString()}</p></div>
+                <div className="col-span-2"><p className="text-xs text-gray-400 dark:text-gray-500">Assignee</p>
+                  {canManageTasks ? (
+                    <div className="mt-1">
+                      <AssigneeSelect
+                        users={users}
+                        value={viewTask.assignedTo?._id || ''}
+                        currentAssignee={viewTask.assignedTo}
+                        onChange={userId => handleAssignChange(viewTask._id, userId)}
+                        loading={assignableLoading}
+                        error={assignableError}
+                        onRetry={loadAssignableUsers}
+                      />
+                    </div>
+                  ) : (
+                    <div className="mt-1 flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 p-2.5 dark:border-gray-700 dark:bg-gray-800">
+                      <span className="w-8 h-8 rounded-lg text-white flex items-center justify-center text-[10px] font-bold" style={{ background: avatarColor(viewTask.assignedTo?.name || '') }}>{initials(viewTask.assignedTo?.name || '')}</span>
+                      <div><p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{viewTask.assignedTo?.name || 'Unassigned'}</p><p className="text-[10px] text-gray-400">Task owner</p></div>
+                    </div>
+                  )}
+                </div>
+                <div className="col-span-2"><p className="text-xs text-gray-400 dark:text-gray-500">Deliverable</p><p className="text-sm font-medium text-gray-900 mt-1 flex items-center gap-1 dark:text-gray-100"><Target size={12} /> {viewTask.deliverable || '—'}</p></div>
               </div>
-              {viewTask.description && <div><p className="text-xs text-gray-400 mb-1">Description</p><p className="text-sm text-gray-700 bg-gray-50 rounded-lg p-3">{viewTask.description}</p></div>}
-              {viewTask.notes && <div><p className="text-xs text-gray-400 mb-1">Notes</p><p className="text-sm text-gray-700 bg-gray-50 rounded-lg p-3">{viewTask.notes}</p></div>}
+              {viewTask.description && <div><p className="text-xs text-gray-400 mb-1 dark:text-gray-500">Description</p><p className="text-sm text-gray-700 bg-gray-50 rounded-lg p-3 dark:text-gray-200 dark:bg-gray-800">{viewTask.description}</p></div>}
+              {viewTask.notes && <div><p className="text-xs text-gray-400 mb-1 dark:text-gray-500">Notes</p><p className="text-sm text-gray-700 bg-gray-50 rounded-lg p-3 dark:text-gray-200 dark:bg-gray-800">{viewTask.notes}</p></div>}
+
+              <div className="rounded-2xl border border-gray-200 overflow-hidden dark:border-gray-700">
+                <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-800/70">
+                  <div className="flex items-center gap-2"><MessageSquare size={15} className="text-indigo-600" /><h4 className="text-sm font-bold text-gray-900 dark:text-gray-100">Messages</h4></div>
+                  <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-gray-500 ring-1 ring-gray-200 dark:bg-gray-900 dark:ring-gray-700">{viewTask.comments?.length || 0}</span>
+                </div>
+                <div className="max-h-60 space-y-3 overflow-y-auto p-4 bg-white dark:bg-gray-900">
+                  {!viewTask.comments?.length ? (
+                    <div className="py-5 text-center"><MessageSquare size={24} className="mx-auto text-gray-300" /><p className="mt-2 text-xs font-semibold text-gray-500">No messages yet</p><p className="mt-0.5 text-[10px] text-gray-400">Start the conversation about this task.</p></div>
+                  ) : viewTask.comments.map(item => {
+                    const own = item.author?._id === user?._id;
+                    return (
+                      <div key={item._id} className={`flex gap-2.5 ${own ? 'flex-row-reverse' : ''}`}>
+                        <span className="w-7 h-7 rounded-lg text-white flex items-center justify-center text-[9px] font-bold flex-shrink-0" style={{ background: avatarColor(item.author?.name || '') }}>{initials(item.author?.name || '')}</span>
+                        <div className={`max-w-[78%] ${own ? 'text-right' : ''}`}>
+                          <div className={`flex items-center gap-2 ${own ? 'justify-end' : ''}`}><span className="text-[10px] font-bold text-gray-600 dark:text-gray-300">{item.author?.name || 'Team member'}</span><span className="text-[9px] text-gray-400">{new Date(item.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span></div>
+                          <p className={`mt-1 rounded-2xl px-3 py-2 text-left text-xs leading-relaxed ${own ? 'rounded-tr-md bg-indigo-600 text-white' : 'rounded-tl-md bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200'}`}>{item.message}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="border-t border-gray-100 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800/70">
+                  <div className="flex items-end gap-2">
+                    <textarea value={comment} onChange={event => setComment(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); handleAddComment(); } }} maxLength={2000} rows={2} placeholder="Write a message... Use Shift+Enter for a new line"
+                      className="min-h-11 flex-1 resize-none rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
+                    <button type="button" onClick={handleAddComment} disabled={!comment.trim() || sendingComment} title="Send message"
+                      className="h-11 w-11 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-sm transition-all hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-40">
+                      {sendingComment ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                    </button>
+                  </div>
+                  <p className="mt-1.5 text-[9px] text-gray-400">Enter to send · Shift+Enter for a new line</p>
+                </div>
+              </div>
+
+              {!!viewTask.activity?.length && (
+                <div>
+                  <div className="mb-2 flex items-center gap-2"><Activity size={14} className="text-gray-400" /><h4 className="text-xs font-bold text-gray-600 dark:text-gray-300">Recent activity</h4></div>
+                  <div className="space-y-2 border-l-2 border-gray-100 pl-3 dark:border-gray-800">
+                    {viewTask.activity.slice(-5).reverse().map(item => <div key={item._id} className="text-[10px] text-gray-500 dark:text-gray-400"><b className="text-gray-700 dark:text-gray-200">{item.actor?.name || 'Team member'}</b> {item.message || item.action.replace(/_/g, ' ')} <span className="text-gray-400">· {new Date(item.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span></div>)}
+                  </div>
+                </div>
+              )}
             </div>
-            <div className="flex justify-end gap-2 px-6 py-4 border-t border-gray-100">
-              <button onClick={() => setDeleteTarget(viewTask._id)} className="px-3 py-2 bg-white border border-red-200 rounded-lg text-xs text-red-600 hover:bg-red-50">Delete</button>
-              <button onClick={() => setViewTask(null)} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50">Close</button>
+            <div className="flex justify-end gap-2 px-6 py-4 border-t border-gray-100 dark:border-gray-700">
+              {canManageTasks && <button onClick={() => setDeleteTarget(viewTask._id)} className="px-3 py-2 bg-white border border-red-200 rounded-lg text-xs text-red-600 hover:bg-red-50 dark:bg-gray-800 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-500/10">Delete</button>}
+              <button onClick={() => setViewTask(null)} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-700">Close</button>
             </div>
           </div>
         </div>
@@ -361,50 +669,61 @@ const Tasks: React.FC = () => {
       {/* Create Modal */}
       {showCreate && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl p-6 max-h-[85vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl p-6 max-h-[85vh] overflow-y-auto dark:bg-gray-900 dark:border dark:border-gray-700">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-bold text-gray-900">New Task</h3>
-              <button onClick={() => setShowCreate(false)} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400"><X size={18} /></button>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">New Task</h3>
+              <button onClick={() => setShowCreate(false)} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 dark:text-gray-500 dark:hover:bg-gray-800"><X size={18} /></button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="text-xs font-semibold text-gray-600 mb-1 block">Title *</label>
-                <input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500" />
+                <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Title *</label>
+                <input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-600 mb-1 block">Deliverable * <span className="text-gray-400 font-normal">(what will be delivered)</span></label>
+                <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Deliverable * <span className="text-gray-400 font-normal">(what will be delivered)</span></label>
                 <input value={form.deliverable} onChange={e => setForm(p => ({ ...p, deliverable: e.target.value }))} placeholder="e.g. Final mix sent to distributor"
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500" />
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-1 block">Deadline *</label>
-                  <input type="date" value={form.deadline} onChange={e => setForm(p => ({ ...p, deadline: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" />
+                  <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Deadline *</label>
+                  <input type="date" value={form.deadline} onChange={e => setForm(p => ({ ...p, deadline: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-1 block">Priority</label>
-                  <select value={form.priority} onChange={e => setForm(p => ({ ...p, priority: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm">
-                    {['low', 'medium', 'high', 'critical'].map(p => <option key={p} value={p}>{p}</option>)}
-                  </select>
+                  <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Assign To</label>
+                  <AssigneeSelect
+                    users={users}
+                    value={form.assignedTo}
+                    onChange={userId => setForm(previous => ({ ...previous, assignedTo: userId }))}
+                    loading={assignableLoading}
+                    error={assignableError}
+                    onRetry={loadAssignableUsers}
+                  />
                 </div>
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-600 mb-1 block">Category</label>
-                <select value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm">
+                <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Priority</label>
+                <select value={form.priority} onChange={e => setForm(p => ({ ...p, priority: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100">
+                  {['low', 'medium', 'high', 'critical'].map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Category</label>
+                <select value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100">
                   {['general', 'production', 'marketing', 'finance', 'legal', 'distribution'].map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-600 mb-1 block">Description</label>
-                <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} rows={2} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" />
+                <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Description</label>
+                <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} rows={2} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-600 mb-1 block">Notes</label>
-                <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} rows={2} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" />
+                <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Notes</label>
+                <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} rows={2} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
               </div>
             </div>
-            <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-gray-100">
-              <button onClick={() => setShowCreate(false)} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50">Cancel</button>
+            <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-gray-100 dark:border-gray-700">
+              <button onClick={() => setShowCreate(false)} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-700">Cancel</button>
               <button onClick={handleCreate} className="px-5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700">Create Task</button>
             </div>
           </div>

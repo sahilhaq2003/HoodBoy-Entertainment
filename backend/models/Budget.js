@@ -28,10 +28,9 @@ const budgetSchema = new mongoose.Schema({
   approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 
-budgetSchema.pre('validate', function validateBudget(next) {
-  if (this.items?.some(item => item.budgeted < 0 || item.spent < 0)) return next(new Error('Budget amounts cannot be negative'));
+budgetSchema.pre('validate', function validateBudget() {
+  if (this.items?.some(item => item.budgeted < 0 || item.spent < 0)) throw new Error('Budget amounts cannot be negative');
   if (this.items?.length) this.totalBudget = this.items.reduce((sum, item) => sum + (item.budgeted || 0), 0);
-  next();
 });
 
 module.exports = mongoose.model('Budget', budgetSchema);

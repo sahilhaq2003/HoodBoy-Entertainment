@@ -83,14 +83,13 @@ contractSchema.index({ status: 1 });
 contractSchema.index({ endDate: 1 });
 contractSchema.index({ renewalDeadline: 1 });
 
-contractSchema.pre('validate', function validateContractDates(next) {
+contractSchema.pre('validate', function validateContractDates() {
   if (this.startDate && this.endDate && this.endDate < this.startDate) {
-    return next(new Error('Expiration date must be on or after the start date'));
+    throw new Error('Expiration date must be on or after the start date');
   }
   if (this.royaltyRate < 0 || this.royaltyRate > 100) {
-    return next(new Error('Royalty percentage must be between 0 and 100'));
+    throw new Error('Royalty percentage must be between 0 and 100');
   }
-  next();
 });
 
 module.exports = mongoose.model('Contract', contractSchema);

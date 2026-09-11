@@ -63,6 +63,7 @@ const ROLE_NAV = {
   ],
   finance: [
     { path: '/finance-dashboard', label: 'Dashboard' },
+    { path: '/tasks', label: 'My Tasks' },
     { path: '/finance', label: 'Finance' },
     { path: '/royalties', label: 'Royalties' },
     { path: '/artist-balances', label: 'Artist Balances' },
@@ -71,6 +72,7 @@ const ROLE_NAV = {
   ],
   marketing: [
     { path: '/marketing-dashboard', label: 'Dashboard' },
+    { path: '/tasks', label: 'My Tasks' },
     { path: '/campaigns', label: 'Campaigns' },
     { path: '/contacts', label: 'Contacts' },
     { path: '/analytics', label: 'Analytics' },
@@ -156,7 +158,7 @@ const ROLE_ACCESS = {
     metadata: { read: false, write: false },
     taxCalendar: { read: false, write: false },
     contacts: { read: false, write: false },
-    tasks: { read: false, write: false },
+    tasks: { read: true, write: false },
     weeklyReports: { read: false, write: false },
     notifications: { read: true, write: false },
     activity: { read: false },
@@ -174,6 +176,7 @@ const ROLE_ACCESS = {
     budgets: { read: true, write: true },
     royalties: { read: true, write: true },
     artistBalances: { read: true, write: true },
+    projects: { read: true, write: false },
     analytics: { read: true },
     songAnalytics: { read: true, write: true },
     campaigns: { read: false, write: false },
@@ -183,7 +186,7 @@ const ROLE_ACCESS = {
     metadata: { read: false, write: false },
     taxCalendar: { read: true, write: true },
     contacts: { read: false, write: false },
-    tasks: { read: false, write: false },
+    tasks: { read: true, write: false },
     weeklyReports: { read: false, write: false },
     notifications: { read: true, write: false },
     activity: { read: false },
@@ -210,7 +213,7 @@ const ROLE_ACCESS = {
     metadata: { read: false, write: false },
     taxCalendar: { read: false, write: false },
     contacts: { read: true, write: true },
-    tasks: { read: false, write: false },
+    tasks: { read: true, write: false },
     weeklyReports: { read: false, write: false },
     notifications: { read: true, write: false },
     activity: { read: false },
@@ -227,7 +230,18 @@ const checkPermission = (resource, action) => {
     const resourceAccess = access[resource];
     if (!resourceAccess) return res.status(403).json({ success: false, message: `Access denied: ${resource}` });
     if (resourceAccess === true) return next();
-    if (resourceAccess[action]) return next();
+    // Routes use CRUD verbs while the policy stores a compact read/write matrix.
+    // Normalize these aliases here so authorization stays backend-enforced and
+    // every module follows the same rule.
+    const normalizedAction = {
+      create: 'write',
+      update: 'write',
+      delete: 'write',
+      approve: 'write',
+      manage: 'write',
+      export: 'read',
+    }[action] || action;
+    if (resourceAccess[normalizedAction]) return next();
     return res.status(403).json({ success: false, message: `Insufficient permissions: ${resource}:${action}` });
   };
 };

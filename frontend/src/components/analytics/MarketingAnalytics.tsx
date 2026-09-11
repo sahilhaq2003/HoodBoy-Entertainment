@@ -7,16 +7,18 @@ import { Target, TrendingUp, DollarSign, Eye, MousePointer, Users, Globe } from 
 
 const COLORS = ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#06B6D4', '#8B5CF6', '#EC4899', '#14B8A6'];
 
-const fmtCurrency = (v: number) => {
-  if (v >= 1000000) return `$${(v / 1000000).toFixed(1)}M`;
-  if (v >= 1000) return `$${(v / 1000).toFixed(1)}k`;
-  return `$${v.toLocaleString()}`;
+const fmtCurrency = (v: number | undefined | null) => {
+  const n = Number(v) || 0;
+  if (n >= 1000000) return `$${(n / 1000000).toFixed(1)}M`;
+  if (n >= 1000) return `$${(n / 1000).toFixed(1)}k`;
+  return `$${n.toLocaleString()}`;
 };
 
-const fmtNum = (v: number) => {
-  if (v >= 1000000) return `${(v / 1000000).toFixed(1)}M`;
-  if (v >= 1000) return `${(v / 1000).toFixed(1)}k`;
-  return v.toLocaleString();
+const fmtNum = (v: number | undefined | null) => {
+  const n = Number(v) || 0;
+  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+  return n.toLocaleString();
 };
 
 const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (

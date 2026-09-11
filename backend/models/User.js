@@ -13,6 +13,10 @@ const userSchema = new mongoose.Schema({
   avatar: { type: String, default: '' },
   department: { type: String, default: '' },
   phone: { type: String, default: '' },
+  notificationPreferences: [{
+    key: { type: String, required: true },
+    enabled: { type: Boolean, default: true },
+  }],
   isActive: { type: Boolean, default: true },
 }, { timestamps: true });
 

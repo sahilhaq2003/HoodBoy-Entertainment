@@ -5,6 +5,7 @@ export interface User {
   role: 'admin' | 'manager' | 'artist' | 'finance' | 'marketing';
   avatar?: string;
   phone?: string;
+  notificationPreferences?: Array<{ key: string; enabled: boolean }>;
   department?: string;
   isActive: boolean;
 }
@@ -163,6 +164,23 @@ export interface Task {
   deliverable: string;
   completedAt?: string;
   notes: string;
+  comments?: Array<{
+    _id: string;
+    author: User;
+    message: string;
+    createdAt: string;
+    updatedAt: string;
+    editedAt?: string;
+  }>;
+  activity?: Array<{
+    _id: string;
+    actor: User;
+    action: 'created' | 'assigned' | 'unassigned' | 'reassigned' | 'status_changed' | 'commented' | 'updated';
+    from?: string;
+    to?: string;
+    message?: string;
+    createdAt: string;
+  }>;
   createdAt: string;
 }
 
@@ -570,6 +588,13 @@ export interface FileItem {
   tags: string[];
   artistId?: Artist;
   songId?: { _id: string; title: string };
+  releaseId?: { _id: string; title: string };
+  contractId?: { _id: string; title?: string; contractNumber?: string };
+  financeId?: { _id: string; description?: string };
+  royaltyId?: { _id: string; period?: string };
+  campaignId?: { _id: string; name?: string; title?: string };
+  contactId?: { _id: string; name?: string; company?: string };
+  projectId?: { _id: string; name?: string; title?: string };
   version: number;
   versionNote: string;
   backup: {
@@ -773,6 +798,10 @@ export interface RoyaltyEntry {
   artist: Artist;
   release?: { _id: string; title: string };
   song?: { _id: string; title: string };
+  contract?: { _id: string; title?: string; contractNumber?: string };
+  ownership?: { _id: string; status?: string };
+  financeTransactions?: Array<{ _id: string; description?: string; amount?: number; category?: string }>;
+  supportingFiles?: Array<{ _id: string; name?: string; category?: string; version?: number }>;
   period: string;
   periodStart: string;
   periodEnd: string;

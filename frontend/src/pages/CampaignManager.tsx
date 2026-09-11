@@ -618,7 +618,7 @@ const CampaignManager: React.FC = () => {
                                   </span>
                                 </td>
                                 <td className="px-4 py-2">
-                                  <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${ci.status === 'published' ? 'bg-green-50 text-green-700' : ci.status === 'scheduled' ? 'bg-blue-50 text-blue-700' : ci.status === 'draft' ? 'bg-gray-100 text-gray-600' : 'bg-red-50 text-red-700'}`}>
+                        <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${ci.status === 'published' ? 'bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400' : ci.status === 'scheduled' ? 'bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400' : ci.status === 'draft' ? 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' : 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400'}`}>
                                     {ci.status}
                                   </span>
                                 </td>
@@ -686,37 +686,37 @@ const CampaignManager: React.FC = () => {
       {/* Campaign Detail Modal */}
       {viewCampaign && activeTab === 'campaigns' && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center" onClick={() => setViewCampaign(null)}>
-          <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[85vh] shadow-2xl overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[85vh] shadow-2xl overflow-hidden flex flex-col dark:bg-gray-900 dark:border dark:border-gray-700" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700">
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded" style={{ background: `${TYPE_COLORS[viewCampaign.type]}15`, color: TYPE_COLORS[viewCampaign.type] }}>{viewCampaign.type.replace(/_/g, ' ')}</span>
                   <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded" style={{ background: `${STATUS_COLORS[viewCampaign.status]}15`, color: STATUS_COLORS[viewCampaign.status] }}>{viewCampaign.status}</span>
                 </div>
-                <h3 className="text-lg font-bold text-gray-900">{viewCampaign.name}</h3>
-                <p className="text-sm text-gray-500">{viewCampaign.artist?.stageName || viewCampaign.artist?.name || 'No artist'}</p>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{viewCampaign.name}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{viewCampaign.artist?.stageName || viewCampaign.artist?.name || 'No artist'}</p>
               </div>
               <div className="flex items-center gap-2">
                 <button onClick={() => openAddContent(viewCampaign._id)} className="px-3 py-2 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 flex items-center gap-1">
                   <Plus size={12} />Add Content
                 </button>
-                <button onClick={() => setViewCampaign(null)} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400"><X size={18} /></button>
+                <button onClick={() => setViewCampaign(null)} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 dark:text-gray-500 dark:hover:bg-gray-800"><X size={18} /></button>
               </div>
             </div>
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               {/* Info Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div><p className="text-xs text-gray-400">Budget</p><p className="text-sm font-semibold text-gray-900">{formatCurrency(viewCampaign.budget)}</p></div>
-                <div><p className="text-xs text-gray-400">Spent</p><p className="text-sm font-semibold text-gray-900">{formatCurrency(viewCampaign.spent)}</p></div>
-                <div><p className="text-xs text-gray-400">Start Date</p><p className="text-sm font-semibold text-gray-900">{new Date(viewCampaign.startDate).toLocaleDateString()}</p></div>
-                <div><p className="text-xs text-gray-400">End Date</p><p className="text-sm font-semibold text-gray-900">{new Date(viewCampaign.endDate).toLocaleDateString()}</p></div>
+                <div><p className="text-xs text-gray-400 dark:text-gray-500">Budget</p><p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(viewCampaign.budget)}</p></div>
+                <div><p className="text-xs text-gray-400 dark:text-gray-500">Spent</p><p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(viewCampaign.spent)}</p></div>
+                <div><p className="text-xs text-gray-400 dark:text-gray-500">Start Date</p><p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{new Date(viewCampaign.startDate).toLocaleDateString()}</p></div>
+                <div><p className="text-xs text-gray-400 dark:text-gray-500">End Date</p><p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{new Date(viewCampaign.endDate).toLocaleDateString()}</p></div>
               </div>
               {viewCampaign.targetAudience && (
-                <div><p className="text-xs text-gray-400 mb-1">Target Audience</p><p className="text-sm text-gray-700">{viewCampaign.targetAudience}</p></div>
+                <div><p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Target Audience</p><p className="text-sm text-gray-700 dark:text-gray-200">{viewCampaign.targetAudience}</p></div>
               )}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {viewCampaign.objective && <div><p className="text-xs text-gray-400 mb-1">Campaign Objective</p><p className="text-sm text-gray-700">{viewCampaign.objective}</p></div>}
-                {viewCampaign.mainStory && <div><p className="text-xs text-gray-400 mb-1">Main Story</p><p className="text-sm text-gray-700">{viewCampaign.mainStory}</p></div>}
+                {viewCampaign.objective && <div><p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Campaign Objective</p><p className="text-sm text-gray-700 dark:text-gray-200">{viewCampaign.objective}</p></div>}
+                {viewCampaign.mainStory && <div><p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Main Story</p><p className="text-sm text-gray-700 dark:text-gray-200">{viewCampaign.mainStory}</p></div>}
               </div>
               {(viewCampaign.contentThemes?.length > 0 || viewCampaign.callsToAction?.length > 0) && <div className="grid grid-cols-2 gap-4"><div><p className="text-xs text-gray-400 mb-2">Content Themes</p><div className="flex flex-wrap gap-1">{viewCampaign.contentThemes?.map(theme => <span key={theme} className="rounded-full bg-purple-50 px-2 py-1 text-[10px] text-purple-700">{theme}</span>)}</div></div><div><p className="text-xs text-gray-400 mb-2">Calls to Action</p><div className="flex flex-wrap gap-1">{viewCampaign.callsToAction?.map(action => <span key={action} className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] text-emerald-700">{action}</span>)}</div></div></div>}
               {viewCampaign.platforms?.length > 0 && (
@@ -749,19 +749,19 @@ const CampaignManager: React.FC = () => {
               {/* Content Items */}
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-sm font-semibold text-gray-700">Content Items ({viewCampaign.contentItems?.length || 0})</h4>
+                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Content Items ({viewCampaign.contentItems?.length || 0})</h4>
                   <button onClick={() => openAddContent(viewCampaign._id)} className="text-xs text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1"><Plus size={12} />Add</button>
                 </div>
                 {viewCampaign.contentItems?.length > 0 ? (
                   <div className="space-y-2">
                     {viewCampaign.contentItems.map(ci => (
-                      <div key={ci._id} className="flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-lg border border-gray-100">
+                      <div key={ci._id} className="flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-lg border border-gray-100 dark:bg-gray-800/40 dark:border-gray-700">
                         <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold" style={{ background: PLATFORM_COLORS[ci.platform] || '#6B7280' }}>
                           {ci.platform?.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">{ci.title}</p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{ci.title}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
                             {ci.platform} · {ci.contentType} · {ci.category?.replace(/_/g, ' ')}
                             {ci.scheduledDate && <> · {new Date(ci.scheduledDate).toLocaleDateString()}</>}
                           </p>
@@ -769,26 +769,26 @@ const CampaignManager: React.FC = () => {
                         <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${ci.status === 'published' ? 'bg-green-50 text-green-700' : ci.status === 'scheduled' ? 'bg-blue-50 text-blue-700' : ci.status === 'draft' ? 'bg-gray-100 text-gray-600' : 'bg-red-50 text-red-700'}`}>
                           {ci.status}
                         </span>
-                        <div className="text-xs text-gray-500 text-right w-24">
+                        <div className="text-xs text-gray-500 dark:text-gray-400 text-right w-24">
                           <div>{ci.impressions.toLocaleString()} imp</div>
                           <div>{ci.clicks.toLocaleString()} clicks</div>
                         </div>
                         <div className="flex items-center gap-1">
-                          <button onClick={() => openEditContent(ci)} className="p-1 rounded hover:bg-gray-200 text-gray-400 hover:text-amber-600"><Edit3 size={12} /></button>
-                          <button onClick={() => setDeleteTarget({ type: 'content', campaignId: viewCampaign._id, contentId: ci._id })} className="p-1 rounded hover:bg-gray-200 text-gray-400 hover:text-red-600"><Trash2 size={12} /></button>
+                          <button onClick={() => openEditContent(ci)} className="p-1 rounded hover:bg-gray-200 text-gray-400 hover:text-amber-600 dark:text-gray-500 dark:hover:bg-gray-700"><Edit3 size={12} /></button>
+                          <button onClick={() => setDeleteTarget({ type: 'content', campaignId: viewCampaign._id, contentId: ci._id })} className="p-1 rounded hover:bg-gray-200 text-gray-400 hover:text-red-600 dark:text-gray-500 dark:hover:bg-gray-700"><Trash2 size={12} /></button>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-400 text-center py-6">No content items yet</p>
+                  <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-6">No content items yet</p>
                 )}
               </div>
 
               {viewCampaign.advertisingTests?.length > 0 && <div><h4 className="mb-3 text-sm font-semibold text-gray-700">Advertising Tests ({viewCampaign.advertisingTests.length})</h4><div className="space-y-2">{viewCampaign.advertisingTests.map((test, index) => <div key={test._id || index} className="grid grid-cols-[1fr_auto_auto] items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 px-4 py-3"><div><p className="text-xs font-semibold text-gray-900">{test.name}</p><p className="mt-1 text-[10px] text-gray-500">{test.platform} · {test.audience} · {test.creative}</p>{test.result && <p className="mt-1 text-[10px] text-gray-600">Learning: {test.result}</p>}</div><div className="text-right text-[10px] text-gray-500"><p>{test.clicks.toLocaleString()} clicks</p><p>{test.conversions.toLocaleString()} conversions</p></div><span className="rounded-full bg-white px-2 py-1 text-[9px] font-semibold uppercase text-gray-600">{test.status}</span></div>)}</div></div>}
 
               {viewCampaign.notes && (
-                <div><p className="text-xs text-gray-400 mb-1">Notes</p><p className="text-sm text-gray-700">{viewCampaign.notes}</p></div>
+                <div><p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Notes</p><p className="text-sm text-gray-700 dark:text-gray-200">{viewCampaign.notes}</p></div>
               )}
             </div>
           </div>
@@ -798,26 +798,26 @@ const CampaignManager: React.FC = () => {
       {/* Create/Edit Campaign Modal */}
       {(showCreateModal || editingCampaign) && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
-          <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl p-6 max-h-[88vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl p-6 max-h-[88vh] overflow-y-auto dark:bg-gray-900 dark:border dark:border-gray-700">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-bold text-gray-900">{editingCampaign ? 'Edit Campaign' : 'New Campaign'}</h3>
-              <button onClick={() => { setShowCreateModal(false); setEditingCampaign(null); resetForm(); }} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400"><X size={18} /></button>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{editingCampaign ? 'Edit Campaign' : 'New Campaign'}</h3>
+              <button onClick={() => { setShowCreateModal(false); setEditingCampaign(null); resetForm(); }} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 dark:text-gray-500 dark:hover:bg-gray-800"><X size={18} /></button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="text-xs font-semibold text-gray-600 mb-1 block">Campaign Name</label>
-                <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none" />
+                <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Campaign Name</label>
+                <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-1 block">Type</label>
-                  <select value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none">
+                  <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Type</label>
+                  <select value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100">
                     {Object.keys(TYPE_COLORS).map(t => <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-1 block">Artist</label>
-                  <select value={form.artist} onChange={e => setForm(p => ({ ...p, artist: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none">
+                  <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Artist</label>
+                  <select value={form.artist} onChange={e => setForm(p => ({ ...p, artist: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100">
                     <option value="">None</option>
                     {artists.map(a => <option key={a._id} value={a._id}>{a.stageName || a.name}</option>)}
                   </select>
@@ -825,56 +825,56 @@ const CampaignManager: React.FC = () => {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-1 block">Status</label>
-                  <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value as any }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none">
+                  <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Status</label>
+                  <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value as any }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100">
                     {['planned', 'active', 'paused', 'completed', 'cancelled'].map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-1 block">Budget ($)</label>
-                  <input type="number" value={form.budget} onChange={e => setForm(p => ({ ...p, budget: Number(e.target.value) }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none" />
+                  <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Budget ($)</label>
+                  <input type="number" value={form.budget} onChange={e => setForm(p => ({ ...p, budget: Number(e.target.value) }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-1 block">Start Date</label>
-                  <input type="date" value={form.startDate} onChange={e => setForm(p => ({ ...p, startDate: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none" />
+                  <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Start Date</label>
+                  <input type="date" value={form.startDate} onChange={e => setForm(p => ({ ...p, startDate: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-1 block">End Date</label>
-                  <input type="date" value={form.endDate} onChange={e => setForm(p => ({ ...p, endDate: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none" />
+                  <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">End Date</label>
+                  <input type="date" value={form.endDate} onChange={e => setForm(p => ({ ...p, endDate: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
                 </div>
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-600 mb-1 block">Target Audience</label>
-                <input value={form.targetAudience} onChange={e => setForm(p => ({ ...p, targetAudience: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none" placeholder="e.g. 18-24 hip-hop fans" />
+                <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Target Audience</label>
+                <input value={form.targetAudience} onChange={e => setForm(p => ({ ...p, targetAudience: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" placeholder="e.g. 18-24 hip-hop fans" />
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-600 mb-1 block">Campaign Objective</label>
-                <textarea value={form.objective} onChange={e => setForm(p => ({ ...p, objective: e.target.value }))} rows={2} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" placeholder="The specific outcome this campaign should achieve" />
+                <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Campaign Objective</label>
+                <textarea value={form.objective} onChange={e => setForm(p => ({ ...p, objective: e.target.value }))} rows={2} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" placeholder="The specific outcome this campaign should achieve" />
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-600 mb-1 block">Main Story</label>
-                <textarea value={form.mainStory} onChange={e => setForm(p => ({ ...p, mainStory: e.target.value }))} rows={2} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" placeholder="The central narrative fans should remember" />
+                <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Main Story</label>
+                <textarea value={form.mainStory} onChange={e => setForm(p => ({ ...p, mainStory: e.target.value }))} rows={2} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" placeholder="The central narrative fans should remember" />
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div><label className="text-xs font-semibold text-gray-600 mb-1 block">Content Themes (one per line)</label><textarea value={form.contentThemes} onChange={e => setForm(p => ({ ...p, contentThemes: e.target.value }))} rows={3} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" /></div>
-                <div><label className="text-xs font-semibold text-gray-600 mb-1 block">Calls to Action (one per line)</label><textarea value={form.callsToAction} onChange={e => setForm(p => ({ ...p, callsToAction: e.target.value }))} rows={3} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" /></div>
+                <div><label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Content Themes (one per line)</label><textarea value={form.contentThemes} onChange={e => setForm(p => ({ ...p, contentThemes: e.target.value }))} rows={3} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" /></div>
+                <div><label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Calls to Action (one per line)</label><textarea value={form.callsToAction} onChange={e => setForm(p => ({ ...p, callsToAction: e.target.value }))} rows={3} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" /></div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div><label className="text-xs font-semibold text-gray-600 mb-1 block">Release Date</label><input type="date" value={form.releaseDate} onChange={e => setForm(p => ({ ...p, releaseDate: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" /></div>
-                <div><label className="text-xs font-semibold text-gray-600 mb-1 block">Content Target</label><input type="number" min="20" max="100" value={form.contentTarget} onChange={e => setForm(p => ({ ...p, contentTarget: Number(e.target.value) }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" /><p className="mt-1 text-[10px] text-gray-400">Priority releases should target 20–30 pieces.</p></div>
+                <div><label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Release Date</label><input type="date" value={form.releaseDate} onChange={e => setForm(p => ({ ...p, releaseDate: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" /></div>
+                <div><label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Content Target</label><input type="number" min="20" max="100" value={form.contentTarget} onChange={e => setForm(p => ({ ...p, contentTarget: Number(e.target.value) }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" /><p className="mt-1 text-[10px] text-gray-400">Priority releases should target 20–30 pieces.</p></div>
               </div>
               <div>
                 <label className="text-xs font-semibold text-gray-600 mb-2 block">Content Categories</label>
-                <div className="flex flex-wrap gap-2">{['performance','lifestyle','behind_the_scenes','storytelling','educational','fan_interaction','promotional','personal_connection'].map(category => <button key={category} type="button" onClick={() => setForm(previous => ({ ...previous, contentCategories: previous.contentCategories.includes(category) ? previous.contentCategories.filter(item => item !== category) : [...previous.contentCategories, category] }))} className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${form.contentCategories.includes(category) ? 'border-indigo-500 bg-indigo-500 text-white' : 'border-gray-200 text-gray-600'}`}>{category.replace(/_/g, ' ')}</button>)}</div>
+                <div className="flex flex-wrap gap-2">{['performance','lifestyle','behind_the_scenes','storytelling','educational','fan_interaction','promotional','personal_connection'].map(category => <button key={category} type="button" onClick={() => setForm(previous => ({ ...previous, contentCategories: previous.contentCategories.includes(category) ? previous.contentCategories.filter(item => item !== category) : [...previous.contentCategories, category] }))} className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${form.contentCategories.includes(category) ? 'border-indigo-500 bg-indigo-500 text-white' : 'border-gray-200 text-gray-600 dark:border-gray-600 dark:text-gray-300'}`}>{category.replace(/_/g, ' ')}</button>)}</div>
               </div>
               <div>
                 <label className="text-xs font-semibold text-gray-600 mb-2 block">Platforms</label>
                 <div className="flex flex-wrap gap-2">
                   {Object.keys(PLATFORM_COLORS).map(p => (
                     <button key={p} type="button" onClick={() => togglePlatform(p)}
-                      className={`text-xs px-2.5 py-1 rounded-full font-medium border transition-all ${form.platforms.includes(p) ? 'text-white' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}
+                      className={`text-xs px-2.5 py-1 rounded-full font-medium border transition-all ${form.platforms.includes(p) ? 'text-white' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:border-gray-500'}`}
                       style={form.platforms.includes(p) ? { background: PLATFORM_COLORS[p], borderColor: PLATFORM_COLORS[p] } : {}}>
                       {p}
                     </button>
@@ -882,25 +882,25 @@ const CampaignManager: React.FC = () => {
                 </div>
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-600 mb-1 block">Goals (one per line)</label>
-                <textarea value={form.goals} onChange={e => setForm(p => ({ ...p, goals: e.target.value }))} rows={3} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none" placeholder="Reach 10k followers&#10;Generate 500 leads&#10;Get 100k impressions" />
+                <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Goals (one per line)</label>
+                <textarea value={form.goals} onChange={e => setForm(p => ({ ...p, goals: e.target.value }))} rows={3} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" placeholder="Reach 10k followers&#10;Generate 500 leads&#10;Get 100k impressions" />
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div><label className="text-xs font-semibold text-gray-600 mb-1 block">Amount Spent ($)</label><input type="number" min="0" value={form.spent} onChange={e => setForm(p => ({ ...p, spent: Number(e.target.value) }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" /></div>
-                <div><label className="text-xs font-semibold text-gray-600 mb-1 block">Attributed Revenue ($)</label><input type="number" min="0" value={form.attributedRevenue} onChange={e => setForm(p => ({ ...p, attributedRevenue: Number(e.target.value) }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" /></div>
+                <div><label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Amount Spent ($)</label><input type="number" min="0" value={form.spent} onChange={e => setForm(p => ({ ...p, spent: Number(e.target.value) }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" /></div>
+                <div><label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Attributed Revenue ($)</label><input type="number" min="0" value={form.attributedRevenue} onChange={e => setForm(p => ({ ...p, attributedRevenue: Number(e.target.value) }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" /></div>
               </div>
-              <div className="rounded-xl border border-gray-200 p-4">
+              <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
                 <div className="mb-3 flex items-center justify-between"><div><h4 className="text-sm font-semibold text-gray-900">Advertising Tests</h4><p className="text-[10px] text-gray-500">Compare audiences, creatives, spend, and results.</p></div><button type="button" onClick={() => setForm(p => ({ ...p, advertisingTests: [...p.advertisingTests, { name: '', platform: '', audience: '', creative: '', callToAction: '', budget: 0, spent: 0, impressions: 0, clicks: 0, conversions: 0, status: 'planned', result: '' }] }))} className="text-xs font-semibold text-indigo-600">+ Add test</button></div>
-                <div className="space-y-3">{form.advertisingTests.map((test, index) => <div key={index} className="rounded-lg bg-gray-50 p-3"><div className="grid grid-cols-3 gap-2"><input placeholder="Test name" value={test.name} onChange={e => setForm(p => ({ ...p, advertisingTests: p.advertisingTests.map((item, i) => i === index ? { ...item, name: e.target.value } : item) }))} className="px-2 py-1.5 border border-gray-300 rounded-md text-xs" /><input placeholder="Platform" value={test.platform} onChange={e => setForm(p => ({ ...p, advertisingTests: p.advertisingTests.map((item, i) => i === index ? { ...item, platform: e.target.value } : item) }))} className="px-2 py-1.5 border border-gray-300 rounded-md text-xs" /><input placeholder="Audience" value={test.audience} onChange={e => setForm(p => ({ ...p, advertisingTests: p.advertisingTests.map((item, i) => i === index ? { ...item, audience: e.target.value } : item) }))} className="px-2 py-1.5 border border-gray-300 rounded-md text-xs" /><input placeholder="Creative variation" value={test.creative} onChange={e => setForm(p => ({ ...p, advertisingTests: p.advertisingTests.map((item, i) => i === index ? { ...item, creative: e.target.value } : item) }))} className="px-2 py-1.5 border border-gray-300 rounded-md text-xs" /><input type="number" min="0" placeholder="Budget" value={test.budget} onChange={e => setForm(p => ({ ...p, advertisingTests: p.advertisingTests.map((item, i) => i === index ? { ...item, budget: Number(e.target.value) } : item) }))} className="px-2 py-1.5 border border-gray-300 rounded-md text-xs" /><div className="flex gap-1"><select value={test.status} onChange={e => setForm(p => ({ ...p, advertisingTests: p.advertisingTests.map((item, i) => i === index ? { ...item, status: e.target.value } : item) }))} className="min-w-0 flex-1 px-2 py-1.5 border border-gray-300 rounded-md text-xs"><option value="planned">Planned</option><option value="running">Running</option><option value="completed">Completed</option><option value="stopped">Stopped</option></select><button type="button" onClick={() => setForm(p => ({ ...p, advertisingTests: p.advertisingTests.filter((_, i) => i !== index) }))} className="px-2 text-red-500"><Trash2 size={13}/></button></div></div></div>)}</div>
+                <div className="space-y-3">{form.advertisingTests.map((test, index) => <div key={index} className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800/40"><div className="grid grid-cols-3 gap-2"><input placeholder="Test name" value={test.name} onChange={e => setForm(p => ({ ...p, advertisingTests: p.advertisingTests.map((item, i) => i === index ? { ...item, name: e.target.value } : item) }))} className="px-2 py-1.5 border border-gray-300 rounded-md text-xs dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" /><input placeholder="Platform" value={test.platform} onChange={e => setForm(p => ({ ...p, advertisingTests: p.advertisingTests.map((item, i) => i === index ? { ...item, platform: e.target.value } : item) }))} className="px-2 py-1.5 border border-gray-300 rounded-md text-xs dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" /><input placeholder="Audience" value={test.audience} onChange={e => setForm(p => ({ ...p, advertisingTests: p.advertisingTests.map((item, i) => i === index ? { ...item, audience: e.target.value } : item) }))} className="px-2 py-1.5 border border-gray-300 rounded-md text-xs dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" /><input placeholder="Creative variation" value={test.creative} onChange={e => setForm(p => ({ ...p, advertisingTests: p.advertisingTests.map((item, i) => i === index ? { ...item, creative: e.target.value } : item) }))} className="px-2 py-1.5 border border-gray-300 rounded-md text-xs dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" /><input type="number" min="0" placeholder="Budget" value={test.budget} onChange={e => setForm(p => ({ ...p, advertisingTests: p.advertisingTests.map((item, i) => i === index ? { ...item, budget: Number(e.target.value) } : item) }))} className="px-2 py-1.5 border border-gray-300 rounded-md text-xs dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" /><div className="flex gap-1"><select value={test.status} onChange={e => setForm(p => ({ ...p, advertisingTests: p.advertisingTests.map((item, i) => i === index ? { ...item, status: e.target.value } : item) }))} className="min-w-0 flex-1 px-2 py-1.5 border border-gray-300 rounded-md text-xs"><option value="planned">Planned</option><option value="running">Running</option><option value="completed">Completed</option><option value="stopped">Stopped</option></select><button type="button" onClick={() => setForm(p => ({ ...p, advertisingTests: p.advertisingTests.filter((_, i) => i !== index) }))} className="px-2 text-red-500"><Trash2 size={13}/></button></div></div></div>)}</div>
               </div>
-              {form.advertisingTests.length > 0 && <div className="rounded-xl border border-gray-200 p-4"><h4 className="mb-3 text-sm font-semibold text-gray-900">Advertising Test Results</h4><div className="space-y-3">{form.advertisingTests.map((test, index) => <div key={index} className="rounded-lg bg-gray-50 p-3"><p className="mb-2 text-xs font-semibold text-gray-700">{test.name || `Test ${index + 1}`}</p><div className="grid grid-cols-3 gap-2"><input placeholder="Call to action" value={test.callToAction} onChange={e => setForm(p => ({ ...p, advertisingTests: p.advertisingTests.map((item, i) => i === index ? { ...item, callToAction: e.target.value } : item) }))} className="rounded-md border border-gray-300 px-2 py-1.5 text-xs" /><input type="number" min="0" placeholder="Spent" value={test.spent} onChange={e => setForm(p => ({ ...p, advertisingTests: p.advertisingTests.map((item, i) => i === index ? { ...item, spent: Number(e.target.value) } : item) }))} className="rounded-md border border-gray-300 px-2 py-1.5 text-xs" /><input placeholder="Result / learning" value={test.result} onChange={e => setForm(p => ({ ...p, advertisingTests: p.advertisingTests.map((item, i) => i === index ? { ...item, result: e.target.value } : item) }))} className="rounded-md border border-gray-300 px-2 py-1.5 text-xs" /><input type="number" min="0" placeholder="Impressions" value={test.impressions} onChange={e => setForm(p => ({ ...p, advertisingTests: p.advertisingTests.map((item, i) => i === index ? { ...item, impressions: Number(e.target.value) } : item) }))} className="rounded-md border border-gray-300 px-2 py-1.5 text-xs" /><input type="number" min="0" placeholder="Clicks" value={test.clicks} onChange={e => setForm(p => ({ ...p, advertisingTests: p.advertisingTests.map((item, i) => i === index ? { ...item, clicks: Number(e.target.value) } : item) }))} className="rounded-md border border-gray-300 px-2 py-1.5 text-xs" /><input type="number" min="0" placeholder="Conversions" value={test.conversions} onChange={e => setForm(p => ({ ...p, advertisingTests: p.advertisingTests.map((item, i) => i === index ? { ...item, conversions: Number(e.target.value) } : item) }))} className="rounded-md border border-gray-300 px-2 py-1.5 text-xs" /></div></div>)}</div></div>}
+              {form.advertisingTests.length > 0 && <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700"><h4 className="mb-3 text-sm font-semibold text-gray-900">Advertising Test Results</h4><div className="space-y-3">{form.advertisingTests.map((test, index) => <div key={index} className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800/40"><p className="mb-2 text-xs font-semibold text-gray-700">{test.name || `Test ${index + 1}`}</p><div className="grid grid-cols-3 gap-2"><input placeholder="Call to action" value={test.callToAction} onChange={e => setForm(p => ({ ...p, advertisingTests: p.advertisingTests.map((item, i) => i === index ? { ...item, callToAction: e.target.value } : item) }))} className="rounded-md border border-gray-300 px-2 py-1.5 text-xs dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" /><input type="number" min="0" placeholder="Spent" value={test.spent} onChange={e => setForm(p => ({ ...p, advertisingTests: p.advertisingTests.map((item, i) => i === index ? { ...item, spent: Number(e.target.value) } : item) }))} className="rounded-md border border-gray-300 px-2 py-1.5 text-xs dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" /><input placeholder="Result / learning" value={test.result} onChange={e => setForm(p => ({ ...p, advertisingTests: p.advertisingTests.map((item, i) => i === index ? { ...item, result: e.target.value } : item) }))} className="rounded-md border border-gray-300 px-2 py-1.5 text-xs dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" /><input type="number" min="0" placeholder="Impressions" value={test.impressions} onChange={e => setForm(p => ({ ...p, advertisingTests: p.advertisingTests.map((item, i) => i === index ? { ...item, impressions: Number(e.target.value) } : item) }))} className="rounded-md border border-gray-300 px-2 py-1.5 text-xs dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" /><input type="number" min="0" placeholder="Clicks" value={test.clicks} onChange={e => setForm(p => ({ ...p, advertisingTests: p.advertisingTests.map((item, i) => i === index ? { ...item, clicks: Number(e.target.value) } : item) }))} className="rounded-md border border-gray-300 px-2 py-1.5 text-xs dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" /><input type="number" min="0" placeholder="Conversions" value={test.conversions} onChange={e => setForm(p => ({ ...p, advertisingTests: p.advertisingTests.map((item, i) => i === index ? { ...item, conversions: Number(e.target.value) } : item) }))} className="rounded-md border border-gray-300 px-2 py-1.5 text-xs dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" /></div></div>)}</div></div>}
               <div>
-                <label className="text-xs font-semibold text-gray-600 mb-1 block">Notes</label>
-                <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} rows={2} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none" />
+                <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Notes</label>
+                <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} rows={2} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
               </div>
             </div>
-            <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-gray-100">
-              <button onClick={() => { setShowCreateModal(false); setEditingCampaign(null); resetForm(); }} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50">Cancel</button>
+            <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-gray-100 dark:border-gray-700">
+              <button onClick={() => { setShowCreateModal(false); setEditingCampaign(null); resetForm(); }} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-700">Cancel</button>
               <button onClick={editingCampaign ? handleUpdate : handleCreate} className="px-5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700">
                 {editingCampaign ? 'Update Campaign' : 'Create Campaign'}
               </button>
@@ -912,67 +912,67 @@ const CampaignManager: React.FC = () => {
       {/* Add/Edit Content Item Modal */}
       {showContentModal && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6 dark:bg-gray-900 dark:border dark:border-gray-700">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-bold text-gray-900">{editingContent ? 'Edit Content' : 'Add Content Item'}</h3>
-              <button onClick={() => { setShowContentModal(null); setEditingContent(null); resetContentForm(); }} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400"><X size={18} /></button>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{editingContent ? 'Edit Content' : 'Add Content Item'}</h3>
+              <button onClick={() => { setShowContentModal(null); setEditingContent(null); resetContentForm(); }} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 dark:text-gray-500 dark:hover:bg-gray-800"><X size={18} /></button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="text-xs font-semibold text-gray-600 mb-1 block">Title</label>
-                <input value={contentForm.title} onChange={e => setContentForm(p => ({ ...p, title: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none" />
+                <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Title</label>
+                <input value={contentForm.title} onChange={e => setContentForm(p => ({ ...p, title: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-1 block">Platform</label>
-                  <select value={contentForm.platform} onChange={e => setContentForm(p => ({ ...p, platform: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none">
+                  <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Platform</label>
+                  <select value={contentForm.platform} onChange={e => setContentForm(p => ({ ...p, platform: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100">
                     {Object.keys(PLATFORM_COLORS).map(p => <option key={p} value={p}>{p}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-1 block">Content Type</label>
-                  <select value={contentForm.contentType} onChange={e => setContentForm(p => ({ ...p, contentType: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none">
+                  <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Content Type</label>
+                  <select value={contentForm.contentType} onChange={e => setContentForm(p => ({ ...p, contentType: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100">
                     {['post', 'story', 'reel', 'video', 'email', 'ad', 'article', 'interview', 'playlist', 'other'].map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-600 mb-1 block">Content Category</label>
-                <select value={contentForm.category} onChange={e => setContentForm(p => ({ ...p, category: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm">
+                <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Content Category</label>
+                <select value={contentForm.category} onChange={e => setContentForm(p => ({ ...p, category: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100">
                   {['performance','lifestyle','behind_the_scenes','storytelling','educational','fan_interaction','promotional','personal_connection'].map(category => <option key={category} value={category}>{category.replace(/_/g, ' ')}</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-1 block">Scheduled Date</label>
-                  <input type="date" value={contentForm.scheduledDate} onChange={e => setContentForm(p => ({ ...p, scheduledDate: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none" />
+                  <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Scheduled Date</label>
+                  <input type="date" value={contentForm.scheduledDate} onChange={e => setContentForm(p => ({ ...p, scheduledDate: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-1 block">Status</label>
-                  <select value={contentForm.status} onChange={e => setContentForm(p => ({ ...p, status: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none">
+                  <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Status</label>
+                  <select value={contentForm.status} onChange={e => setContentForm(p => ({ ...p, status: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100">
                     {['draft', 'scheduled', 'published', 'cancelled'].map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-600 mb-1 block">Caption</label>
-                <textarea value={contentForm.caption} onChange={e => setContentForm(p => ({ ...p, caption: e.target.value }))} rows={2} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none" />
+                <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Caption</label>
+                <textarea value={contentForm.caption} onChange={e => setContentForm(p => ({ ...p, caption: e.target.value }))} rows={2} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-600 mb-1 block">Media URL</label>
-                <input value={contentForm.mediaUrl} onChange={e => setContentForm(p => ({ ...p, mediaUrl: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none" placeholder="https://..." />
+                <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Media URL</label>
+                <input value={contentForm.mediaUrl} onChange={e => setContentForm(p => ({ ...p, mediaUrl: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" placeholder="https://..." />
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-600 mb-1 block">Link</label>
-                <input value={contentForm.link} onChange={e => setContentForm(p => ({ ...p, link: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none" placeholder="https://..." />
+                <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Link</label>
+                <input value={contentForm.link} onChange={e => setContentForm(p => ({ ...p, link: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" placeholder="https://..." />
               </div>
               <div>
                 <label className="text-xs font-semibold text-gray-600 mb-2 block">Published Results</label>
-                <div className="grid grid-cols-3 gap-2">{(['impressions','clicks','likes','shares','comments','conversions'] as const).map(metric => <div key={metric}><label className="mb-1 block text-[9px] uppercase text-gray-400">{metric}</label><input type="number" min="0" value={contentForm[metric]} onChange={e => setContentForm(p => ({ ...p, [metric]: Number(e.target.value) }))} className="w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs" /></div>)}</div>
+                <div className="grid grid-cols-3 gap-2">{(['impressions','clicks','likes','shares','comments','conversions'] as const).map(metric => <div key={metric}><label className="mb-1 block text-[9px] uppercase text-gray-400">{metric}</label><input type="number" min="0" value={contentForm[metric]} onChange={e => setContentForm(p => ({ ...p, [metric]: Number(e.target.value) }))} className="w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" /></div>)}</div>
               </div>
             </div>
-            <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-gray-100">
-              <button onClick={() => { setShowContentModal(null); setEditingContent(null); resetContentForm(); }} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50">Cancel</button>
+            <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-gray-100 dark:border-gray-700">
+              <button onClick={() => { setShowContentModal(null); setEditingContent(null); resetContentForm(); }} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-700">Cancel</button>
               <button onClick={editingContent ? handleUpdateContent : handleAddContent} className="px-5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700">
                 {editingContent ? 'Update Content' : 'Add Content'}
               </button>

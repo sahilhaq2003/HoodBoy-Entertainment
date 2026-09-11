@@ -88,7 +88,7 @@ const updateProfile = async (req, res) => {
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
-    const { name, phone, department, avatar } = req.body;
+    const { name, phone, department, avatar, notificationPreferences } = req.body;
     if (name !== undefined) user.name = name;
     if (phone !== undefined) user.phone = phone;
     if (department !== undefined) user.department = department;
@@ -98,6 +98,12 @@ const updateProfile = async (req, res) => {
       } else {
         return res.status(400).json({ success: false, message: 'Invalid profile image. Must be an image data URI under 3.5MB.' });
       }
+    }
+    if (notificationPreferences !== undefined) {
+      if (!Array.isArray(notificationPreferences) || notificationPreferences.length > 20 || notificationPreferences.some(pref => !pref || typeof pref.key !== 'string' || typeof pref.enabled !== 'boolean')) {
+        return res.status(400).json({ success: false, message: 'Invalid notification preferences' });
+      }
+      user.notificationPreferences = notificationPreferences.map(pref => ({ key: pref.key.trim().slice(0, 80), enabled: pref.enabled }));
     }
     await user.save();
     const { ROLE_DESCRIPTIONS, ROLE_DASHBOARDS, ROLE_NAV, ROLE_ACCESS } = require('../middleware/rbac');

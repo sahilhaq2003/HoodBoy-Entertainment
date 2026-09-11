@@ -4,6 +4,7 @@ import {
   Users, Search, Music, DollarSign, TrendingUp,
   Filter, UserPlus, Clock, CheckCircle, XCircle, AlertCircle, FileText,
   ArrowUpRight, RefreshCw, Grid3X3, List, Disc3, Edit2, Trash2, X, Loader2,
+  Calendar,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { artistsApi } from '../services/api';
@@ -177,90 +178,112 @@ const Artists: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {artists.map(artist => {
             const displayName = artist.artistName || artist.stageName || artist.name;
+            const name = displayName || 'Artist';
+            const avatarColor = getAvatarColor(name);
+            const hasDocs = artist.documents && artist.documents.length > 0;
             return (
               <div
                 key={artist._id}
-                className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md hover:border-gray-300 transition-all duration-200 p-5 cursor-pointer group"
+                className="group relative bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-xl hover:border-gray-300 hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden flex flex-col"
                 onClick={() => navigate(`/artists/${artist._id}`)}
               >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-base flex-shrink-0 overflow-hidden"
-                      style={{ background: getAvatarColor(displayName) }}
+                {/* Cover banner */}
+                <div
+                  className="relative h-16 flex items-start justify-end p-2.5 flex-shrink-0"
+                  style={{ background: `linear-gradient(135deg, ${avatarColor} 0%, ${avatarColor}55 100%)` }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-t from-white via-white/5 to-transparent" />
+                  <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); navigate(`/artists/${artist._id}`); }}
+                      className="p-1.5 rounded-lg bg-white/25 text-white hover:bg-white/40 backdrop-blur-sm transition-all"
+                      title="Edit"
                     >
-                      {artist.image ? (
-                        <img src={artist.image} alt={displayName} className="w-full h-full object-cover" />
-                      ) : (
-                        getInitials(displayName)
-                      )}
-                    </div>
-                    <div>
-                      <div className="font-semibold text-gray-900 text-sm group-hover:text-indigo-600 transition-colors">{displayName}</div>
-                      {artist.artistName && artist.name !== artist.artistName && (
-                        <div className="text-xs text-gray-500">{artist.name}</div>
-                      )}
-                      <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
-                        <Music size={10} /> {artist.genre || 'No genre'}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <button onClick={(e) => { e.stopPropagation(); navigate(`/artists/${artist._id}`); }} className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all" title="Edit">
                       <Edit2 size={13} />
                     </button>
-                    <button onClick={(e) => { e.stopPropagation(); setDeleteId(artist._id); }} className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all" title="Delete">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setDeleteId(artist._id); }}
+                      className="p-1.5 rounded-lg bg-white/25 text-white hover:bg-red-600/80 backdrop-blur-sm transition-all"
+                      title="Delete"
+                    >
                       <Trash2 size={13} />
                     </button>
+                  </div>
+                  <div className="relative z-10">
                     <StatusBadge status={artist.status} />
                   </div>
                 </div>
 
-                <div className="mb-3">
-                  <OnboardingProgress currentStep={artist.onboardingStep} onboardingStatus={artist.onboardingStatus} compact />
-                </div>
-
-                <div className="flex items-center gap-2 mb-3">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide text-[10px] ${
-                    artist.onboardingStatus === 'approved' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
-                    artist.onboardingStatus === 'rejected' ? 'bg-red-50 text-red-700 border border-red-200' :
-                    artist.onboardingStatus === 'pending_approval' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
-                    artist.onboardingStatus === 'in_progress' ? 'bg-cyan-50 text-cyan-700 border border-cyan-200' :
-                    'bg-gray-100 text-gray-600 border border-gray-200'
-                  }`}>
-                    {artist.onboardingStatus?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-lg p-2.5 bg-gray-50">
-                    <div className="text-xs text-gray-500 flex items-center gap-1 mb-1"><TrendingUp size={10} />Streams</div>
-                    <div className="text-sm font-bold text-gray-900">{formatNumber(artist.totalStreams || 0)}</div>
-                  </div>
-                  <div className="rounded-lg p-2.5 bg-gray-50">
-                    <div className="text-xs text-gray-500 flex items-center gap-1 mb-1"><DollarSign size={10} />Revenue</div>
-                    <div className="text-sm font-bold text-gray-900">{formatCurrency(artist.totalRevenue || 0)}</div>
-                  </div>
-                </div>
-
-                {artist.contractEnd && (
-                  <div className="mt-3 pt-3 border-t border-gray-100">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-gray-500">Contract ends</span>
-                      <span className="text-gray-700">{formatDate(artist.contractEnd)}</span>
+                {/* Body */}
+                <div className="relative px-5 pb-5 flex-1 flex flex-col">
+                  {/* Avatar */}
+                  <div className="-mt-6 mb-3">
+                    <div
+                      className="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold text-lg flex-shrink-0 ring-4 ring-white shadow-md overflow-hidden"
+                      style={{ background: avatarColor }}
+                    >
+                      {artist.image ? (
+                        <img src={artist.image} alt={name} className="w-full h-full object-cover" />
+                      ) : (
+                        getInitials(name)
+                      )}
                     </div>
                   </div>
-                )}
 
-                {artist.documents && artist.documents.length > 0 && (
-                  <div className="mt-2 flex items-center gap-1 text-xs text-gray-400">
-                    <FileText size={10} />
-                    {artist.documents.length} document(s)
+                  {/* Identity */}
+                  <div>
+                    <h3 className="text-base font-bold text-gray-900 leading-tight truncate group-hover:text-indigo-600 transition-colors">{name}</h3>
+                    {artist.name && artist.name !== displayName && (
+                      <p className="text-xs text-gray-400 truncate">{artist.name}</p>
+                    )}
+                    <div className="mt-2 flex items-center gap-1.5">
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-gray-100 text-gray-500 text-[11px] font-medium">
+                        <Music size={11} /> {artist.genre || 'No genre'}
+                      </span>
+                    </div>
                   </div>
-                )}
 
-                <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <ArrowUpRight size={16} className="text-indigo-500" />
+                  {/* Stats */}
+                  <div className="grid grid-cols-2 gap-3 mt-4">
+                    <div className="rounded-xl bg-gray-50 border border-gray-100 px-3 py-2.5">
+                      <div className="text-[11px] text-gray-500 flex items-center gap-1 mb-0.5"><TrendingUp size={11} className="text-indigo-500" /> Streams</div>
+                      <div className="text-lg font-bold text-gray-900">{formatNumber(artist.totalStreams || 0)}</div>
+                    </div>
+                    <div className="rounded-xl bg-gray-50 border border-gray-100 px-3 py-2.5">
+                      <div className="text-[11px] text-gray-500 flex items-center gap-1 mb-0.5"><DollarSign size={11} className="text-emerald-500" /> Revenue</div>
+                      <div className="text-lg font-bold text-gray-900">{formatCurrency(artist.totalRevenue || 0)}</div>
+                    </div>
+                  </div>
+
+                  {/* Onboarding progress */}
+                  <div className="mt-4">
+                    <OnboardingProgress currentStep={artist.onboardingStep} onboardingStatus={artist.onboardingStatus} compact />
+                  </div>
+
+                  {/* Footer */}
+                  <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500 gap-2">
+                    {artist.contractEnd ? (
+                      <span className="flex items-center gap-1.5 min-w-0">
+                        <Calendar size={11} className="text-gray-400 flex-shrink-0" />
+                        <span className="truncate">Ends <span className="font-semibold text-gray-700">{formatDate(artist.contractEnd)}</span></span>
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1.5">
+                        <Calendar size={11} className="text-gray-400" />
+                        No contract
+                      </span>
+                    )}
+                    {hasDocs && (
+                      <span className="flex items-center gap-1 flex-shrink-0">
+                        <FileText size={11} className="text-gray-400" />
+                        {artist.documents!.length} doc{artist.documents!.length > 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <ArrowUpRight size={16} className="text-indigo-500" />
+                  </div>
                 </div>
               </div>
             );
@@ -339,11 +362,11 @@ const Artists: React.FC = () => {
       {/* Delete Confirmation */}
       {deleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-2">Delete Artist</h2>
-            <p className="text-sm text-gray-500 mb-6">Are you sure you want to delete this artist? All associated data will be removed. This action cannot be undone.</p>
+          <div className="relative z-10 bg-white dark:bg-gray-900 dark:border dark:border-gray-700 rounded-2xl shadow-2xl w-full max-w-sm p-6">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Delete Artist</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Are you sure you want to delete this artist? All associated data will be removed. This action cannot be undone.</p>
             <div className="flex items-center justify-end gap-3">
-              <button onClick={() => setDeleteId(null)} className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition">Cancel</button>
+              <button onClick={() => setDeleteId(null)} className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 transition">Cancel</button>
               <button onClick={handleDelete} disabled={deleting} className="inline-flex items-center gap-2 bg-red-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50 transition">
                 {deleting && <Loader2 size={14} className="animate-spin" />}
                 {deleting ? 'Deleting...' : 'Delete'}

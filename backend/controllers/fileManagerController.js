@@ -4,6 +4,7 @@ const fs = require('fs');
 const Folder = require('../models/Folder');
 const File = require('../models/File');
 const { backupFile: copyToBackup, checksumFile, getConfiguration } = require('../services/backupService');
+const { logActivity } = require('./activityController');
 
 const STORAGE_ROOT = path.resolve(__dirname, '..', 'uploads', 'files');
 
@@ -93,6 +94,11 @@ const backupRelativePath = (file) => file.path.slice('/uploads/files/'.length);
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+const logFileActivity = (req, file, action, details, metadata = {}) => logActivity({
+  action, entityType: 'file', entityId: file._id, entityName: file.name,
+  user: req.user._id, userName: req.user.name, details, metadata,
+});
+
 const getFolderTree = async (folder) => {
   const descendants = await Folder.find({ path: { $regex: `^${escapeRegex(folder.path)}/` } }).sort('path');
   return [folder, ...descendants];
@@ -166,6 +172,13 @@ const storeUploadedFile = async (uploadedFile, metadata, userId) => {
       tags: metadata.tags,
       artistId: metadata.artistId || null,
       songId: metadata.songId || null,
+      releaseId: metadata.releaseId || null,
+      contractId: metadata.contractId || null,
+      financeId: metadata.financeId || null,
+      royaltyId: metadata.royaltyId || null,
+      campaignId: metadata.campaignId || null,
+      contactId: metadata.contactId || null,
+      projectId: metadata.projectId || null,
       uploadedBy: userId,
       backup: { primary: true, checksum, primaryVerifiedAt: new Date() },
     });
@@ -408,9 +421,10 @@ exports.deleteFolder = async (req, res) => {
 exports.uploadFile = async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ success: false, message: 'No file provided' });
-    const { folderId, artistId, songId, category, tags } = req.body;
+    const { folderId, artistId, songId, releaseId, contractId, financeId, royaltyId, campaignId, contactId, projectId, category, tags } = req.body;
     const parsedTags = tags ? (typeof tags === 'string' ? tags.split(',').map(t => t.trim()) : tags) : [];
-    const file = await storeUploadedFile(req.file, { folderId, artistId, songId, category, tags: parsedTags }, req.user._id);
+    const file = await storeUploadedFile(req.file, { folderId, artistId, songId, releaseId, contractId, financeId, royaltyId, campaignId, contactId, projectId, category, tags: parsedTags }, req.user._id);
+    await logFileActivity(req, file, 'uploaded', 'Uploaded a file to the managed library', { category: file.category, size: file.size });
     res.status(201).json({ success: true, data: file });
   } catch (error) {
     if (req.file?.path && fs.existsSync(req.file.path)) await fs.promises.unlink(req.file.path).catch(() => {});
@@ -421,11 +435,12 @@ exports.uploadFile = async (req, res) => {
 exports.uploadMultipleFiles = async (req, res) => {
   try {
     if (!req.files || !req.files.length) return res.status(400).json({ success: false, message: 'No files provided' });
-    const { folderId, artistId, songId, category, tags } = req.body;
+    const { folderId, artistId, songId, releaseId, contractId, financeId, royaltyId, campaignId, contactId, projectId, category, tags } = req.body;
     const parsedTags = tags ? (typeof tags === 'string' ? tags.split(',').map(t => t.trim()) : tags) : [];
     const files = [];
     for (const f of req.files) {
-      const file = await storeUploadedFile(f, { folderId, artistId, songId, category, tags: parsedTags }, req.user._id);
+      const file = await storeUploadedFile(f, { folderId, artistId, songId, releaseId, contractId, financeId, royaltyId, campaignId, contactId, projectId, category, tags: parsedTags }, req.user._id);
+      await logFileActivity(req, file, 'uploaded', 'Uploaded a file to the managed library', { category: file.category, size: file.size });
       files.push(file);
     }
     res.status(201).json({ success: true, data: files });
@@ -439,11 +454,18 @@ exports.uploadMultipleFiles = async (req, res) => {
 
 exports.getFiles = async (req, res) => {
   try {
-    const { folderId, artistId, songId, category, type, search, starred, page = 1, limit = 50 } = req.query;
+    const { folderId, artistId, songId, releaseId, contractId, financeId, royaltyId, campaignId, contactId, projectId, category, type, search, starred, page = 1, limit = 50 } = req.query;
     const query = {};
     if (folderId) query.folderId = folderId;
     if (artistId) query.artistId = artistId;
     if (songId) query.songId = songId;
+    if (releaseId) query.releaseId = releaseId;
+    if (contractId) query.contractId = contractId;
+    if (financeId) query.financeId = financeId;
+    if (royaltyId) query.royaltyId = royaltyId;
+    if (campaignId) query.campaignId = campaignId;
+    if (contactId) query.contactId = contactId;
+    if (projectId) query.projectId = projectId;
     if (category) query.category = category;
     if (type) query.type = type;
     if (starred === 'true') query.starred = true;
@@ -456,6 +478,11 @@ exports.getFiles = async (req, res) => {
     const files = await File.find(query)
       .populate('uploadedBy', 'name')
       .populate('artistId', 'name artistName stageName')
+      .populate('releaseId', 'title')
+      .populate('contractId', 'title contractNumber')
+      .populate('campaignId', 'name title')
+      .populate('contactId', 'name company')
+      .populate('projectId', 'name title')
       .sort('-createdAt')
       .limit(limit * 1)
       .skip((page - 1) * limit);
@@ -471,7 +498,12 @@ exports.getFile = async (req, res) => {
     const file = await File.findById(req.params.id)
       .populate('uploadedBy', 'name')
       .populate('artistId', 'name artistName stageName')
-      .populate('songId', 'title');
+      .populate('songId', 'title')
+      .populate('releaseId', 'title')
+      .populate('contractId', 'title contractNumber')
+      .populate('campaignId', 'name title')
+      .populate('contactId', 'name company')
+      .populate('projectId', 'name title');
     if (!file) return res.status(404).json({ success: false, message: 'File not found' });
     res.json({ success: true, data: file });
   } catch (error) {
@@ -479,15 +511,39 @@ exports.getFile = async (req, res) => {
   }
 };
 
+// Stream managed files only after authentication and file-read authorization.
+// This keeps internal storage paths out of the browser and avoids public static access.
+exports.getFileContent = async (req, res) => {
+  try {
+    const file = await File.findById(req.params.id);
+    if (!file) return res.status(404).json({ success: false, message: 'File not found' });
+    const fullPath = resolveFilePath(file.path);
+    if (!fs.existsSync(fullPath)) return res.status(409).json({ success: false, message: 'Primary file is unavailable' });
+
+    file.downloads += 1;
+    await file.save();
+    await logFileActivity(req, file, req.query.download === 'true' ? 'downloaded' : 'previewed', req.query.download === 'true' ? 'Downloaded a managed file' : 'Previewed a managed file');
+    const safeName = (file.originalName || file.name || 'download').replace(/[\r\n"]/g, '_');
+    if (req.query.download === 'true') return res.download(fullPath, safeName);
+
+    res.setHeader('Content-Type', file.mimeType || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `inline; filename="${safeName}"`);
+    return res.sendFile(fullPath);
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 exports.updateFile = async (req, res) => {
   try {
-    const allowed = ['name', 'category', 'tags', 'artistId', 'songId', 'versionNote'];
+    const allowed = ['name', 'category', 'tags', 'artistId', 'songId', 'releaseId', 'contractId', 'financeId', 'royaltyId', 'campaignId', 'contactId', 'projectId', 'versionNote'];
     const updates = allowed.reduce((result, field) => {
       if (req.body[field] !== undefined) result[field] = req.body[field];
       return result;
     }, {});
     const file = await File.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true });
     if (!file) return res.status(404).json({ success: false, message: 'File not found' });
+    await logFileActivity(req, file, 'updated', 'Updated file metadata', { fields: Object.keys(updates) });
     res.json({ success: true, data: file });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -500,6 +556,7 @@ exports.toggleStar = async (req, res) => {
     if (!file) return res.status(404).json({ success: false, message: 'File not found' });
     file.starred = !file.starred;
     await file.save();
+    await logFileActivity(req, file, file.starred ? 'starred' : 'unstarred', file.starred ? 'Starred a managed file' : 'Removed star from a managed file');
     res.json({ success: true, data: file });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -528,6 +585,7 @@ exports.moveFile = async (req, res) => {
     file.backup.lastError = 'Backups require refresh after moving the primary file';
     await file.save();
     await runConfiguredBackups(file);
+    await logFileActivity(req, file, 'moved', 'Moved file to a different folder', { folderId: file.folderId });
     res.json({ success: true, data: file });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -541,6 +599,7 @@ exports.deleteFile = async (req, res) => {
     const fullPath = resolveFilePath(file.path);
     if (fs.existsSync(fullPath)) await fs.promises.unlink(fullPath);
     await file.deleteOne();
+    await logFileActivity(req, file, 'deleted', 'Deleted a managed file', { category: file.category });
     res.json({ success: true, message: 'File deleted' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -554,6 +613,7 @@ exports.backupFile = async (req, res) => {
     const file = await File.findById(req.params.id);
     if (!file) return res.status(404).json({ success: false, message: 'File not found' });
     const verification = await runBackup(file, target);
+    await logFileActivity(req, file, 'backup_verified', `Verified ${target} backup`, { target, verifiedAt: verification.verifiedAt });
     res.json({ success: true, data: file, verification });
   } catch (error) {
     const status = ['BACKUP_NOT_CONFIGURED', 'BACKUP_UNAVAILABLE'].includes(error.code) ? 503 : 500;

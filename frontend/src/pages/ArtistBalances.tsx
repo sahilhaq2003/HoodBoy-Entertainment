@@ -105,7 +105,7 @@ const ArtistBalances: React.FC = () => {
     setDetailLoading(true);
     try {
       const res = await api.get(`/artist-balances/artist/${balance.artist._id}/history`);
-      setSelectedBalance(res.data.data || balance);
+      setSelectedBalance((Array.isArray(res.data.data) ? res.data.data[0] : res.data.data) || balance);
     } catch {
       setSelectedBalance(balance);
     } finally {

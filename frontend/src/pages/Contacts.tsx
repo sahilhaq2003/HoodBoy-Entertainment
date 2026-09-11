@@ -487,19 +487,19 @@ const Contacts: React.FC = () => {
       {/* Detail Modal */}
       {showDetailModal && selectedContact && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowDetailModal(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden shadow-2xl flex flex-col dark:bg-gray-900 dark:border dark:border-gray-700" onClick={e => e.stopPropagation()}>
             {/* Header */}
-            <div className="flex items-start justify-between p-6 border-b border-gray-200">
+            <div className="flex items-start justify-between p-6 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-start gap-4">
                 <div className="w-14 h-14 rounded-xl flex items-center justify-center text-lg font-bold text-white flex-shrink-0" style={{ background: getAvatarColor(selectedContact.name) }}>{getInitials(selectedContact.name)}</div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h2 className="text-xl font-bold text-gray-900">{selectedContact.name}</h2>
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">{selectedContact.name}</h2>
                     <button onClick={async () => { await contactsApi.toggleFavorite(selectedContact._id); const res = await contactsApi.getById(selectedContact._id); setSelectedContact(res.data.data); fetchContacts(); fetchStats(); }} className="p-1 hover:bg-gray-100 rounded-lg transition-colors">
                       <Star size={16} className={selectedContact.isFavorite ? 'fill-amber-400 text-amber-400' : 'text-gray-300'} />
                     </button>
                   </div>
-                  <div className="text-sm text-gray-500 mt-0.5">{selectedContact.role || 'No role'} {selectedContact.company ? `at ${selectedContact.company}` : ''}</div>
+                   <div className="text-sm text-gray-500 mt-0.5 dark:text-gray-400">{selectedContact.role || 'No role'} {selectedContact.company ? `at ${selectedContact.company}` : ''}</div>
                   <div className="mt-1.5">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${categoryColors[selectedContact.category]?.bg || 'bg-gray-50'} ${categoryColors[selectedContact.category]?.text || 'text-gray-700'} ${categoryColors[selectedContact.category]?.border || 'border-gray-200'}`}>
                       {categoryLabels[selectedContact.category] || selectedContact.category}
@@ -507,13 +507,13 @@ const Contacts: React.FC = () => {
                   </div>
                 </div>
               </div>
-              <button onClick={() => setShowDetailModal(false)} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all"><X size={18} /></button>
+               <button onClick={() => setShowDetailModal(false)} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-800"><X size={18} /></button>
             </div>
 
             {/* Tabs */}
-            <div className="flex border-b border-gray-200 px-6">
+            <div className="flex border-b border-gray-200 px-6 dark:border-gray-700">
               {(['overview', 'interactions', 'reminders'] as const).map(tab => (
-                <button key={tab} onClick={() => setActiveTab(tab)} className={`px-4 py-3 text-sm font-medium border-b-2 transition-all capitalize ${activeTab === tab ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>{tab}</button>
+                <button key={tab} onClick={() => setActiveTab(tab)} className={`px-4 py-3 text-sm font-medium border-b-2 transition-all capitalize ${activeTab === tab ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}>{tab}</button>
               ))}
             </div>
 
@@ -588,38 +588,38 @@ const Contacts: React.FC = () => {
                     <button onClick={() => setShowInteractionForm(!showInteractionForm)} className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5"><Plus size={12} />Add Interaction</button>
                   </div>
                   {showInteractionForm && (
-                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-3">
+                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-3 dark:bg-gray-800/40 dark:border-gray-700">
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Type</label>
-                          <select value={interactionForm.type} onChange={e => setInteractionForm({ ...interactionForm, type: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all">
+                          <label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-300">Type</label>
+                          <select value={interactionForm.type} onChange={e => setInteractionForm({ ...interactionForm, type: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100">
                             <option value="call">Call</option><option value="email">Email</option><option value="meeting">Meeting</option><option value="message">Message</option><option value="event">Event</option><option value="other">Other</option>
                           </select>
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Outcome</label>
-                          <select value={interactionForm.outcome} onChange={e => setInteractionForm({ ...interactionForm, outcome: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all">
+                          <label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-300">Outcome</label>
+                          <select value={interactionForm.outcome} onChange={e => setInteractionForm({ ...interactionForm, outcome: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100">
                             <option value="positive">Positive</option><option value="neutral">Neutral</option><option value="negative">Negative</option><option value="pending">Pending</option>
                           </select>
                         </div>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Subject</label>
-                        <input value={interactionForm.subject} onChange={e => setInteractionForm({ ...interactionForm, subject: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all" placeholder="Subject" />
+                        <label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-300">Subject</label>
+                        <input value={interactionForm.subject} onChange={e => setInteractionForm({ ...interactionForm, subject: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" placeholder="Subject" />
                       </div>
                       <div className="grid grid-cols-2 gap-3">
-                        <div><label className="block text-xs font-medium text-gray-600 mb-1">Interaction Date</label><input type="datetime-local" value={interactionForm.date} onChange={e => setInteractionForm({ ...interactionForm, date: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" /></div>
-                        <div><label className="block text-xs font-medium text-gray-600 mb-1">What Was Sent</label><input value={interactionForm.whatWasSent} onChange={e => setInteractionForm({ ...interactionForm, whatWasSent: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" placeholder="Music, deck, proposal..." /></div>
+                        <div><label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-300">Interaction Date</label><input type="datetime-local" value={interactionForm.date} onChange={e => setInteractionForm({ ...interactionForm, date: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" /></div>
+                        <div><label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-300">What Was Sent</label><input value={interactionForm.whatWasSent} onChange={e => setInteractionForm({ ...interactionForm, whatWasSent: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" placeholder="Music, deck, proposal..." /></div>
                       </div>
-                      <div><label className="block text-xs font-medium text-gray-600 mb-1">Response</label><textarea value={interactionForm.response} onChange={e => setInteractionForm({ ...interactionForm, response: e.target.value })} rows={2} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" placeholder="Response received or current status" /></div>
+                      <div><label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-300">Response</label><textarea value={interactionForm.response} onChange={e => setInteractionForm({ ...interactionForm, response: e.target.value })} rows={2} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" placeholder="Response received or current status" /></div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Notes</label>
-                        <textarea value={interactionForm.notes} onChange={e => setInteractionForm({ ...interactionForm, notes: e.target.value })} rows={3} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all resize-none" placeholder="Notes" />
+                        <label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-300">Notes</label>
+                        <textarea value={interactionForm.notes} onChange={e => setInteractionForm({ ...interactionForm, notes: e.target.value })} rows={3} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 resize-none" placeholder="Notes" />
                       </div>
                       <label className="flex items-center gap-2 text-xs font-medium text-gray-600"><input type="checkbox" checked={interactionForm.followUpRequired} onChange={e => setInteractionForm({ ...interactionForm, followUpRequired: e.target.checked })} className="h-4 w-4 rounded" />Follow-up required</label>
-                      {interactionForm.followUpRequired && <div><label className="block text-xs font-medium text-gray-600 mb-1">Follow-up Date</label><input type="datetime-local" value={interactionForm.followUpDate} onChange={e => setInteractionForm({ ...interactionForm, followUpDate: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" /></div>}
+                      {interactionForm.followUpRequired && <div><label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-300">Follow-up Date</label><input type="datetime-local" value={interactionForm.followUpDate} onChange={e => setInteractionForm({ ...interactionForm, followUpDate: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" /></div>}
                       <div className="flex gap-2 justify-end">
-                        <button onClick={() => setShowInteractionForm(false)} className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200 rounded-lg transition-all">Cancel</button>
+                        <button onClick={() => setShowInteractionForm(false)} className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200 rounded-lg transition-all dark:text-gray-300 dark:hover:bg-gray-700">Cancel</button>
                         <button onClick={handleAddInteraction} className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg transition-all">Save</button>
                       </div>
                     </div>
@@ -661,26 +661,26 @@ const Contacts: React.FC = () => {
                     <button onClick={() => setShowReminderForm(!showReminderForm)} className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5"><Plus size={12} />Add Reminder</button>
                   </div>
                   {showReminderForm && (
-                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-3">
+                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-3 dark:bg-gray-800/40 dark:border-gray-700">
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Title</label>
-                          <input value={reminderForm.title} onChange={e => setReminderForm({ ...reminderForm, title: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all" placeholder="Title" />
+                          <label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-300">Title</label>
+                          <input value={reminderForm.title} onChange={e => setReminderForm({ ...reminderForm, title: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" placeholder="Title" />
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Date</label>
-                          <input type="datetime-local" value={reminderForm.date} onChange={e => setReminderForm({ ...reminderForm, date: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all" />
+                          <label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-300">Date</label>
+                          <input type="datetime-local" value={reminderForm.date} onChange={e => setReminderForm({ ...reminderForm, date: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
                         </div>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Type</label>
-                        <select value={reminderForm.type} onChange={e => setReminderForm({ ...reminderForm, type: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all">
+                        <label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-300">Type</label>
+                        <select value={reminderForm.type} onChange={e => setReminderForm({ ...reminderForm, type: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100">
                           <option value="follow_up">Follow Up</option><option value="birthday">Birthday</option><option value="contract_renewal">Contract Renewal</option><option value="meeting">Meeting</option><option value="payment">Payment</option><option value="other">Other</option>
                         </select>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Notes</label>
-                        <textarea value={reminderForm.notes} onChange={e => setReminderForm({ ...reminderForm, notes: e.target.value })} rows={2} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all resize-none" placeholder="Notes" />
+                        <label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-300">Notes</label>
+                        <textarea value={reminderForm.notes} onChange={e => setReminderForm({ ...reminderForm, notes: e.target.value })} rows={2} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 resize-none" placeholder="Notes" />
                       </div>
                       <div className="flex gap-2 justify-end">
                         <button onClick={() => setShowReminderForm(false)} className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200 rounded-lg transition-all">Cancel</button>
@@ -717,8 +717,8 @@ const Contacts: React.FC = () => {
             </div>
 
             {/* Footer */}
-            <div className="flex justify-between items-center px-6 py-4 border-t border-gray-200 bg-gray-50">
-              <button onClick={() => setDeleteTarget(selectedContact._id)} className="text-xs text-red-600 hover:text-red-700 font-medium transition-colors flex items-center gap-1"><Trash2 size={12} />Delete Contact</button>
+            <div className="flex justify-between items-center px-6 py-4 border-t border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
+              <button onClick={() => setDeleteTarget(selectedContact._id)} className="text-xs text-red-600 hover:text-red-700 font-medium transition-colors flex items-center gap-1 dark:text-red-400"><Trash2 size={12} />Delete Contact</button>
               <button onClick={() => openEdit(selectedContact)} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-all flex items-center gap-2"><Edit3 size={14} />Edit Contact</button>
             </div>
           </div>
@@ -728,53 +728,53 @@ const Contacts: React.FC = () => {
       {/* Create/Edit Modal */}
       {showFormModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setShowFormModal(false); setIsEditing(false); }}>
-          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-lg font-bold text-gray-900">{isEditing ? 'Edit Contact' : 'New Contact'}</h2>
-              <button onClick={() => { setShowFormModal(false); setIsEditing(false); }} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all"><X size={18} /></button>
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden shadow-2xl flex flex-col dark:bg-gray-900 dark:border dark:border-gray-700" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">{isEditing ? 'Edit Contact' : 'New Contact'}</h2>
+              <button onClick={() => { setShowFormModal(false); setIsEditing(false); }} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-800"><X size={18} /></button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-5">
               {/* Basic Info */}
               <div>
-                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Basic Info</div>
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 dark:text-gray-400">Basic Info</div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Name *</label>
-                    <input value={editingContact.name || ''} onChange={e => setEditingContact({ ...editingContact, name: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all" placeholder="Full name" />
+                    <label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-300">Name *</label>
+                    <input value={editingContact.name || ''} onChange={e => setEditingContact({ ...editingContact, name: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" placeholder="Full name" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Role</label>
-                    <input value={editingContact.role || ''} onChange={e => setEditingContact({ ...editingContact, role: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all" placeholder="Job title" />
+                    <label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-300">Role</label>
+                    <input value={editingContact.role || ''} onChange={e => setEditingContact({ ...editingContact, role: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" placeholder="Job title" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
-                    <input type="email" value={editingContact.email || ''} onChange={e => setEditingContact({ ...editingContact, email: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all" placeholder="email@example.com" />
+                    <label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-300">Email</label>
+                    <input type="email" value={editingContact.email || ''} onChange={e => setEditingContact({ ...editingContact, email: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" placeholder="email@example.com" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Phone</label>
-                    <input value={editingContact.phone || ''} onChange={e => setEditingContact({ ...editingContact, phone: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all" placeholder="+1 (555) 000-0000" />
+                    <label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-300">Phone</label>
+                    <input value={editingContact.phone || ''} onChange={e => setEditingContact({ ...editingContact, phone: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" placeholder="+1 (555) 000-0000" />
                   </div>
                   <div className="sm:col-span-2">
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Company</label>
-                    <input value={editingContact.company || ''} onChange={e => setEditingContact({ ...editingContact, company: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all" placeholder="Company name" />
+                    <label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-300">Company</label>
+                    <input value={editingContact.company || ''} onChange={e => setEditingContact({ ...editingContact, company: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" placeholder="Company name" />
                   </div>
                 </div>
               </div>
 
               {/* Category */}
               <div>
-                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Category</div>
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 dark:text-gray-400">Category</div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Category *</label>
-                    <select value={editingContact.category || 'other'} onChange={e => setEditingContact({ ...editingContact, category: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all">
+                    <label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-300">Category *</label>
+                    <select value={editingContact.category || 'other'} onChange={e => setEditingContact({ ...editingContact, category: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100">
                       {Object.entries(categoryLabels).map(([val, label]) => <option key={val} value={val}>{label}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Source</label>
-                    <select value={editingContact.source || 'other'} onChange={e => setEditingContact({ ...editingContact, source: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all">
+                    <label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-300">Source</label>
+                    <select value={editingContact.source || 'other'} onChange={e => setEditingContact({ ...editingContact, source: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100">
                       {Object.entries(sourceLabels).map(([val, label]) => <option key={val} value={val}>{label}</option>)}
                     </select>
                   </div>
@@ -782,86 +782,86 @@ const Contacts: React.FC = () => {
               </div>
 
               <div>
-                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Relationship</div>
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 dark:text-gray-400">Relationship</div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Relationship Status</label><select value={editingContact.relationshipStatus || 'new'} onChange={e => setEditingContact({ ...editingContact, relationshipStatus: e.target.value as ContactData['relationshipStatus'] })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm">{['new','contacted','warm','strong','inactive','archived'].map(status => <option key={status} value={status}>{status}</option>)}</select></div>
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Relationship Strength ({editingContact.relationshipStrength || 0}/10)</label><input type="range" min="0" max="10" value={editingContact.relationshipStrength || 0} onChange={e => setEditingContact({ ...editingContact, relationshipStrength: Number(e.target.value) })} className="w-full mt-2" /></div>
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Genre Preference</label><input value={editingContact.genrePreference || ''} onChange={e => setEditingContact({ ...editingContact, genrePreference: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" placeholder="Hip-Hop, R&B, Pop..." /></div>
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Follow-up Date</label><input type="datetime-local" value={editingContact.followUpDate?.slice(0, 16) || ''} onChange={e => setEditingContact({ ...editingContact, followUpDate: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" /></div>
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">What Was Sent</label><textarea value={editingContact.whatWasSent || ''} onChange={e => setEditingContact({ ...editingContact, whatWasSent: e.target.value })} rows={2} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" placeholder="Track, press kit, proposal..." /></div>
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Response</label><textarea value={editingContact.response || ''} onChange={e => setEditingContact({ ...editingContact, response: e.target.value })} rows={2} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" placeholder="Their response or current outcome" /></div>
+                  <div><label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-300">Relationship Status</label><select value={editingContact.relationshipStatus || 'new'} onChange={e => setEditingContact({ ...editingContact, relationshipStatus: e.target.value as ContactData['relationshipStatus'] })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100">{['new','contacted','warm','strong','inactive','archived'].map(status => <option key={status} value={status}>{status}</option>)}</select></div>
+                  <div><label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-300">Relationship Strength ({editingContact.relationshipStrength || 0}/10)</label><input type="range" min="0" max="10" value={editingContact.relationshipStrength || 0} onChange={e => setEditingContact({ ...editingContact, relationshipStrength: Number(e.target.value) })} className="w-full mt-2" /></div>
+                  <div><label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-300">Genre Preference</label><input value={editingContact.genrePreference || ''} onChange={e => setEditingContact({ ...editingContact, genrePreference: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" placeholder="Hip-Hop, R&B, Pop..." /></div>
+                  <div><label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-300">Follow-up Date</label><input type="datetime-local" value={editingContact.followUpDate?.slice(0, 16) || ''} onChange={e => setEditingContact({ ...editingContact, followUpDate: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" /></div>
+                  <div><label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-300">What Was Sent</label><textarea value={editingContact.whatWasSent || ''} onChange={e => setEditingContact({ ...editingContact, whatWasSent: e.target.value })} rows={2} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" placeholder="Track, press kit, proposal..." /></div>
+                  <div><label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-300">Response</label><textarea value={editingContact.response || ''} onChange={e => setEditingContact({ ...editingContact, response: e.target.value })} rows={2} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" placeholder="Their response or current outcome" /></div>
                 </div>
               </div>
 
               {/* Address */}
               <div>
-                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Address</div>
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 dark:text-gray-400">Address</div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="sm:col-span-2">
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Street</label>
-                    <input value={editingContact.address?.street || ''} onChange={e => setEditingContact({ ...editingContact, address: { ...editingContact.address!, street: e.target.value } })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all" />
+                    <label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-300">Street</label>
+                    <input value={editingContact.address?.street || ''} onChange={e => setEditingContact({ ...editingContact, address: { ...editingContact.address!, street: e.target.value } })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">City</label>
-                    <input value={editingContact.address?.city || ''} onChange={e => setEditingContact({ ...editingContact, address: { ...editingContact.address!, city: e.target.value } })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all" />
+                    <label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-300">City</label>
+                    <input value={editingContact.address?.city || ''} onChange={e => setEditingContact({ ...editingContact, address: { ...editingContact.address!, city: e.target.value } })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">State</label>
-                    <input value={editingContact.address?.state || ''} onChange={e => setEditingContact({ ...editingContact, address: { ...editingContact.address!, state: e.target.value } })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all" />
+                    <label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-300">State</label>
+                    <input value={editingContact.address?.state || ''} onChange={e => setEditingContact({ ...editingContact, address: { ...editingContact.address!, state: e.target.value } })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Zip Code</label>
-                    <input value={editingContact.address?.zipCode || ''} onChange={e => setEditingContact({ ...editingContact, address: { ...editingContact.address!, zipCode: e.target.value } })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all" />
+                    <label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-300">Zip Code</label>
+                    <input value={editingContact.address?.zipCode || ''} onChange={e => setEditingContact({ ...editingContact, address: { ...editingContact.address!, zipCode: e.target.value } })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Country</label>
-                    <input value={editingContact.address?.country || ''} onChange={e => setEditingContact({ ...editingContact, address: { ...editingContact.address!, country: e.target.value } })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all" />
+                    <label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-300">Country</label>
+                    <input value={editingContact.address?.country || ''} onChange={e => setEditingContact({ ...editingContact, address: { ...editingContact.address!, country: e.target.value } })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
                   </div>
                 </div>
               </div>
 
               {/* Social Links */}
               <div>
-                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Social Links</div>
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 dark:text-gray-400">Social Links</div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Instagram</label>
-                    <input value={editingContact.socialLinks?.instagram || ''} onChange={e => setEditingContact({ ...editingContact, socialLinks: { ...editingContact.socialLinks!, instagram: e.target.value } })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all" placeholder="https://..." />
+                    <label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-300">Instagram</label>
+                    <input value={editingContact.socialLinks?.instagram || ''} onChange={e => setEditingContact({ ...editingContact, socialLinks: { ...editingContact.socialLinks!, instagram: e.target.value } })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" placeholder="https://..." />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">LinkedIn</label>
-                    <input value={editingContact.socialLinks?.linkedin || ''} onChange={e => setEditingContact({ ...editingContact, socialLinks: { ...editingContact.socialLinks!, linkedin: e.target.value } })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all" placeholder="https://..." />
+                    <label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-300">LinkedIn</label>
+                    <input value={editingContact.socialLinks?.linkedin || ''} onChange={e => setEditingContact({ ...editingContact, socialLinks: { ...editingContact.socialLinks!, linkedin: e.target.value } })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" placeholder="https://..." />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Twitter</label>
-                    <input value={editingContact.socialLinks?.twitter || ''} onChange={e => setEditingContact({ ...editingContact, socialLinks: { ...editingContact.socialLinks!, twitter: e.target.value } })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all" placeholder="https://..." />
+                    <label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-300">Twitter</label>
+                    <input value={editingContact.socialLinks?.twitter || ''} onChange={e => setEditingContact({ ...editingContact, socialLinks: { ...editingContact.socialLinks!, twitter: e.target.value } })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" placeholder="https://..." />
                   </div>
                 </div>
               </div>
 
               {/* Tags & Notes */}
               <div>
-                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Tags & Notes</div>
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 dark:text-gray-400">Tags & Notes</div>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Tags (comma separated)</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-300">Tags (comma separated)</label>
                     <input
                       value={editingContact.tags?.join(', ') || ''}
                       onChange={e => setEditingContact({ ...editingContact, tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean) })}
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all"
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
                       placeholder="e.g. VIP, priority, local"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Notes</label>
-                    <textarea value={editingContact.notes || ''} onChange={e => setEditingContact({ ...editingContact, notes: e.target.value })} rows={3} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all resize-none" placeholder="Any notes about this contact..." />
+                    <label className="block text-xs font-medium text-gray-600 mb-1 dark:text-gray-300">Notes</label>
+                    <textarea value={editingContact.notes || ''} onChange={e => setEditingContact({ ...editingContact, notes: e.target.value })} rows={3} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 resize-none" placeholder="Any notes about this contact..." />
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
-              <button onClick={() => { setShowFormModal(false); setIsEditing(false); }} className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-200 rounded-lg transition-all">Cancel</button>
+            <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
+              <button onClick={() => { setShowFormModal(false); setIsEditing(false); }} className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-200 rounded-lg transition-all dark:text-gray-300 dark:hover:bg-gray-700">Cancel</button>
               <button onClick={handleSaveContact} className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-all shadow-sm hover:shadow-md">{isEditing ? 'Update Contact' : 'Create Contact'}</button>
             </div>
           </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Bell, Check, Trash2, CheckCheck, Inbox, Clock, ClipboardCheck, CreditCard, FileText, Disc3, BellRing, Megaphone, AlertTriangle } from 'lucide-react';
+import { Bell, Check, Trash2, CheckCheck, Inbox, Clock, ClipboardCheck, CreditCard, FileText, Disc3, BellRing, Megaphone, AlertTriangle, MessageSquare, UserCheck } from 'lucide-react';
 import { notificationsApi } from '../../services/api';
 import { useStore } from '../../store/createStore';
 import { notificationStore } from '../../store';
@@ -23,6 +23,9 @@ const NOTIF_STYLES: Record<string, { tile: string; color: string; icon: React.Re
   contract_expiry: { color: '#7C3AED', tile: 'rgba(124,58,237,0.10)', icon: <FileText size={14} /> },
   release_scheduled: { color: '#0EA5E9', tile: 'rgba(14,165,233,0.10)', icon: <Disc3 size={14} /> },
   campaign_update: { color: '#DB2777', tile: 'rgba(219,39,119,0.10)', icon: <Megaphone size={14} /> },
+  task_assigned: { color: '#7C3AED', tile: 'rgba(124,58,237,0.10)', icon: <UserCheck size={14} /> },
+  task_update: { color: '#0EA5E9', tile: 'rgba(14,165,233,0.10)', icon: <ClipboardCheck size={14} /> },
+  task_comment: { color: '#16A34A', tile: 'rgba(22,163,74,0.10)', icon: <MessageSquare size={14} /> },
 };
 
 const NotificationBell: React.FC = () => {

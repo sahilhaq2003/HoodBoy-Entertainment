@@ -97,8 +97,8 @@ campaignSchema.index({ artist: 1, status: 1 });
 campaignSchema.index({ type: 1 });
 campaignSchema.index({ startDate: 1, endDate: 1 });
 
-campaignSchema.pre('validate', function validateCampaign(next) {
-  if (this.startDate && this.endDate && this.endDate < this.startDate) return next(new Error('Campaign end date must be on or after its start date'));
+campaignSchema.pre('validate', function validateCampaign() {
+  if (this.startDate && this.endDate && this.endDate < this.startDate) throw new Error('Campaign end date must be on or after its start date');
   this.profit = (this.attributedRevenue || 0) - (this.spent || 0);
   this.costPerClick = this.clicks > 0 ? this.spent / this.clicks : 0;
   this.costPerConversion = this.conversions > 0 ? this.spent / this.conversions : 0;
@@ -107,7 +107,6 @@ campaignSchema.pre('validate', function validateCampaign(next) {
   if (threshold >= this.budgetAlertThreshold && !this.budgetAlertTriggered) this.budgetAlertTriggeredAt = new Date();
   this.budgetAlertTriggered = threshold >= this.budgetAlertThreshold;
   this.progress = Math.min(100, Math.round(((this.contentItems?.filter(item => item.status === 'published').length || 0) / Math.max(this.contentTarget || 20, 1)) * 100));
-  next();
 });
 
 module.exports = mongoose.model('Campaign', campaignSchema);

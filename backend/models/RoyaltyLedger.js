@@ -4,6 +4,10 @@ const royaltyEntrySchema = new mongoose.Schema({
   artist: { type: mongoose.Schema.Types.ObjectId, ref: 'Artist', required: true },
   release: { type: mongoose.Schema.Types.ObjectId, ref: 'Release' },
   song: { type: mongoose.Schema.Types.ObjectId, ref: 'Song' },
+  contract: { type: mongoose.Schema.Types.ObjectId, ref: 'Contract', default: null },
+  ownership: { type: mongoose.Schema.Types.ObjectId, ref: 'Ownership', default: null },
+  financeTransactions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Finance' }],
+  supportingFiles: [{ type: mongoose.Schema.Types.ObjectId, ref: 'File' }],
   period: { type: String, required: true }, // e.g. "2026-Q2", "2026-06"
   periodStart: { type: Date, required: true },
   periodEnd: { type: Date, required: true },
@@ -93,8 +97,10 @@ const royaltyEntrySchema = new mongoose.Schema({
 royaltyEntrySchema.index({ artist: 1, period: 1 });
 royaltyEntrySchema.index({ period: 1 });
 royaltyEntrySchema.index({ status: 1 });
+royaltyEntrySchema.index({ release: 1 });
+royaltyEntrySchema.index({ contract: 1 });
 
-royaltyEntrySchema.pre('validate', function validatePeriod(next) {
+royaltyEntrySchema.pre('validate', function validatePeriod() {
   if (this.periodStart && this.periodEnd && this.periodStart > this.periodEnd) {
     this.invalidate('periodEnd', 'Period end must be on or after period start');
   }
@@ -109,7 +115,6 @@ royaltyEntrySchema.pre('validate', function validatePeriod(next) {
   if (sourceTotal > 0 && Math.abs(sourceTotal - Number(this.grossIncome || 0)) > 0.01) {
     this.invalidate('grossIncome', 'Gross income must equal the income-by-source total');
   }
-  next();
 });
 
 module.exports = mongoose.model('RoyaltyLedger', royaltyEntrySchema);

@@ -1,10 +1,12 @@
 export const formatCurrency = (amount: number): string => {
+  if (amount === null || amount === undefined || isNaN(amount)) return '$0';
   if (amount >= 1000000) return `$${(amount / 1000000).toFixed(1)}M`;
   if (amount >= 1000) return `$${(amount / 1000).toFixed(0)}K`;
   return `$${amount.toLocaleString()}`;
 };
 
 export const formatNumber = (num: number): string => {
+  if (num === null || num === undefined || isNaN(num)) return '0';
   if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
   if (num >= 1000) return `${(num / 1000).toFixed(0)}K`;
   return num.toLocaleString();

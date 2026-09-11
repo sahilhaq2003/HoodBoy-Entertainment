@@ -1,7 +1,20 @@
 const TaxCalendar = require('../models/TaxCalendar');
 
-const TAX_FIELDS = ['title', 'type', 'description', 'dueDate', 'completed', 'completedAt', 'amount', 'notes', 'assignedTo', 'year', 'quarter', 'recurring', 'recurrencePattern'];
+const TAX_FIELDS = ['title', 'type', 'description', 'dueDate', 'status', 'completed', 'completedAt', 'priority', 'year', 'quarter', 'month', 'amount', 'notes', 'assignedTo', 'recurring', 'recurringFrequency', 'recurrencePattern', 'tags'];
 const pick = (obj, keys) => keys.reduce((o, k) => { if (obj[k] !== undefined) o[k] = obj[k]; return o; }, {});
+
+const syncStatusFlags = (doc) => {
+  if (doc.status === 'completed') {
+    doc.completed = true;
+    if (!doc.completedAt) doc.completedAt = new Date();
+  } else if (doc.status !== undefined) {
+    doc.completed = false;
+  }
+  if (doc.recurringFrequency && !doc.recurrencePattern && doc.recurringFrequency !== 'semi_annual') {
+    doc.recurrencePattern = doc.recurringFrequency;
+  }
+  return doc;
+};
 
 const getAll = async (req, res) => {
   try {
@@ -11,7 +24,7 @@ const getAll = async (req, res) => {
     if (quarter) filter.quarter = parseInt(quarter);
     if (completed !== undefined) filter.completed = completed === 'true';
     if (type) filter.type = type;
-    const items = await TaxCalendar.find(filter).populate('assignedTo', 'name').sort({ dueDate: 1 });
+    const items = await TaxCalendar.find(filter).sort({ dueDate: 1 });
     res.json({ success: true, data: items });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -27,7 +40,7 @@ const getUpcoming = async (req, res) => {
     const items = await TaxCalendar.find({
       dueDate: { $gte: now, $lte: future },
       completed: false,
-    }).populate('assignedTo', 'name').sort({ dueDate: 1 });
+    }).sort({ dueDate: 1 });
     res.json({ success: true, data: items });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -36,7 +49,7 @@ const getUpcoming = async (req, res) => {
 
 const create = async (req, res) => {
   try {
-    const item = await TaxCalendar.create(pick(req.body, TAX_FIELDS));
+    const item = await TaxCalendar.create(syncStatusFlags(pick(req.body, TAX_FIELDS)));
     res.status(201).json({ success: true, data: item });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -45,7 +58,11 @@ const create = async (req, res) => {
 
 const update = async (req, res) => {
   try {
-    const item = await TaxCalendar.findByIdAndUpdate(req.params.id, pick(req.body, TAX_FIELDS), { new: true, runValidators: true });
+    const item = await TaxCalendar.findByIdAndUpdate(
+      req.params.id,
+      syncStatusFlags(pick(req.body, TAX_FIELDS)),
+      { new: true, runValidators: true }
+    );
     if (!item) return res.status(404).json({ success: false, message: 'Not found' });
     res.json({ success: true, data: item });
   } catch (error) {

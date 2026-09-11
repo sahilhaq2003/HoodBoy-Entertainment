@@ -463,7 +463,7 @@ const getRoleDashboard = async (req, res) => {
 
     if (role === 'artist') {
       const artistDoc = await Artist.findOne({ email: req.user.email });
-      if (!artistDoc) return res.json({ success: true, data: { role: 'artist', kpis: {}, songs: [], releases: [], tasks: [], royalties: {} }});
+      if (!artistDoc) return res.json({ success: true, data: { role: 'artist', artist: null, kpis: { totalSongs: 0, totalReleases: 0, totalStreams: 0, totalRevenue: 0, totalRoyaltiesOwed: 0, totalPaid: 0, balance: 0 }, songs: [], releases: [], tasks: [], royalties: [] }});
 
       const [mySongs, myReleases, myTasks, myRoyalties] = await Promise.all([
         Song.find({ artist: artistDoc._id }).select('title status genre streams revenue createdAt').sort('-createdAt'),
@@ -543,4 +543,82 @@ const getRoleDashboard = async (req, res) => {
   }
 };
 
-module.exports = { getDashboardStats, getMonthlyFinancials, getProjectStatusBreakdown, getUpcomingDeadlines, getUnifiedDashboard, getRoleDashboard };
+// @desc    Get the artist's own full profile (matched by email)
+// @route   GET /api/dashboard/profile
+// @access  Artist
+const getMyProfile = async (req, res) => {
+  try {
+    if (req.user.role !== 'artist') {
+      return res.status(403).json({ success: false, message: 'Artist accounts only' });
+    }
+    const artist = await Artist.findOne({ email: req.user.email });
+    if (!artist) {
+      return res.status(404).json({ success: false, message: 'No artist profile linked to your account yet' });
+    }
+    res.json({ success: true, data: artist });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Update the artist's own profile (safe fields only)
+// @route   PUT /api/dashboard/profile
+// @access  Artist
+const updateMyProfile = async (req, res) => {
+  try {
+    if (req.user.role !== 'artist') {
+      return res.status(403).json({ success: false, message: 'Artist accounts only' });
+    }
+    const artist = await Artist.findOne({ email: req.user.email });
+    if (!artist) {
+      return res.status(404).json({ success: false, message: 'No artist profile linked to your account yet' });
+    }
+
+    const ALLOWED = [
+      'artistName', 'legalName', 'phone', 'dateOfBirth', 'bio',
+      'image', 'coverPhoto', 'socialLinks', 'genre', 'musicLinks',
+      'previousReleases', 'catalogOwnership', 'proAffiliation',
+      'publisher', 'paymentInfo', 'taxInfo', 'address', 'emergencyContact',
+    ];
+    const body = { ...req.body };
+    ALLOWED.forEach((key) => {
+      if (body[key] !== undefined) artist[key] = body[key];
+    });
+
+    if (body.artistName && !artist.stageName) artist.stageName = body.artistName;
+    if (body.legalName && !artist.name) artist.name = body.legalName;
+
+    await artist.save();
+    res.json({ success: true, data: artist });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Upload the artist's own profile/cover photo
+// @route   POST /api/dashboard/profile/image
+// @access  Artist
+const uploadMyImage = async (req, res) => {
+  try {
+    if (req.user.role !== 'artist') {
+      return res.status(403).json({ success: false, message: 'Artist accounts only' });
+    }
+    if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
+    const artist = await Artist.findOne({ email: req.user.email });
+    if (!artist) {
+      return res.status(404).json({ success: false, message: 'No artist profile linked to your account yet' });
+    }
+    const imageUrl = `/uploads/images/${req.file.filename}`;
+    if (req.body.field === 'coverPhoto') {
+      artist.coverPhoto = imageUrl;
+    } else {
+      artist.image = imageUrl;
+    }
+    await artist.save();
+    res.json({ success: true, data: artist });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+module.exports = { getDashboardStats, getMonthlyFinancials, getProjectStatusBreakdown, getUpcomingDeadlines, getUnifiedDashboard, getRoleDashboard, getMyProfile, updateMyProfile, uploadMyImage };

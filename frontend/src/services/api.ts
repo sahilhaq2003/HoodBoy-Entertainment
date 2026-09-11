@@ -16,6 +16,27 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // 403 while the app believes the user has access (e.g. admin) means the
+    // stored token belongs to a different/stale session. Clear it and re-login.
+    if (error.response?.status === 403) {
+      let storedUser: { role?: string } | null = null;
+      try {
+        storedUser = JSON.parse(localStorage.getItem('hbe_user') || 'null');
+      } catch { /* ignore malformed */ }
+      const isStaleToken =
+        storedUser?.role === 'admin' ||
+        (storedUser?.role && storedUser.role !== 'artist');
+      if (isStaleToken && !window.location.pathname.startsWith('/login')) {
+        localStorage.removeItem('hbe_token');
+        localStorage.removeItem('hbe_user');
+        localStorage.removeItem('hbe_access');
+        localStorage.removeItem('hbe_role_description');
+        localStorage.removeItem('hbe_dashboard_path');
+        localStorage.removeItem('hbe_nav');
+        window.location.href = '/login';
+        return Promise.reject(error);
+      }
+    }
     if (error.response?.status === 401) {
       localStorage.removeItem('hbe_token');
       localStorage.removeItem('hbe_user');
@@ -40,6 +61,12 @@ export const dashboardApi = {
   getDeadlines: () => api.get('/dashboard/deadlines'),
   getUnified: () => api.get('/dashboard/unified'),
   getRoleDashboard: () => api.get('/dashboard/role'),
+  getMyProfile: () => api.get('/dashboard/profile'),
+  updateMyProfile: (data: object) => api.put('/dashboard/profile', data),
+  uploadMyImage: (formData: FormData) =>
+    api.post('/dashboard/profile/image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
 };
 
 // Artists
@@ -92,6 +119,8 @@ export const tasksApi = {
   getKanban: () => api.get('/tasks/kanban'),
   getTeam: () => api.get('/tasks/team'),
   getStats: () => api.get('/tasks/stats'),
+  getAssignable: () => api.get('/tasks/assignable'),
+  addComment: (id: string, message: string) => api.post(`/tasks/${id}/comments`, { message }),
 };
 
 // Weekly Reports
@@ -257,6 +286,10 @@ export const fileManagerApi = {
   }),
   getFiles: (params?: object) => api.get('/files/files', { params }),
   getFile: (id: string) => api.get(`/files/files/${id}`),
+  getContent: (id: string, download = false) => api.get(`/files/files/${id}/content`, {
+    params: download ? { download: 'true' } : undefined,
+    responseType: 'blob',
+  }),
   updateFile: (id: string, data: object) => api.put(`/files/files/${id}`, data),
   toggleStar: (id: string) => api.patch(`/files/files/${id}/star`),
   moveFile: (id: string, folderId: string) => api.put(`/files/files/${id}/move`, { folderId }),

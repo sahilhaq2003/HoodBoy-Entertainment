@@ -16,8 +16,14 @@ app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 if (process.env.NODE_ENV === 'development') app.use(morgan('dev'));
 
-// Serve uploaded files
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Managed library files are always served through /api/files with authentication.
+// Legacy non-library uploads retain their existing paths.
+app.use('/uploads', (req, res, next) => {
+  if (req.path === '/files' || req.path.startsWith('/files/')) {
+    return res.status(404).json({ success: false, message: 'Use the authorized file endpoint' });
+  }
+  return next();
+}, express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));

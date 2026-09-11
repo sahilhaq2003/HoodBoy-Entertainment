@@ -1,22 +1,37 @@
 const Task = require('../models/Task');
+const User = require('../models/User');
+const { createNotification } = require('../services/notificationService');
 
-const TASK_FIELDS = ['title', 'description', 'assignedTo', 'relatedProject', 'relatedArtist', 'deadline', 'status', 'priority', 'category', 'deliverable', 'tags', 'completedAt', 'notes'];
+const TASK_FIELDS = ['title', 'description', 'assignedTo', 'relatedProject', 'relatedArtist', 'deadline', 'status', 'priority', 'category', 'deliverable', 'tags', 'notes'];
 const pick = (obj, keys) => keys.reduce((o, k) => { if (obj[k] !== undefined) o[k] = obj[k]; return o; }, {});
+const canManageTasks = (user) => ['admin', 'manager'].includes(user?.role);
+const taskScope = (req) => canManageTasks(req.user) ? {} : { assignedTo: req.user._id };
+const idOf = (value) => value?._id?.toString?.() || value?.toString?.() || '';
+const canParticipate = (task, user) => canManageTasks(user)
+  || idOf(task.assignedTo) === user._id.toString()
+  || idOf(task.assignedBy) === user._id.toString();
+const populateTask = (query) => query
+  .populate('assignedTo', 'name email role avatar isActive')
+  .populate('assignedBy', 'name email role avatar')
+  .populate('relatedProject', 'name')
+  .populate('relatedArtist', 'name stageName artistName image')
+  .populate('comments.author', 'name email role avatar')
+  .populate('activity.actor', 'name role avatar');
+
+const notifySafely = async (payload) => {
+  try { await createNotification(payload); } catch (_error) { /* Task changes must not fail if notification storage is unavailable. */ }
+};
 
 const getTasks = async (req, res) => {
   try {
     const { status, priority, assignedTo, category, search, page = 1, limit = 50 } = req.query;
-    const query = {};
+    const query = { ...taskScope(req) };
     if (status) query.status = status;
     if (priority) query.priority = priority;
     if (assignedTo) query.assignedTo = assignedTo;
     if (category) query.category = category;
     if (search) query.title = { $regex: search, $options: 'i' };
-    const tasks = await Task.find(query)
-      .populate('assignedTo', 'name email role')
-      .populate('assignedBy', 'name')
-      .populate('relatedProject', 'name')
-      .populate('relatedArtist', 'name stageName')
+    const tasks = await populateTask(Task.find(query))
       .sort('deadline')
       .limit(limit * 1).skip((page - 1) * limit);
     const total = await Task.countDocuments(query);
@@ -26,30 +41,98 @@ const getTasks = async (req, res) => {
 
 const getTask = async (req, res) => {
   try {
-    const task = await Task.findById(req.params.id)
-      .populate('assignedTo', 'name email role')
-      .populate('assignedBy', 'name')
-      .populate('relatedProject', 'name')
-      .populate('relatedArtist', 'name stageName');
+    const task = await populateTask(Task.findById(req.params.id));
     if (!task) return res.status(404).json({ success: false, message: 'Task not found' });
+    if (!canParticipate(task, req.user)) return res.status(403).json({ success: false, message: 'You can only access tasks assigned to you' });
     res.json({ success: true, data: task });
   } catch (error) { res.status(500).json({ success: false, message: error.message }); }
 };
 
 const createTask = async (req, res) => {
   try {
-    const task = await Task.create({ ...pick(req.body, TASK_FIELDS), assignedBy: req.user._id });
-    res.status(201).json({ success: true, data: task });
+    const data = pick(req.body, TASK_FIELDS);
+    if (data.assignedTo) {
+      const assignee = await User.findOne({ _id: data.assignedTo, isActive: true });
+      if (!assignee) return res.status(400).json({ success: false, message: 'Select an active team member' });
+    }
+    const task = await Task.create({
+      ...data,
+      assignedTo: data.assignedTo || null,
+      assignedBy: req.user._id,
+      activity: [{ actor: req.user._id, action: 'created', message: 'Created the task' }],
+    });
+    if (task.assignedTo) {
+      await notifySafely({
+        userId: task.assignedTo, type: 'task_assigned', title: `New task: ${task.title}`,
+        message: `${req.user.name} assigned this task to you`, link: `/tasks?task=${task._id}`,
+        priority: task.priority === 'critical' ? 'high' : 'medium', metadata: { taskId: task._id },
+      });
+    }
+    res.status(201).json({ success: true, data: await populateTask(Task.findById(task._id)) });
   } catch (error) { res.status(400).json({ success: false, message: error.message }); }
 };
 
 const updateTask = async (req, res) => {
   try {
-    const updateData = pick(req.body, TASK_FIELDS);
-    if (updateData.status === 'completed' && !updateData.completedAt) updateData.completedAt = new Date();
-    const task = await Task.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true });
+    const task = await Task.findById(req.params.id);
     if (!task) return res.status(404).json({ success: false, message: 'Task not found' });
-    res.json({ success: true, data: task });
+    if (!canParticipate(task, req.user)) return res.status(403).json({ success: false, message: 'You can only update tasks assigned to you' });
+
+    const manager = canManageTasks(req.user);
+    const updateData = pick(req.body, manager ? TASK_FIELDS : ['status', 'notes']);
+    const previousStatus = task.status;
+    const previousAssignee = task.assignedTo?.toString() || '';
+
+    if (updateData.assignedTo !== undefined) {
+      if (updateData.assignedTo) {
+        const assignee = await User.findOne({ _id: updateData.assignedTo, isActive: true });
+        if (!assignee) return res.status(400).json({ success: false, message: 'Select an active team member' });
+      } else updateData.assignedTo = null;
+    }
+    Object.assign(task, updateData);
+    if (updateData.status === 'completed') task.completedAt = new Date();
+    else if (updateData.status && previousStatus === 'completed') task.completedAt = undefined;
+
+    if (updateData.assignedTo !== undefined && previousAssignee !== (task.assignedTo?.toString() || '')) {
+      const action = !task.assignedTo ? 'unassigned' : previousAssignee ? 'reassigned' : 'assigned';
+      task.activity.push({ actor: req.user._id, action, from: previousAssignee, to: task.assignedTo?.toString() || '', message: action === 'unassigned' ? 'Removed the assignee' : 'Changed the assignee' });
+    }
+    if (updateData.status && updateData.status !== previousStatus) {
+      task.activity.push({ actor: req.user._id, action: 'status_changed', from: previousStatus, to: updateData.status, message: `Changed status from ${previousStatus} to ${updateData.status}` });
+    }
+    await task.save();
+
+    if (updateData.assignedTo !== undefined && task.assignedTo && previousAssignee !== task.assignedTo.toString()) {
+      await notifySafely({ userId: task.assignedTo, type: 'task_assigned', title: `Task assigned: ${task.title}`, message: `${req.user.name} assigned this task to you`, link: `/tasks?task=${task._id}`, priority: task.priority === 'critical' ? 'high' : 'medium', metadata: { taskId: task._id } });
+    }
+    if (updateData.status && updateData.status !== previousStatus) {
+      const notifyUser = updateData.status === 'waiting_approval' ? task.assignedBy : (task.assignedTo?.toString() !== req.user._id.toString() ? task.assignedTo : task.assignedBy);
+      if (notifyUser && notifyUser.toString() !== req.user._id.toString()) {
+        await notifySafely({ userId: notifyUser, type: 'task_update', title: `Task updated: ${task.title}`, message: `${req.user.name} changed the status to ${updateData.status.replace(/_/g, ' ')}`, link: `/tasks?task=${task._id}`, priority: updateData.status === 'blocked' ? 'high' : 'medium', metadata: { taskId: task._id } });
+      }
+    }
+    res.json({ success: true, data: await populateTask(Task.findById(task._id)) });
+  } catch (error) { res.status(400).json({ success: false, message: error.message }); }
+};
+
+const addComment = async (req, res) => {
+  try {
+    const message = typeof req.body.message === 'string' ? req.body.message.trim() : '';
+    if (!message) return res.status(400).json({ success: false, message: 'Message is required' });
+    if (message.length > 2000) return res.status(400).json({ success: false, message: 'Message must be 2,000 characters or fewer' });
+    const task = await Task.findById(req.params.id);
+    if (!task) return res.status(404).json({ success: false, message: 'Task not found' });
+    if (!canParticipate(task, req.user)) return res.status(403).json({ success: false, message: 'You cannot message on this task' });
+    task.comments.push({ author: req.user._id, message });
+    task.activity.push({ actor: req.user._id, action: 'commented', message: 'Added a message' });
+    await task.save();
+    const recipients = [task.assignedTo, task.assignedBy]
+      .filter(Boolean).map(id => id.toString())
+      .filter((id, index, all) => id !== req.user._id.toString() && all.indexOf(id) === index);
+    for (const userId of recipients) {
+      await notifySafely({ userId, type: 'task_comment', title: `New message: ${task.title}`, message: `${req.user.name}: ${message.slice(0, 120)}`, link: `/tasks?task=${task._id}`, priority: 'medium', metadata: { taskId: task._id } });
+    }
+    res.status(201).json({ success: true, data: await populateTask(Task.findById(task._id)) });
   } catch (error) { res.status(400).json({ success: false, message: error.message }); }
 };
 
@@ -63,12 +146,7 @@ const deleteTask = async (req, res) => {
 
 const getKanban = async (req, res) => {
   try {
-    const tasks = await Task.find()
-      .populate('assignedTo', 'name email role')
-      .populate('assignedBy', 'name')
-      .populate('relatedProject', 'name')
-      .populate('relatedArtist', 'name stageName')
-      .sort('deadline');
+    const tasks = await populateTask(Task.find(taskScope(req))).sort('deadline');
     const columns = {
       not_started: [], in_progress: [], waiting_approval: [],
       blocked: [], delayed: [], completed: [],
@@ -84,7 +162,7 @@ const getKanban = async (req, res) => {
 const getTeamPerformance = async (req, res) => {
   try {
     const users = await Task.aggregate([
-      { $match: { assignedTo: { $exists: true } } },
+      { $match: { assignedTo: { $exists: true, $ne: null } } },
       {
         $group: {
           _id: '$assignedTo',
@@ -121,14 +199,26 @@ const getTeamPerformance = async (req, res) => {
   } catch (error) { res.status(500).json({ success: false, message: error.message }); }
 };
 
+const getAssignableUsers = async (req, res) => {
+  try {
+    const users = await User.find({ isActive: true })
+      .select('name email role isActive')
+      .sort('name');
+    res.json({ success: true, data: users });
+  } catch (error) { res.status(500).json({ success: false, message: error.message }); }
+};
+
 const getStats = async (req, res) => {
   try {
+    const scope = taskScope(req);
+    const scopeMatch = Object.keys(scope).length ? [{ $match: scope }] : [];
     const [total, byStatus, byPriority, overdue, dueThisWeek] = await Promise.all([
-      Task.countDocuments(),
-      Task.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
-      Task.aggregate([{ $group: { _id: '$priority', count: { $sum: 1 } } }]),
-      Task.countDocuments({ deadline: { $lt: new Date() }, status: { $nin: ['completed'] } }),
+      Task.countDocuments(scope),
+      Task.aggregate([...scopeMatch, { $group: { _id: '$status', count: { $sum: 1 } } }]),
+      Task.aggregate([...scopeMatch, { $group: { _id: '$priority', count: { $sum: 1 } } }]),
+      Task.countDocuments({ ...scope, deadline: { $lt: new Date() }, status: { $nin: ['completed'] } }),
       Task.countDocuments({
+        ...scope,
         deadline: { $gte: new Date(), $lte: new Date(Date.now() + 7 * 86400000) },
         status: { $nin: ['completed'] },
       }),
@@ -145,4 +235,4 @@ const getStats = async (req, res) => {
   } catch (error) { res.status(500).json({ success: false, message: error.message }); }
 };
 
-module.exports = { getTasks, getTask, createTask, updateTask, deleteTask, getKanban, getTeamPerformance, getStats };
+module.exports = { getTasks, getTask, createTask, updateTask, deleteTask, addComment, getKanban, getTeamPerformance, getStats, getAssignableUsers };

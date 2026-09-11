@@ -49,6 +49,8 @@ const getRoyalties = async (req, res) => {
       .populate('artist', 'name stageName')
       .populate('release', 'title')
       .populate('song', 'title')
+      .populate('contract', 'title contractNumber')
+      .populate('ownership', 'status')
       .sort({ periodStart: -1 })
       .skip((page - 1) * limit)
       .limit(parseInt(limit));
@@ -146,7 +148,11 @@ const generateStatement = async (req, res) => {
     const entry = await RoyaltyLedger.findById(req.params.id)
       .populate('artist', 'name stageName email')
       .populate('release', 'title')
-      .populate('song', 'title');
+      .populate('song', 'title')
+      .populate('contract', 'title contractNumber')
+      .populate('ownership', 'status')
+      .populate('financeTransactions', 'description amount category transactionDate')
+      .populate('supportingFiles', 'name category version');
     if (!entry) return res.status(404).json({ success: false, message: 'Entry not found' });
 
     calculateEntry(entry);
@@ -158,6 +164,10 @@ const generateStatement = async (req, res) => {
       artist: entry.artist,
       release: entry.release,
       song: entry.song,
+      contract: entry.contract,
+      ownership: entry.ownership,
+      financeTransactions: entry.financeTransactions,
+      supportingFiles: entry.supportingFiles,
       grossIncome: entry.grossIncome,
       incomeBySource: entry.incomeBySource,
       deductions: { distributorFees: entry.distributorFees, approved: entry.approvedDeductions, total: entry.totalDeductions },
@@ -202,3 +212,4 @@ const recordPayment = async (req, res) => {
 };
 
 module.exports = { getRoyalties, getArtistRoyaltySummary, createRoyaltyEntry, calculateRoyalties, updateRoyaltyEntry, deleteRoyaltyEntry, generateStatement, approveRoyaltyEntry, recordPayment };
+module.exports._calculateEntry = calculateEntry;

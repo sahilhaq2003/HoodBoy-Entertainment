@@ -88,7 +88,7 @@ interface RatingInputProps {
 function RatingInput({ label, value, onChange }: RatingInputProps) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">{label}</label>
       <div className="flex gap-1">
         {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => {
           const active = n <= value;
@@ -513,7 +513,7 @@ export default function ArtistScorecard() {
                   <div className="border-t border-gray-200 px-6 py-6 grid grid-cols-2 gap-8">
                     {/* Skills */}
                     <div>
-                      <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                      <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400 mb-3 dark:text-gray-400">
                         Skill Ratings
                       </h4>
                       <div className="space-y-2">
@@ -554,7 +554,7 @@ export default function ArtistScorecard() {
 
                     {/* Metrics & extras */}
                     <div className="space-y-6">
-                      <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                      <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">
                         Metric Scores
                       </h4>
                       <div className="grid grid-cols-2 gap-3">
@@ -575,7 +575,7 @@ export default function ArtistScorecard() {
 
                       {sc.comments && (
                         <div>
-                          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400 mb-1">
                             Comments
                           </h4>
                           <p className="text-sm text-gray-700 whitespace-pre-line">
@@ -586,7 +586,7 @@ export default function ArtistScorecard() {
 
                       {sc.improvements?.length > 0 && (
                         <div>
-                          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400 mb-1">
                             Improvements
                           </h4>
                           <ul className="list-disc list-inside text-sm text-gray-700 space-y-0.5">
@@ -599,7 +599,7 @@ export default function ArtistScorecard() {
 
                       {sc.goals?.length > 0 && (
                         <div>
-                          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400 mb-1">
                             Goals
                           </h4>
                           <ul className="space-y-1">
@@ -645,10 +645,10 @@ export default function ArtistScorecard() {
       {/* New Scorecard Modal */}
       {showNewScorecard && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto dark:bg-gray-900 dark:border dark:border-gray-700">
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white z-10">
-              <h2 className="text-lg font-bold text-gray-900">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white z-10 dark:bg-gray-900 dark:border-gray-700">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
                 New Scorecard
               </h2>
               <button
@@ -656,7 +656,7 @@ export default function ArtistScorecard() {
                   setShowNewScorecard(false);
                   resetNewForm();
                 }}
-                className="p-1 rounded-lg hover:bg-gray-100 text-gray-400 transition"
+                className="p-1 rounded-lg hover:bg-gray-100 text-gray-400 transition dark:text-gray-500 dark:hover:bg-gray-800"
               >
                 <X size={20} />
               </button>
@@ -666,13 +666,13 @@ export default function ArtistScorecard() {
               {/* Month & Year */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
                     Month
                   </label>
                   <select
                     value={newMonth}
                     onChange={(e) => setNewMonth(+e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
                   >
                     {MONTHS.map((m, i) => (
                       <option key={i} value={i}>
@@ -682,21 +682,21 @@ export default function ArtistScorecard() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
                     Year
                   </label>
                   <input
                     type="number"
                     value={newYear}
                     onChange={(e) => setNewYear(+e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
                   />
                 </div>
               </div>
 
               {/* Skill Ratings */}
               <div>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400 mb-3 dark:text-gray-400">
                   Skill Ratings
                 </h3>
                 <div className="space-y-4">
@@ -717,14 +717,14 @@ export default function ArtistScorecard() {
 
               {/* Metric Scores */}
               <div>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400 mb-3 dark:text-gray-400">
                   Metric Scores
                 </h3>
                 <div className="grid grid-cols-2 gap-4">
                   {(Object.keys(METRIC_LABELS) as (keyof MetricScores)[]).map(
                     (key) => (
                       <div key={key}>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
                           {METRIC_LABELS[key]}
                         </label>
                         <input
@@ -738,7 +738,7 @@ export default function ArtistScorecard() {
                               [key]: +e.target.value,
                             }))
                           }
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
                         />
                       </div>
                     )
@@ -749,7 +749,7 @@ export default function ArtistScorecard() {
               {/* Goals */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide dark:text-gray-400">
                     Goals
                   </h3>
                   <button
@@ -780,7 +780,7 @@ export default function ArtistScorecard() {
                             )
                           )
                         }
-                        className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
                       />
                       <input
                         type="checkbox"
@@ -814,41 +814,41 @@ export default function ArtistScorecard() {
 
               {/* Improvements */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
                   Improvements (one per line)
                 </label>
                 <textarea
                   value={newImprovements}
                   onChange={(e) => setNewImprovements(e.target.value)}
                   rows={3}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
                   placeholder="Improved vocal range&#10;Better stage presence"
                 />
               </div>
 
               {/* Comments */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
                   Comments
                 </label>
                 <textarea
                   value={newComments}
                   onChange={(e) => setNewComments(e.target.value)}
                   rows={3}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
                   placeholder="General notes about this period..."
                 />
               </div>
             </div>
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 sticky bottom-0 bg-white">
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 sticky bottom-0 bg-white dark:bg-gray-900 dark:border-gray-700">
               <button
                 onClick={() => {
                   setShowNewScorecard(false);
                   resetNewForm();
                 }}
-                className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition"
+                className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition dark:text-gray-300 dark:hover:text-gray-100"
               >
                 Cancel
               </button>

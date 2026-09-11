@@ -26,6 +26,13 @@ const fileSchema = new mongoose.Schema({
   tags: [{ type: String }],
   artistId: { type: mongoose.Schema.Types.ObjectId, ref: 'Artist', default: null },
   songId: { type: mongoose.Schema.Types.ObjectId, ref: 'Song', default: null },
+  releaseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Release', default: null },
+  contractId: { type: mongoose.Schema.Types.ObjectId, ref: 'Contract', default: null },
+  financeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Finance', default: null },
+  royaltyId: { type: mongoose.Schema.Types.ObjectId, ref: 'RoyaltyLedger', default: null },
+  campaignId: { type: mongoose.Schema.Types.ObjectId, ref: 'Campaign', default: null },
+  contactId: { type: mongoose.Schema.Types.ObjectId, ref: 'Contact', default: null },
+  projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', default: null },
   version: { type: Number, default: 1 },
   versionNote: { type: String, default: '' },
   // Version history
@@ -58,6 +65,13 @@ const fileSchema = new mongoose.Schema({
 fileSchema.index({ folderId: 1 });
 fileSchema.index({ artistId: 1 });
 fileSchema.index({ songId: 1 });
+fileSchema.index({ releaseId: 1 });
+fileSchema.index({ contractId: 1 });
+fileSchema.index({ financeId: 1 });
+fileSchema.index({ royaltyId: 1 });
+fileSchema.index({ campaignId: 1 });
+fileSchema.index({ contactId: 1 });
+fileSchema.index({ projectId: 1 });
 fileSchema.index({ name: 'text', tags: 'text' });
 fileSchema.index({ category: 1 });
 

@@ -487,17 +487,17 @@ const OwnershipTracker: React.FC = () => {
       {/* Create modal */}
       {showCreate && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Add Ownership Record</h3>
-            <label className="text-xs font-semibold text-gray-600 mb-1 block">Song</label>
-            <select value={selectedSong} onChange={e => setSelectedSong(e.target.value)} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm mb-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl dark:bg-gray-900 dark:border dark:border-gray-700">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Add Ownership Record</h3>
+            <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Song</label>
+            <select value={selectedSong} onChange={e => setSelectedSong(e.target.value)} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm mb-4 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100">
               <option value="">Select a song...</option>
               {songs.filter(s => !ownerships.some(o => o.songId?._id === s._id)).map(s => (
                 <option key={s._id} value={s._id}>{s.title}</option>
               ))}
             </select>
             <div className="flex justify-end gap-2">
-              <button onClick={() => { setShowCreate(false); setSelectedSong(''); }} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50">Cancel</button>
+              <button onClick={() => { setShowCreate(false); setSelectedSong(''); }} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-700">Cancel</button>
               <button onClick={addNewOwnership} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700">Create & Edit</button>
             </div>
           </div>

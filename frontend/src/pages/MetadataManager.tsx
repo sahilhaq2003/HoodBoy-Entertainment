@@ -84,7 +84,7 @@ const STATUS_CONFIG: Record<string, { bg: string; text: string; dot: string }> =
   unvalidated: { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' },
 };
 
-const INPUT_CLASS = 'w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10';
+const INPUT_CLASS = 'w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-500';
 const PRIMARY_BTN = 'px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors flex items-center gap-2';
 
 const emptyForm = {
@@ -467,10 +467,10 @@ const MetadataManager: React.FC = () => {
       {/* Create / Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-bold text-gray-900">{editingId ? 'Edit Metadata' : 'Add Metadata'}</h2>
-              <button onClick={() => setShowModal(false)} className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col dark:bg-gray-900 dark:border dark:border-gray-700">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">{editingId ? 'Edit Metadata' : 'Add Metadata'}</h2>
+              <button onClick={() => setShowModal(false)} className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-800">
                 <X size={20} />
               </button>
             </div>
@@ -478,11 +478,11 @@ const MetadataManager: React.FC = () => {
             <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5">
               {/* Core */}
               <div>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Core</h3>
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 dark:text-gray-400">Core</h3>
                 <div className="grid grid-cols-2 gap-3">
                   {!editingId && (
                     <div className="col-span-2">
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Song</label>
+                      <label className="block text-xs font-medium text-gray-700 mb-1 dark:text-gray-300">Song</label>
                       <select value={form.songId} onChange={e => {
                         const song = songs.find(item => item._id === e.target.value);
                         setForm(previous => ({ ...previous, songId: e.target.value, title: song?.title || previous.title, artist: song?.artist?._id || previous.artist }));
@@ -493,60 +493,60 @@ const MetadataManager: React.FC = () => {
                     </div>
                   )}
                   <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Title *</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1 dark:text-gray-300">Title *</label>
                     <input value={form.title} onChange={e => updateField('title', e.target.value)} className={INPUT_CLASS} placeholder="Song title" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Version *</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1 dark:text-gray-300">Version *</label>
                     <input value={form.version} onChange={e => updateField('version', e.target.value)} className={INPUT_CLASS} placeholder="Original, Clean, Radio Edit..." />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Label *</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1 dark:text-gray-300">Label *</label>
                     <input value={form.label} onChange={e => updateField('label', e.target.value)} className={INPUT_CLASS} placeholder="Record label" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Artist *</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1 dark:text-gray-300">Artist *</label>
                     <select value={form.artist} onChange={e => updateField('artist', e.target.value)} className={INPUT_CLASS}>
                       <option value="">Select artist</option>
                       {artists.map(a => <option key={a._id} value={a._id}>{a.stageName || a.artistName || a.name}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Album</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1 dark:text-gray-300">Album</label>
                     <input value={form.album} onChange={e => updateField('album', e.target.value)} className={INPUT_CLASS} placeholder="Album name" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Genre</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1 dark:text-gray-300">Genre</label>
                     <input value={form.genre} onChange={e => updateField('genre', e.target.value)} className={INPUT_CLASS} placeholder="e.g. Hip-Hop" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Subgenre</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1 dark:text-gray-300">Subgenre</label>
                     <input value={form.subgenre} onChange={e => updateField('subgenre', e.target.value)} className={INPUT_CLASS} placeholder="e.g. Trap" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Mood</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1 dark:text-gray-300">Mood</label>
                     <input value={form.mood} onChange={e => updateField('mood', e.target.value)} className={INPUT_CLASS} placeholder="e.g. Upbeat" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">BPM</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1 dark:text-gray-300">BPM</label>
                     <input type="number" value={form.bpm} onChange={e => updateField('bpm', e.target.value)} className={INPUT_CLASS} placeholder="120" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Key</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1 dark:text-gray-300">Key</label>
                     <input value={form.key} onChange={e => updateField('key', e.target.value)} className={INPUT_CLASS} placeholder="e.g. C Major" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Language</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1 dark:text-gray-300">Language</label>
                     <input value={form.language} onChange={e => updateField('language', e.target.value)} className={INPUT_CLASS} placeholder="English" />
                   </div>
                   <div className="flex items-center pt-5">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input type="checkbox" checked={form.isExplicit} onChange={e => updateField('isExplicit', e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
-                      <span className="text-sm text-gray-700">Explicit</span>
+                      <span className="text-sm text-gray-700 dark:text-gray-200">Explicit</span>
                     </label>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Official Release Date *</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1 dark:text-gray-300">Official Release Date *</label>
                     <input type="date" value={form.releaseDate} onChange={e => updateField('releaseDate', e.target.value)} className={INPUT_CLASS} />
                   </div>
                 </div>
@@ -554,26 +554,26 @@ const MetadataManager: React.FC = () => {
 
               {/* Rights */}
               <div>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Rights & Identifiers</h3>
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 dark:text-gray-400">Rights & Identifiers</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">ISRC</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1 dark:text-gray-300">ISRC</label>
                     <input value={form.isrc} onChange={e => updateField('isrc', e.target.value)} className={INPUT_CLASS} placeholder="US-S1Z-99-00001" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">UPC</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1 dark:text-gray-300">UPC</label>
                     <input value={form.upc} onChange={e => updateField('upc', e.target.value)} className={INPUT_CLASS} placeholder="UPC code" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Copyright</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1 dark:text-gray-300">Copyright</label>
                     <input value={form.copyright} onChange={e => updateField('copyright', e.target.value)} className={INPUT_CLASS} placeholder="© 2026 HoodBoy Entertainment" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Copyright Owner *</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1 dark:text-gray-300">Copyright Owner *</label>
                     <input value={form.copyrightOwner} onChange={e => updateField('copyrightOwner', e.target.value)} className={INPUT_CLASS} placeholder="Master copyright owner" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Copyright Year</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1 dark:text-gray-300">Copyright Year</label>
                     <input type="number" value={form.copyrightYear} onChange={e => updateField('copyrightYear', e.target.value)} className={INPUT_CLASS} placeholder="2026" />
                   </div>
                 </div>
@@ -581,48 +581,48 @@ const MetadataManager: React.FC = () => {
 
               {/* Publishing */}
               <div>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Publishing</h3>
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 dark:text-gray-400">Publishing</h3>
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Publisher</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1 dark:text-gray-300">Publisher</label>
                     <input value={form.publisher} onChange={e => updateField('publisher', e.target.value)} className={INPUT_CLASS} placeholder="Publisher" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">PRO Affiliation</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1 dark:text-gray-300">PRO Affiliation</label>
                     <input value={form.proAffiliation} onChange={e => updateField('proAffiliation', e.target.value)} className={INPUT_CLASS} placeholder="BMI / ASCAP" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Writer Split</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1 dark:text-gray-300">Writer Split</label>
                     <input value={form.writerSplit} onChange={e => updateField('writerSplit', e.target.value)} className={INPUT_CLASS} placeholder="e.g. 50/50" />
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-xl border border-gray-200 p-4">
-                <div className="mb-3 flex items-center justify-between"><div><h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">Credits</h3><p className="mt-1 text-[10px] text-gray-400">Add writers, producers, featured artists, and other official credits.</p></div><button type="button" onClick={() => setForm(previous => ({ ...previous, credits: [...previous.credits, { name: '', role: 'songwriter', percentage: 0 }] }))} className="text-xs font-semibold text-indigo-600">+ Add credit</button></div>
+              <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+                <div className="mb-3 flex items-center justify-between"><div><h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Credits</h3><p className="mt-1 text-[10px] text-gray-400">Add writers, producers, featured artists, and other official credits.</p></div><button type="button" onClick={() => setForm(previous => ({ ...previous, credits: [...previous.credits, { name: '', role: 'songwriter', percentage: 0 }] }))} className="text-xs font-semibold text-indigo-600">+ Add credit</button></div>
                 {form.credits.length === 0 ? <p className="py-2 text-center text-xs text-gray-400">No credits entered</p> : <div className="space-y-2">{form.credits.map((credit, index) => <div key={index} className="grid grid-cols-[1fr_150px_90px_auto] gap-2"><input value={credit.name} placeholder="Legal credit name" onChange={e => setForm(previous => ({ ...previous, credits: previous.credits.map((item, i) => i === index ? { ...item, name: e.target.value } : item) }))} className={INPUT_CLASS} /><select value={credit.role} onChange={e => setForm(previous => ({ ...previous, credits: previous.credits.map((item, i) => i === index ? { ...item, role: e.target.value } : item) }))} className={INPUT_CLASS}>{['songwriter','composer','producer','featured_artist','engineer','mixer','masterer','vocalist','musician','other'].map(role => <option key={role} value={role}>{role.replace(/_/g, ' ')}</option>)}</select><input type="number" min="0" max="100" title="Percentage" value={credit.percentage} onChange={e => setForm(previous => ({ ...previous, credits: previous.credits.map((item, i) => i === index ? { ...item, percentage: +e.target.value } : item) }))} className={INPUT_CLASS} /><button type="button" onClick={() => setForm(previous => ({ ...previous, credits: previous.credits.filter((_, i) => i !== index) }))} className="p-2 text-gray-400 hover:text-red-500"><Trash2 size={15} /></button></div>)}</div>}
                 <p className="mt-2 text-[10px] text-gray-400">Writer and composer percentages must total 100%.</p>
               </div>
 
-              <div className="rounded-xl border border-gray-200 p-4">
-                <div className="mb-3 flex items-center justify-between"><div><h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">Publishers</h3><p className="mt-1 text-[10px] text-gray-400">Structured publisher ownership and registration details.</p></div><button type="button" onClick={() => setForm(previous => ({ ...previous, publishers: [...previous.publishers, { name: '', percentage: 0, proAffiliation: '', ipi: '' }] }))} className="text-xs font-semibold text-indigo-600">+ Add publisher</button></div>
+              <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+                <div className="mb-3 flex items-center justify-between"><div><h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Publishers</h3><p className="mt-1 text-[10px] text-gray-400">Structured publisher ownership and registration details.</p></div><button type="button" onClick={() => setForm(previous => ({ ...previous, publishers: [...previous.publishers, { name: '', percentage: 0, proAffiliation: '', ipi: '' }] }))} className="text-xs font-semibold text-indigo-600">+ Add publisher</button></div>
                 {form.publishers.length === 0 ? <p className="py-2 text-center text-xs text-gray-400">No publishers entered</p> : <div className="space-y-2">{form.publishers.map((publisher, index) => <div key={index} className="grid grid-cols-[1fr_80px_110px_110px_auto] gap-2"><input value={publisher.name} placeholder="Publisher" onChange={e => setForm(previous => ({ ...previous, publishers: previous.publishers.map((item, i) => i === index ? { ...item, name: e.target.value } : item) }))} className={INPUT_CLASS} /><input type="number" min="0" max="100" title="Percentage" value={publisher.percentage} onChange={e => setForm(previous => ({ ...previous, publishers: previous.publishers.map((item, i) => i === index ? { ...item, percentage: +e.target.value } : item) }))} className={INPUT_CLASS} /><input value={publisher.proAffiliation} placeholder="PRO" onChange={e => setForm(previous => ({ ...previous, publishers: previous.publishers.map((item, i) => i === index ? { ...item, proAffiliation: e.target.value } : item) }))} className={INPUT_CLASS} /><input value={publisher.ipi} placeholder="IPI" onChange={e => setForm(previous => ({ ...previous, publishers: previous.publishers.map((item, i) => i === index ? { ...item, ipi: e.target.value } : item) }))} className={INPUT_CLASS} /><button type="button" onClick={() => setForm(previous => ({ ...previous, publishers: previous.publishers.filter((_, i) => i !== index) }))} className="p-2 text-gray-400 hover:text-red-500"><Trash2 size={15} /></button></div>)}</div>}
               </div>
 
               {/* Distribution */}
               <div>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Distribution</h3>
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 dark:text-gray-400">Distribution</h3>
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Distribution Date</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1 dark:text-gray-300">Distribution Date</label>
                     <input type="date" value={form.distributionDate} onChange={e => updateField('distributionDate', e.target.value)} className={INPUT_CLASS} />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Platform</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1 dark:text-gray-300">Platform</label>
                     <input value={form.distributionPlatform} onChange={e => updateField('distributionPlatform', e.target.value)} className={INPUT_CLASS} placeholder="Spotify, Apple Music..." />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Pre-Save Date</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1 dark:text-gray-300">Pre-Save Date</label>
                     <input type="date" value={form.preSaveDate} onChange={e => updateField('preSaveDate', e.target.value)} className={INPUT_CLASS} />
                   </div>
                 </div>
@@ -630,10 +630,10 @@ const MetadataManager: React.FC = () => {
 
               {/* Technical */}
               <div>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Technical</h3>
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 dark:text-gray-400">Technical</h3>
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Audio Format</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1 dark:text-gray-300">Audio Format</label>
                     <select value={form.audioFormat} onChange={e => updateField('audioFormat', e.target.value)} className={INPUT_CLASS}>
                       <option value="">Select format</option>
                       <option value="wav">WAV</option>
@@ -644,25 +644,25 @@ const MetadataManager: React.FC = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Sample Rate</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1 dark:text-gray-300">Sample Rate</label>
                     <input value={form.sampleRate} onChange={e => updateField('sampleRate', e.target.value)} className={INPUT_CLASS} placeholder="44.1 kHz" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Bit Depth</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1 dark:text-gray-300">Bit Depth</label>
                     <input value={form.bitDepth} onChange={e => updateField('bitDepth', e.target.value)} className={INPUT_CLASS} placeholder="24-bit" />
                   </div>
                 </div>
               </div>
 
               <div>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Lyrics & Contact</h3>
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 dark:text-gray-400">Lyrics & Contact</h3>
                 <textarea value={form.lyrics} onChange={e => updateField('lyrics', e.target.value)} rows={7} className={INPUT_CLASS} placeholder="Official lyrics *" />
                 <div className="mt-3 grid grid-cols-3 gap-3"><input value={form.contactInformation.name} onChange={e => setForm(previous => ({ ...previous, contactInformation: { ...previous.contactInformation, name: e.target.value } }))} className={INPUT_CLASS} placeholder="Contact name" /><input type="email" value={form.contactInformation.email} onChange={e => setForm(previous => ({ ...previous, contactInformation: { ...previous.contactInformation, email: e.target.value } }))} className={INPUT_CLASS} placeholder="Contact email *" /><input value={form.contactInformation.phone} onChange={e => setForm(previous => ({ ...previous, contactInformation: { ...previous.contactInformation, phone: e.target.value } }))} className={INPUT_CLASS} placeholder="Contact phone" /></div>
               </div>
 
               {/* Notes */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Notes</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1 dark:text-gray-300">Notes</label>
                 <textarea
                   value={form.notes}
                   onChange={e => updateField('notes', e.target.value)}
@@ -674,8 +674,8 @@ const MetadataManager: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200">
-              <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+              <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700">
                 Cancel
               </button>
               <button onClick={handleSave} disabled={saving} className={PRIMARY_BTN}>

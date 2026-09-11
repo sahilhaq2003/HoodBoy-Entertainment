@@ -289,51 +289,51 @@ const TeamManagement: React.FC = () => {
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowModal(false)} />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-5 border-b border-gray-100">
-              <h2 className="text-base font-bold text-gray-900">{editingUser ? 'Edit Team Member' : 'Add Team Member'}</h2>
-              <button onClick={() => setShowModal(false)} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100"><X size={16} /></button>
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto dark:bg-gray-900 dark:border dark:border-gray-700">
+            <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-700">
+              <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">{editingUser ? 'Edit Team Member' : 'Add Team Member'}</h2>
+              <button onClick={() => setShowModal(false)} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:text-gray-500 dark:hover:bg-gray-800"><X size={16} /></button>
             </div>
             <div className="p-5 space-y-4">
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1.5">Full Name *</label>
+                <label className="block text-xs font-medium text-gray-500 mb-1.5 dark:text-gray-400">Full Name *</label>
                 <input type="text" value={formName} onChange={e => setFormName(e.target.value)} placeholder="John Doe"
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10" />
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1.5">Email Address *</label>
+                <label className="block text-xs font-medium text-gray-500 mb-1.5 dark:text-gray-400">Email Address *</label>
                 <input type="email" value={formEmail} onChange={e => setFormEmail(e.target.value)} placeholder="john@example.com"
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10" />
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
               </div>
               {!editingUser && (
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Password *</label>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5 dark:text-gray-400">Password *</label>
                   <input type="password" value={formPassword} onChange={e => setFormPassword(e.target.value)} placeholder="Min 6 characters"
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10" />
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
                 </div>
               )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Role *</label>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5 dark:text-gray-400">Role *</label>
                   <select value={formRole} onChange={e => setFormRole(e.target.value)}
                     className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm outline-none focus:border-indigo-500">
                     {Object.entries(ROLE_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Department</label>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5 dark:text-gray-400">Department</label>
                   <input type="text" value={formDepartment} onChange={e => setFormDepartment(e.target.value)} placeholder="e.g. A&R"
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10" />
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1.5">Phone</label>
+                <label className="block text-xs font-medium text-gray-500 mb-1.5 dark:text-gray-400">Phone</label>
                 <input type="tel" value={formPhone} onChange={e => setFormPhone(e.target.value)} placeholder="+1 (555) 000-0000"
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10" />
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
               </div>
             </div>
-            <div className="flex justify-end gap-3 p-5 border-t border-gray-100">
-              <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-xl transition-colors">Cancel</button>
+            <div className="flex justify-end gap-3 p-5 border-t border-gray-100 dark:border-gray-700">
+              <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-xl transition-colors dark:text-gray-200 dark:hover:bg-gray-800">Cancel</button>
               <button onClick={handleSave} disabled={saving} className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-all disabled:opacity-50 flex items-center gap-2">
                 {saving && <Loader2 size={14} className="animate-spin" />}
                 {saving ? 'Saving...' : editingUser ? 'Update Member' : 'Create Member'}
@@ -347,18 +347,18 @@ const TeamManagement: React.FC = () => {
       {showPasswordModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowPasswordModal(false)} />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md">
-            <div className="flex items-center justify-between p-5 border-b border-gray-100">
-              <h2 className="text-base font-bold text-gray-900">Reset Password</h2>
-              <button onClick={() => setShowPasswordModal(false)} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100"><X size={16} /></button>
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md dark:bg-gray-900 dark:border dark:border-gray-700">
+            <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-700">
+              <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">Reset Password</h2>
+              <button onClick={() => setShowPasswordModal(false)} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:text-gray-500 dark:hover:bg-gray-800"><X size={16} /></button>
             </div>
             <div className="p-5">
-              <label className="block text-xs font-medium text-gray-500 mb-1.5">New Password</label>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5 dark:text-gray-400">New Password</label>
               <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Min 6 characters" autoFocus
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10" />
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
             </div>
-            <div className="flex justify-end gap-3 p-5 border-t border-gray-100">
-              <button onClick={() => setShowPasswordModal(false)} className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-xl transition-colors">Cancel</button>
+            <div className="flex justify-end gap-3 p-5 border-t border-gray-100 dark:border-gray-700">
+              <button onClick={() => setShowPasswordModal(false)} className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-xl transition-colors dark:text-gray-200 dark:hover:bg-gray-800">Cancel</button>
               <button onClick={handleResetPassword} className="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold rounded-xl transition-all flex items-center gap-2">
                 <Key size={14} />
                 Reset Password

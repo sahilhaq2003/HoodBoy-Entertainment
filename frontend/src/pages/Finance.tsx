@@ -1195,102 +1195,102 @@ const FinancePage: React.FC = () => {
       {/* Transaction Modal */}
       {showTransactionModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowTransactionModal(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 dark:bg-gray-900 dark:border dark:border-gray-700" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-gray-900">{editTransaction ? 'Edit Transaction' : 'New Transaction'}</h3>
-              <button onClick={() => setShowTransactionModal(false)} className="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{editTransaction ? 'Edit Transaction' : 'New Transaction'}</h3>
+              <button onClick={() => setShowTransactionModal(false)} className="text-gray-400 hover:text-gray-600 text-xl dark:text-gray-500 dark:hover:text-gray-300">&times;</button>
             </div>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Type</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1 dark:text-gray-300">Type</label>
                   <select value={txForm.type} onChange={e => setTxForm(p => ({ ...p, type: e.target.value as any, category: e.target.value === 'income' ? 'streaming_revenue' : 'production' }))}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10">
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100">
                     <option value="income">Income</option>
                     <option value="expense">Expense</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Category</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1 dark:text-gray-300">Category</label>
                   {tabsForCategories}
                 </div>
               </div>
-              <div className="rounded-xl border border-gray-200 p-4">
-                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Accounting Attribution</p>
+              <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Accounting Attribution</p>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><label className="block text-xs font-semibold text-gray-700 mb-1">Project</label><select value={txForm.project} onChange={e => setTxForm(p => ({ ...p, project: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm"><option value="">None</option>{projects.map(project => <option key={project._id} value={project._id}>{project.name}</option>)}</select></div>
-                  <div><label className="block text-xs font-semibold text-gray-700 mb-1">Release</label><select value={txForm.release} onChange={e => setTxForm(p => ({ ...p, release: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm"><option value="">None</option>{releases.map(release => <option key={release._id} value={release._id}>{release.title}</option>)}</select></div>
-                  <div><label className="block text-xs font-semibold text-gray-700 mb-1">Department</label><select value={txForm.department} onChange={e => setTxForm(p => ({ ...p, department: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm"><option value="">None</option>{['executive','a_and_r','production','marketing','distribution','publishing','legal','finance','touring','merchandise','operations','other'].map(department => <option key={department} value={department}>{department.replace(/_/g, ' ')}</option>)}</select></div>
-                  <div><label className="block text-xs font-semibold text-gray-700 mb-1">Vendor / Contractor / Payer</label><input value={txForm.counterparty} onChange={e => setTxForm(p => ({ ...p, counterparty: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" placeholder="Counterparty name" /></div>
+                  <div><label className="block text-xs font-semibold text-gray-700 mb-1 dark:text-gray-300">Project</label><select value={txForm.project} onChange={e => setTxForm(p => ({ ...p, project: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"><option value="">None</option>{projects.map(project => <option key={project._id} value={project._id}>{project.name}</option>)}</select></div>
+                  <div><label className="block text-xs font-semibold text-gray-700 mb-1 dark:text-gray-300">Release</label><select value={txForm.release} onChange={e => setTxForm(p => ({ ...p, release: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"><option value="">None</option>{releases.map(release => <option key={release._id} value={release._id}>{release.title}</option>)}</select></div>
+                  <div><label className="block text-xs font-semibold text-gray-700 mb-1 dark:text-gray-300">Department</label><select value={txForm.department} onChange={e => setTxForm(p => ({ ...p, department: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"><option value="">None</option>{['executive','a_and_r','production','marketing','distribution','publishing','legal','finance','touring','merchandise','operations','other'].map(department => <option key={department} value={department}>{department.replace(/_/g, ' ')}</option>)}</select></div>
+                  <div><label className="block text-xs font-semibold text-gray-700 mb-1 dark:text-gray-300">Vendor / Contractor / Payer</label><input value={txForm.counterparty} onChange={e => setTxForm(p => ({ ...p, counterparty: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" placeholder="Counterparty name" /></div>
                 </div>
                 {txForm.type === 'expense' && <p className="mt-2 text-[10px] text-gray-400">Every expense must be assigned to at least one artist, project, release, or department.</p>}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Amount</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1 dark:text-gray-300">Amount</label>
                   <input type="number" value={txForm.amount} onChange={e => setTxForm(p => ({ ...p, amount: e.target.value }))} placeholder="0.00"
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10" />
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Date</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1 dark:text-gray-300">Date</label>
                   <input type="date" value={txForm.date} onChange={e => setTxForm(p => ({ ...p, date: e.target.value }))}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10" />
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-4">
-                <div><label className="block text-xs font-semibold text-gray-700 mb-1">Payment Due</label><input type="date" value={txForm.paymentDue} onChange={e => setTxForm(p => ({ ...p, paymentDue: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" /></div>
-                <div><label className="block text-xs font-semibold text-gray-700 mb-1">Business Account</label><input value={txForm.accountName} onChange={e => setTxForm(p => ({ ...p, accountName: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" placeholder="Operating account" /></div>
-                <div><label className="block text-xs font-semibold text-gray-700 mb-1">Account Last 4</label><input maxLength={4} value={txForm.accountLast4} onChange={e => setTxForm(p => ({ ...p, accountLast4: e.target.value.replace(/\D/g, '').slice(0, 4) }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" placeholder="1234" /></div>
+                <div><label className="block text-xs font-semibold text-gray-700 mb-1 dark:text-gray-300">Payment Due</label><input type="date" value={txForm.paymentDue} onChange={e => setTxForm(p => ({ ...p, paymentDue: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" /></div>
+                <div><label className="block text-xs font-semibold text-gray-700 mb-1 dark:text-gray-300">Business Account</label><input value={txForm.accountName} onChange={e => setTxForm(p => ({ ...p, accountName: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" placeholder="Operating account" /></div>
+                <div><label className="block text-xs font-semibold text-gray-700 mb-1 dark:text-gray-300">Account Last 4</label><input maxLength={4} value={txForm.accountLast4} onChange={e => setTxForm(p => ({ ...p, accountLast4: e.target.value.replace(/\D/g, '').slice(0, 4) }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" placeholder="1234" /></div>
               </div>
               <label className="flex items-center gap-2 text-xs font-semibold text-gray-700"><input type="checkbox" checked={txForm.taxDeductible} onChange={e => setTxForm(p => ({ ...p, taxDeductible: e.target.checked }))} className="h-4 w-4 rounded" />Tax-deductible business expense</label>
               <div className="grid grid-cols-2 gap-4">
-                <label className="cursor-pointer rounded-lg border border-dashed border-gray-300 bg-gray-50 p-3 text-xs text-gray-600"><FileText size={14} className="mr-2 inline" />{receiptFile?.name || editTransaction?.receiptFileName || 'Upload receipt'}<input type="file" className="hidden" accept=".pdf,.doc,.docx,.txt,image/jpeg,image/png,image/webp" onChange={e => setReceiptFile(e.target.files?.[0] || null)} /></label>
-                <label className="cursor-pointer rounded-lg border border-dashed border-gray-300 bg-gray-50 p-3 text-xs text-gray-600"><FileText size={14} className="mr-2 inline" />{invoiceFile?.name || editTransaction?.invoiceFileName || 'Upload invoice'}<input type="file" className="hidden" accept=".pdf,.doc,.docx,.txt,image/jpeg,image/png,image/webp" onChange={e => setInvoiceFile(e.target.files?.[0] || null)} /></label>
+                <label className="cursor-pointer rounded-lg border border-dashed border-gray-300 bg-gray-50 p-3 text-xs text-gray-600 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300"><FileText size={14} className="mr-2 inline" />{receiptFile?.name || editTransaction?.receiptFileName || 'Upload receipt'}<input type="file" className="hidden" accept=".pdf,.doc,.docx,.txt,image/jpeg,image/png,image/webp" onChange={e => setReceiptFile(e.target.files?.[0] || null)} /></label>
+                <label className="cursor-pointer rounded-lg border border-dashed border-gray-300 bg-gray-50 p-3 text-xs text-gray-600 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300"><FileText size={14} className="mr-2 inline" />{invoiceFile?.name || editTransaction?.invoiceFileName || 'Upload invoice'}<input type="file" className="hidden" accept=".pdf,.doc,.docx,.txt,image/jpeg,image/png,image/webp" onChange={e => setInvoiceFile(e.target.files?.[0] || null)} /></label>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Description</label>
+                <label className="block text-xs font-semibold text-gray-700 mb-1 dark:text-gray-300">Description</label>
                 <input type="text" value={txForm.description} onChange={e => setTxForm(p => ({ ...p, description: e.target.value }))} placeholder="Transaction description"
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10" />
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Artist</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1 dark:text-gray-300">Artist</label>
                   <select value={txForm.artist} onChange={e => setTxForm(p => ({ ...p, artist: e.target.value }))}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10">
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100">
                     <option value="">None</option>
                     {artists.map(a => <option key={a._id} value={a._id}>{a.stageName || a.artistName || a.name}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Invoice #</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1 dark:text-gray-300">Invoice #</label>
                   <input type="text" value={txForm.invoiceNumber} onChange={e => setTxForm(p => ({ ...p, invoiceNumber: e.target.value }))} placeholder="INV-001"
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10" />
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Payment Method</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1 dark:text-gray-300">Payment Method</label>
                   <select value={txForm.paymentMethod} onChange={e => setTxForm(p => ({ ...p, paymentMethod: e.target.value }))}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10">
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100">
                     <option value="">None</option>
                     {PAYMENT_METHODS.map(m => <option key={m} value={m}>{m.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Payment Status</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1 dark:text-gray-300">Payment Status</label>
                   <select value={txForm.paymentStatus} onChange={e => setTxForm(p => ({ ...p, paymentStatus: e.target.value }))}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10">
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100">
                     {PAYMENT_STATUSES.map(s => <option key={s} value={s}>{s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</option>)}
                   </select>
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Notes</label>
+                <label className="block text-xs font-semibold text-gray-700 mb-1 dark:text-gray-300">Notes</label>
                 <textarea value={txForm.notes} onChange={e => setTxForm(p => ({ ...p, notes: e.target.value }))} rows={2} placeholder="Additional notes"
                   className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 resize-none" />
               </div>
               <div className="flex justify-end gap-3 pt-2">
-                <button onClick={() => setShowTransactionModal(false)} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
+                <button onClick={() => setShowTransactionModal(false)} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">Cancel</button>
                 <button onClick={handleSaveTransaction} className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-sm transition-all">{editTransaction ? 'Update' : 'Create'}</button>
               </div>
             </div>
@@ -1301,27 +1301,27 @@ const FinancePage: React.FC = () => {
       {/* Budget Modal */}
       {showBudgetModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowBudgetModal(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6 dark:bg-gray-900 dark:border dark:border-gray-700" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-gray-900">{editBudget ? 'Edit Budget' : 'Create Budget'}</h3>
-              <button onClick={() => setShowBudgetModal(false)} className="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{editBudget ? 'Edit Budget' : 'Create Budget'}</h3>
+              <button onClick={() => setShowBudgetModal(false)} className="text-gray-400 hover:text-gray-600 text-xl dark:text-gray-500 dark:hover:text-gray-300">&times;</button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Budget Name</label>
+                <label className="block text-xs font-semibold text-gray-700 mb-1 dark:text-gray-300">Budget Name</label>
                 <input type="text" value={budgetForm.name} onChange={e => setBudgetForm(p => ({ ...p, name: e.target.value }))} placeholder="e.g. Q1 Marketing Budget"
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10" />
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Year</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1 dark:text-gray-300">Year</label>
                   <input type="number" value={budgetForm.year} onChange={e => setBudgetForm(p => ({ ...p, year: parseInt(e.target.value) || currentYear }))}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10" />
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Quarter (optional)</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1 dark:text-gray-300">Quarter (optional)</label>
                   <select value={budgetForm.quarter} onChange={e => setBudgetForm(p => ({ ...p, quarter: e.target.value }))}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10">
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100">
                     <option value="">Full Year</option>
                     <option value="1">Q1</option><option value="2">Q2</option><option value="3">Q3</option><option value="4">Q4</option>
                   </select>
@@ -1329,38 +1329,38 @@ const FinancePage: React.FC = () => {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Total Budget ($)</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1 dark:text-gray-300">Total Budget ($)</label>
                   <input type="number" value={budgetForm.totalBudget} onChange={e => setBudgetForm(p => ({ ...p, totalBudget: e.target.value }))} placeholder="0.00"
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10" />
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Status</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1 dark:text-gray-300">Status</label>
                   <select value={budgetForm.status} onChange={e => setBudgetForm(p => ({ ...p, status: e.target.value }))}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10">
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100">
                     {['draft', 'approved', 'active', 'closed'].map(s => <option key={s} value={s}>{s.replace(/\b\w/g, c => c.toUpperCase())}</option>)}
                   </select>
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Artist (optional, leave blank for label-wide)</label>
+                <label className="block text-xs font-semibold text-gray-700 mb-1 dark:text-gray-300">Artist (optional, leave blank for label-wide)</label>
                 <select value={budgetForm.artist} onChange={e => setBudgetForm(p => ({ ...p, artist: e.target.value }))}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10">
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100">
                   <option value="">Label-wide</option>
                   {artists.map(a => <option key={a._id} value={a._id}>{a.stageName || a.artistName || a.name}</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div><label className="block text-xs font-semibold text-gray-700 mb-1">Project</label><select value={budgetForm.project} onChange={e => setBudgetForm(p => ({ ...p, project: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm"><option value="">None</option>{projects.map(project => <option key={project._id} value={project._id}>{project.name}</option>)}</select></div>
-                <div><label className="block text-xs font-semibold text-gray-700 mb-1">Release</label><select value={budgetForm.release} onChange={e => setBudgetForm(p => ({ ...p, release: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm"><option value="">None</option>{releases.map(release => <option key={release._id} value={release._id}>{release.title}</option>)}</select></div>
+                <div><label className="block text-xs font-semibold text-gray-700 mb-1 dark:text-gray-300">Project</label><select value={budgetForm.project} onChange={e => setBudgetForm(p => ({ ...p, project: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"><option value="">None</option>{projects.map(project => <option key={project._id} value={project._id}>{project.name}</option>)}</select></div>
+                <div><label className="block text-xs font-semibold text-gray-700 mb-1 dark:text-gray-300">Release</label><select value={budgetForm.release} onChange={e => setBudgetForm(p => ({ ...p, release: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"><option value="">None</option>{releases.map(release => <option key={release._id} value={release._id}>{release.title}</option>)}</select></div>
               </div>
-              <div><label className="block text-xs font-semibold text-gray-700 mb-1">Department</label><select value={budgetForm.department} onChange={e => setBudgetForm(p => ({ ...p, department: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm"><option value="">None</option>{['executive','a_and_r','production','marketing','distribution','publishing','legal','finance','touring','merchandise','operations','other'].map(department => <option key={department} value={department}>{department.replace(/_/g, ' ')}</option>)}</select></div>
+              <div><label className="block text-xs font-semibold text-gray-700 mb-1 dark:text-gray-300">Department</label><select value={budgetForm.department} onChange={e => setBudgetForm(p => ({ ...p, department: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"><option value="">None</option>{['executive','a_and_r','production','marketing','distribution','publishing','legal','finance','touring','merchandise','operations','other'].map(department => <option key={department} value={department}>{department.replace(/_/g, ' ')}</option>)}</select></div>
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Notes</label>
+                <label className="block text-xs font-semibold text-gray-700 mb-1 dark:text-gray-300">Notes</label>
                 <textarea value={budgetForm.notes} onChange={e => setBudgetForm(p => ({ ...p, notes: e.target.value }))} rows={2} placeholder="Budget notes"
                   className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 resize-none" />
               </div>
               <div className="flex justify-end gap-3 pt-2">
-                <button onClick={() => setShowBudgetModal(false)} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
+                <button onClick={() => setShowBudgetModal(false)} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">Cancel</button>
                 <button onClick={handleSaveBudget} className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-sm transition-all">{editBudget ? 'Update' : 'Create'}</button>
               </div>
             </div>
@@ -1371,16 +1371,16 @@ const FinancePage: React.FC = () => {
       {/* Budget Item Modal */}
       {showBudgetItemModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowBudgetItemModal(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 dark:bg-gray-900 dark:border dark:border-gray-700" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-gray-900">{editBudgetItem ? 'Edit Budget Item' : 'Add Budget Item'}</h3>
-              <button onClick={() => setShowBudgetItemModal(false)} className="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{editBudgetItem ? 'Edit Budget Item' : 'Add Budget Item'}</h3>
+              <button onClick={() => setShowBudgetItemModal(false)} className="text-gray-400 hover:text-gray-600 text-xl dark:text-gray-500 dark:hover:text-gray-300">&times;</button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Category</label>
+                <label className="block text-xs font-semibold text-gray-700 mb-1 dark:text-gray-300">Category</label>
                 <select value={budgetItemForm.category} onChange={e => setBudgetItemForm(p => ({ ...p, category: e.target.value }))}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10">
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100">
                   <optgroup label="Income">
                     {INCOME_CATEGORIES.map(c => <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>)}
                   </optgroup>
@@ -1390,22 +1390,22 @@ const FinancePage: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Label</label>
+                <label className="block text-xs font-semibold text-gray-700 mb-1 dark:text-gray-300">Label</label>
                 <input type="text" value={budgetItemForm.label} onChange={e => setBudgetItemForm(p => ({ ...p, label: e.target.value }))} placeholder="e.g. Facebook Ads, Studio Time"
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10" />
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Budgeted Amount ($)</label>
+                <label className="block text-xs font-semibold text-gray-700 mb-1 dark:text-gray-300">Budgeted Amount ($)</label>
                 <input type="number" value={budgetItemForm.budgeted} onChange={e => setBudgetItemForm(p => ({ ...p, budgeted: e.target.value }))} placeholder="0.00"
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10" />
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Notes</label>
+                <label className="block text-xs font-semibold text-gray-700 mb-1 dark:text-gray-300">Notes</label>
                 <textarea value={budgetItemForm.notes} onChange={e => setBudgetItemForm(p => ({ ...p, notes: e.target.value }))} rows={2} placeholder="Item notes"
                   className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 resize-none" />
               </div>
               <div className="flex justify-end gap-3 pt-2">
-                <button onClick={() => setShowBudgetItemModal(false)} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
+                <button onClick={() => setShowBudgetItemModal(false)} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">Cancel</button>
                 <button onClick={handleSaveBudgetItem} className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-sm transition-all">{editBudgetItem ? 'Update' : 'Add Item'}</button>
               </div>
             </div>

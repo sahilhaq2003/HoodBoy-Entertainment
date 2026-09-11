@@ -62,7 +62,7 @@ const Login: React.FC = () => {
       </div>
 
       {/* Centered card */}
-      <div className="relative w-full max-w-[920px] grid grid-cols-1 lg:grid-cols-[42%_58%] rounded-[24px] overflow-hidden bg-white shadow-[0_32px_90px_-20px_rgba(15,40,120,0.55)] anim-rise">
+      <div className="relative w-full max-w-[920px] grid grid-cols-1 lg:grid-cols-[42%_58%] rounded-[24px] overflow-hidden bg-white shadow-[0_32px_90px_-20px_rgba(15,40,120,0.55)] anim-rise dark:bg-gray-800">
         {/* ------------------------- LEFT - Branding ------------------------- */}
         <div className="relative hidden lg:flex flex-col justify-between p-10 xl:p-12 overflow-hidden bg-gradient-to-br from-[#4C1D95] via-[#7C3AED] to-[#C084FC]">
           {/* Abstract shapes */}
@@ -123,7 +123,7 @@ const Login: React.FC = () => {
         </div>
 
         {/* ------------------------- RIGHT - Form ------------------------- */}
-        <div className="relative bg-white p-6 sm:p-10 xl:p-12 flex flex-col justify-center">
+        <div className="relative bg-white p-6 sm:p-10 xl:p-12 flex flex-col justify-center dark:bg-gray-800">
           {/* Mobile branding banner */}
           <div className="lg:hidden mb-8 rounded-2xl relative overflow-hidden p-6 text-white bg-gradient-to-br from-[#4C1D95] via-[#7C3AED] to-[#C084FC]">
             <div className="absolute -top-10 -right-10 w-36 h-36 rounded-full bg-white/10 blur-xl" />
@@ -154,9 +154,9 @@ const Login: React.FC = () => {
                       <CheckCircle2 size={28} className="text-purple-600 animate-pulse" />
                     </div>
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900 tracking-tight mb-2">Welcome, {user.name}</h2>
-                  <p className="text-sm text-gray-500 mb-4">Preparing your dashboard...</p>
-                  <div className="w-48 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <h2 className="text-xl font-bold text-gray-900 tracking-tight mb-2 dark:text-gray-100">Welcome, {user.name}</h2>
+                  <p className="text-sm text-gray-500 mb-4 dark:text-gray-400">Preparing your dashboard...</p>
+                  <div className="w-48 h-1.5 bg-gray-100 rounded-full overflow-hidden dark:bg-gray-700">
                     <div className="h-full bg-gradient-to-r from-[#4C1D95] via-[#7C3AED] to-[#C084FC] rounded-full animate-loading-bar" />
                   </div>
                 </div>
@@ -165,12 +165,12 @@ const Login: React.FC = () => {
               <>
                 {/* Login form */}
                 <div className="mb-7">
-                  <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Welcome back</h2>
-                  <p className="text-sm text-gray-500 mt-1.5">Sign in to your account to continue</p>
+                  <h2 className="text-2xl font-bold text-gray-900 tracking-tight dark:text-gray-100">Welcome back</h2>
+                  <p className="text-sm text-gray-500 mt-1.5 dark:text-gray-400">Sign in to your account to continue</p>
                 </div>
 
                 {error && (
-                  <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl mb-5 text-sm font-medium text-red-700 bg-red-50 border border-red-200 animate-in slide-in-from-top-2 duration-300">
+                  <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl mb-5 text-sm font-medium text-red-700 bg-red-50 border border-red-200 animate-in slide-in-from-top-2 duration-300 dark:text-red-400 dark:bg-red-500/10 dark:border-red-800">
                     <AlertCircle size={16} className="flex-shrink-0" />
                     <span>{error}</span>
                   </div>
@@ -178,7 +178,7 @@ const Login: React.FC = () => {
 
                 <form onSubmit={handleSubmit} className="space-y-5">
                   <div>
-                    <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">Email address</label>
+                    <label className="block text-[13px] font-semibold text-gray-700 mb-1.5 dark:text-gray-200">Email address</label>
                     <div className="relative">
                       <Mail size={16} className={`absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none transition-colors ${focusedField === 'email' ? 'text-purple-600' : 'text-gray-400'}`} />
                       <input
@@ -188,7 +188,7 @@ const Login: React.FC = () => {
                         onFocus={() => setFocusedField('email')}
                         onBlur={() => setFocusedField(null)}
                         required
-                        className="w-full h-12 pl-11 pr-4 bg-gray-100/70 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 outline-none transition-all duration-200 focus:bg-white focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10"
+                        className="w-full h-12 pl-11 pr-4 bg-gray-100/70 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 outline-none transition-all duration-200 focus:bg-white focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 dark:bg-gray-700/50 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-500 dark:focus:bg-gray-700"
                         placeholder="you@hbelabel.com"
                       />
                     </div>
@@ -196,7 +196,7 @@ const Login: React.FC = () => {
 
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="block text-[13px] font-semibold text-gray-700">Password</label>
+                      <label className="block text-[13px] font-semibold text-gray-700 dark:text-gray-200">Password</label>
                       <button type="button" className="text-xs font-medium text-purple-600 hover:text-purple-700 transition-colors">
                         Forgot password?
                       </button>
@@ -210,13 +210,13 @@ const Login: React.FC = () => {
                         onFocus={() => setFocusedField('password')}
                         onBlur={() => setFocusedField(null)}
                         required
-                        className="w-full h-12 pl-11 pr-11 bg-gray-100/70 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 outline-none transition-all duration-200 focus:bg-white focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10"
+                        className="w-full h-12 pl-11 pr-11 bg-gray-100/70 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 outline-none transition-all duration-200 focus:bg-white focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 dark:bg-gray-700/50 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-500 dark:focus:bg-gray-700"
                         placeholder="Enter your password"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors dark:text-gray-500 dark:hover:text-gray-300"
                       >
                         {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
@@ -229,7 +229,7 @@ const Login: React.FC = () => {
                       id="remember"
                       className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500/20 accent-purple-600"
                     />
-                    <label htmlFor="remember" className="text-sm text-gray-600 cursor-pointer">
+                    <label htmlFor="remember" className="text-sm text-gray-600 cursor-pointer dark:text-gray-300">
                       Keep me signed in
                     </label>
                   </div>
@@ -250,12 +250,12 @@ const Login: React.FC = () => {
                   </button>
                 </form>
 
-                <p className="mt-6 text-center text-sm text-gray-500">
+                <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
                   Don&apos;t have an account?{' '}
                   <a
                     href="#"
                     onClick={e => e.preventDefault()}
-                    className="font-semibold text-purple-600 hover:text-purple-700 hover:underline transition-colors"
+                    className="font-semibold text-purple-600 hover:text-purple-700 hover:underline transition-colors dark:text-purple-400 dark:hover:text-purple-300"
                   >
                     Create an account
                   </a>
@@ -263,7 +263,7 @@ const Login: React.FC = () => {
               </>
             )}
 
-            <p className="mt-8 pt-6 text-center text-xs text-gray-400 border-t border-gray-100">
+            <p className="mt-8 pt-6 text-center text-xs text-gray-400 border-t border-gray-100 dark:text-gray-500 dark:border-gray-700">
               Lnkup Label Management Platform v1.0 &middot; &copy; 2026 HoodBoy Entertainment
             </p>
           </div>

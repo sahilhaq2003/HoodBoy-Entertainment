@@ -120,19 +120,20 @@ const emptyForm = () => ({
   notableEvents: [{ date: '', event: '', impact: '' }],
 });
 
-const ChangeIndicator = ({ value }: { value: number }) => {
-  if (value > 0)
+const ChangeIndicator = ({ value }: { value?: number }) => {
+  const safe = Number(value) || 0;
+  if (safe > 0)
     return (
       <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400">
         <ArrowUp className="w-3 h-3" />
-        {value.toFixed(1)}%
+        {safe.toFixed(1)}%
       </span>
     );
-  if (value < 0)
+  if (safe < 0)
     return (
       <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400">
         <ArrowDown className="w-3 h-3" />
-        {Math.abs(value).toFixed(1)}%
+        {Math.abs(safe).toFixed(1)}%
       </span>
     );
   return (
@@ -642,15 +643,16 @@ export default function PerSongAnalyticsPage() {
 function ExpandedDetail({ analytics }: { analytics: PerSongAnalytics }) {
   const [openSection, setOpenSection] = useState<string>('platforms');
   const toggle = (s: string) => setOpenSection(openSection === s ? '' : s);
+  const comparison = analytics.comparisonToPrevious || {};
 
   return (
     <div className="space-y-4 bg-gray-50 dark:bg-gray-800/30 rounded-lg p-4 mt-1">
       <div className="grid grid-cols-3 gap-4">
-        <ChangeIndicator value={analytics.comparisonToPrevious.streamsChange} />
+        <ChangeIndicator value={comparison.streamsChange || 0} />
         <div className="text-xs text-gray-500 dark:text-gray-400">Streams Change</div>
-        <ChangeIndicator value={analytics.comparisonToPrevious.revenueChange} />
+        <ChangeIndicator value={comparison.revenueChange || 0} />
         <div className="text-xs text-gray-500 dark:text-gray-400">Revenue Change</div>
-        <ChangeIndicator value={analytics.comparisonToPrevious.savesChange} />
+        <ChangeIndicator value={comparison.savesChange || 0} />
         <div className="text-xs text-gray-500 dark:text-gray-400">Saves Change</div>
       </div>
 
@@ -661,8 +663,8 @@ function ExpandedDetail({ analytics }: { analytics: PerSongAnalytics }) {
       {openSection === 'platforms' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {(Object.keys(platformConfig) as Array<keyof typeof platformConfig>).map((key) => {
-            const m = analytics.platforms[key];
-            if (!m.streams && !m.revenue) return null;
+            const m = analytics.platforms?.[key];
+            if (!m?.streams && !m?.revenue) return null;
             return (
               <div key={key} className={`rounded-lg border p-4 ${platformConfig[key].colorClass}`}>
                 <p className={`text-sm font-semibold mb-2 ${key === 'tidal' ? 'text-white' : 'text-gray-900 dark:text-white'}`}>{platformConfig[key].label}</p>
@@ -692,7 +694,7 @@ function ExpandedDetail({ analytics }: { analytics: PerSongAnalytics }) {
         </div>
       )}
 
-      {analytics.topCountries.length > 0 && (
+      {analytics.topCountries?.length > 0 && (
         <>
           <button onClick={() => toggle('countries')} className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white w-full text-left">
             {openSection === 'countries' ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}

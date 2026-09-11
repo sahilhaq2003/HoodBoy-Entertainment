@@ -130,6 +130,18 @@ const ArtistDashboard: React.FC = () => {
 
   const { artist, kpis, songs, releases, tasks, royalties } = data;
 
+  if (!artist) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center space-y-3">
+          <AlertCircle size={40} className="text-[#F59E0B] mx-auto" />
+          <p className="text-sm font-semibold text-[var(--hbe-text-soft)]">No artist profile linked to your account yet.</p>
+          <p className="text-xs text-[var(--hbe-muted)]">Contact your manager to set up your artist profile.</p>
+        </div>
+      </div>
+    );
+  }
+
   const settlement = kpis.totalPaid + kpis.totalRoyaltiesOwed > 0 ? (kpis.totalPaid / (kpis.totalPaid + kpis.totalRoyaltiesOwed)) * 100 : 0;
   const releasedReleases = releases.filter((r) => r.status === 'released').length;
   const activeSongs = songs.filter((s) => ['active', 'released', 'in_production'].includes(s.status)).length;

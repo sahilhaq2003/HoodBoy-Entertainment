@@ -15,6 +15,10 @@ import FinanceDashboard from './pages/FinanceDashboard';
 import MarketingDashboard from './pages/MarketingDashboard';
 import Artists from './pages/Artists';
 import ArtistProfile from './pages/ArtistProfile';
+import MyProfile from './pages/MyProfile';
+import MyMusic from './pages/MyMusic';
+import MyReleases from './pages/MyReleases';
+import MyRoyalties from './pages/MyRoyalties';
 import ArtistOnboarding from './pages/ArtistOnboarding';
 import Songs from './pages/Songs';
 import Releases from './pages/Releases';
@@ -76,6 +80,11 @@ const AccessGuard: React.FC<{ children: React.ReactNode; resource: string; actio
   return <>{children}</>;
 };
 
+const RoleConditional: React.FC<{ artist: React.ReactNode; staff: React.ReactNode }> = ({ artist, staff }) => {
+  const { user } = useAuth();
+  return user?.role === 'artist' ? <>{artist}</> : <>{staff}</>;
+};
+
 const AppRoutes: React.FC = () => {
   const { user } = useAuth();
   const dashPath = getDashboardPath(user?.role || '');
@@ -113,13 +122,11 @@ const AppRoutes: React.FC = () => {
         <Route path="files/folder/:folderId" element={<AccessGuard resource="files"><FileManager /></AccessGuard>} />
         <Route path="metadata" element={<AccessGuard resource="metadata"><MetadataManager /></AccessGuard>} />
         <Route path="ownership" element={<AccessGuard resource="ownership"><OwnershipTracker /></AccessGuard>} />
-        <Route path="tasks" element={<AccessGuard resource="tasks"><Tasks /></AccessGuard>} />
         <Route path="weekly-report" element={<AccessGuard resource="weeklyReports"><WeeklyReport /></AccessGuard>} />
         <Route path="analytics" element={<AccessGuard resource="analytics"><Analytics /></AccessGuard>} />
 
         {/* Finance */}
         <Route path="finance" element={<AccessGuard resource="finance"><Finance /></AccessGuard>} />
-        <Route path="royalties" element={<AccessGuard resource="royalties"><Royalties /></AccessGuard>} />
         <Route path="artist-balances" element={<AccessGuard resource="artistBalances"><ArtistBalances /></AccessGuard>} />
         <Route path="budgets" element={<AccessGuard resource="budgets"><Finance /></AccessGuard>} />
         <Route path="tax-calendar" element={<AccessGuard resource="taxCalendar"><TaxCalendar /></AccessGuard>} />
@@ -134,9 +141,11 @@ const AppRoutes: React.FC = () => {
         <Route path="song-analytics" element={<AccessGuard resource="songAnalytics"><PerSongAnalytics /></AccessGuard>} />
 
         {/* Artist-only routes */}
-        <Route path="my-music" element={<RoleGuard roles={['artist']}><Songs /></RoleGuard>} />
-        <Route path="my-releases" element={<RoleGuard roles={['artist']}><Releases /></RoleGuard>} />
-        <Route path="profile" element={<RoleGuard roles={['artist']}><ArtistProfile /></RoleGuard>} />
+        <Route path="my-music" element={<RoleGuard roles={['artist']}><MyMusic /></RoleGuard>} />
+        <Route path="my-releases" element={<RoleGuard roles={['artist']}><MyReleases /></RoleGuard>} />
+        <Route path="profile" element={<RoleGuard roles={['artist']}><MyProfile /></RoleGuard>} />
+        <Route path="royalties" element={<RoleConditional artist={<RoleGuard roles={['artist']}><MyRoyalties /></RoleGuard>} staff={<AccessGuard resource="royalties"><Royalties /></AccessGuard>} />} />
+        <Route path="tasks" element={<AccessGuard resource="tasks"><Tasks /></AccessGuard>} />
 
         {/* Settings - Admin only */}
         <Route path="settings" element={<RoleGuard roles={['admin']}><Settings /></RoleGuard>} />
@@ -150,7 +159,7 @@ const AppRoutes: React.FC = () => {
 const ThemeInit: React.FC = () => {
   useEffect(() => {
     const stored = localStorage.getItem('hbe_theme') as 'light' | 'dark' | null;
-    if (stored !== 'light') {
+    if (stored === 'dark') {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');

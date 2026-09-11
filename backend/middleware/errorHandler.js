@@ -23,9 +23,9 @@ const errorHandler = (err, req, res, next) => {
   }
 
   if (err.code === 'LIMIT_FILE_SIZE') {
-    return res.status(400).json({ success: false, message: 'File too large. Maximum size is 10MB.' });
+    return res.status(413).json({ success: false, message: err.message || 'File exceeds the configured upload limit.' });
   }
-  if (err.message && err.message.includes('File type not allowed')) {
+  if (err.code === 'LIMIT_UNEXPECTED_FILE' || (err.message && (err.message.includes('File type not allowed') || err.message.includes('mismatched file type')))) {
     return res.status(400).json({ success: false, message: err.message });
   }
 

@@ -458,14 +458,14 @@ const Development: React.FC = () => {
       {showNewPlan && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setShowNewPlan(false)} />
-          <div className="relative z-10 w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white rounded-2xl border border-gray-200 shadow-xl p-6">
+          <div className="relative z-10 w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white rounded-2xl border border-gray-200 shadow-xl p-6 dark:bg-gray-900 dark:border-gray-700">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-bold text-gray-900">New Development Plan</h3>
-              <button onClick={() => setShowNewPlan(false)} className="text-gray-400 hover:text-gray-600 p-1"><X size={18} /></button>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">New Development Plan</h3>
+              <button onClick={() => setShowNewPlan(false)} className="text-gray-400 hover:text-gray-600 p-1 dark:text-gray-500 dark:hover:text-gray-300"><X size={18} /></button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Artist <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5 dark:text-gray-300">Artist <span className="text-red-500">*</span></label>
                 <select
                   value={newPlan.artistId}
                   onChange={(e) => setNewPlan({ ...newPlan, artistId: e.target.value })}
@@ -478,17 +478,17 @@ const Development: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Plan Title <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5 dark:text-gray-300">Plan Title <span className="text-red-500">*</span></label>
                 <input
                   type="text"
                   value={newPlan.title}
                   onChange={(e) => setNewPlan({ ...newPlan, title: e.target.value })}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-500"
                   placeholder="e.g. Q1 2026 Development Plan"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5 dark:text-gray-300">Description</label>
                 <textarea
                   value={newPlan.description}
                   onChange={(e) => setNewPlan({ ...newPlan, description: e.target.value })}
@@ -497,19 +497,19 @@ const Development: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Focus Areas (comma-separated)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5 dark:text-gray-300">Focus Areas (comma-separated)</label>
                 <input
                   type="text"
                   value={newPlan.focusAreas}
                   onChange={(e) => setNewPlan({ ...newPlan, focusAreas: e.target.value })}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-500"
                   placeholder="e.g. Stage Performance, Branding, Social Media"
                 />
               </div>
               <GoalEditor goals={newGoals} onChange={setNewGoals} />
             </div>
-            <div className="flex items-center gap-3 justify-end mt-6 pt-4 border-t border-gray-100">
-              <button onClick={() => setShowNewPlan(false)} className="px-4 py-2 bg-white text-gray-600 font-medium rounded-lg text-sm border border-gray-200 hover:bg-gray-50 transition-all duration-200">
+            <div className="flex items-center gap-3 justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
+              <button onClick={() => setShowNewPlan(false)} className="px-4 py-2 bg-white text-gray-600 font-medium rounded-lg text-sm border border-gray-200 hover:bg-gray-50 transition-all duration-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-700">
                 Cancel
               </button>
               <button
@@ -528,18 +528,18 @@ const Development: React.FC = () => {
       {editingPlan && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setEditingPlan(null)} />
-          <div className="relative z-10 w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white rounded-2xl border border-gray-200 shadow-xl p-6">
+          <div className="relative z-10 w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white rounded-2xl border border-gray-200 shadow-xl p-6 dark:bg-gray-900 dark:border-gray-700">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-bold text-gray-900">Edit Development Plan</h3>
-              <button onClick={() => setEditingPlan(null)} className="text-gray-400 hover:text-gray-600 p-1"><X size={18} /></button>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Edit Development Plan</h3>
+              <button onClick={() => setEditingPlan(null)} className="text-gray-400 hover:text-gray-600 p-1 dark:text-gray-500 dark:hover:text-gray-300"><X size={18} /></button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Plan Title *</label>
-                <input type="text" value={editForm.title} onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10" />
+                <label className="block text-sm font-medium text-gray-700 mb-1.5 dark:text-gray-300">Plan Title *</label>
+                <input type="text" value={editForm.title} onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-500" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Status</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5 dark:text-gray-300">Status</label>
                 <select value={editForm.status} onChange={e => setEditForm(f => ({ ...f, status: e.target.value as DevelopmentPlan['status'] }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10">
                   <option value="active">Active</option>
                   <option value="completed">Completed</option>
@@ -548,17 +548,17 @@ const Development: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5 dark:text-gray-300">Description</label>
                 <textarea value={editForm.description} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))} rows={3} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 resize-none" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Focus Areas (comma-separated)</label>
-                <input type="text" value={editForm.focusAreas} onChange={e => setEditForm(f => ({ ...f, focusAreas: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10" />
+                <label className="block text-sm font-medium text-gray-700 mb-1.5 dark:text-gray-300">Focus Areas (comma-separated)</label>
+                <input type="text" value={editForm.focusAreas} onChange={e => setEditForm(f => ({ ...f, focusAreas: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-500" />
               </div>
               <GoalEditor goals={editGoals} onChange={setEditGoals} />
             </div>
-            <div className="flex items-center gap-3 justify-end mt-6 pt-4 border-t border-gray-100">
-              <button onClick={() => setEditingPlan(null)} className="px-4 py-2 bg-white text-gray-600 font-medium rounded-lg text-sm border border-gray-200 hover:bg-gray-50 transition-all">Cancel</button>
+            <div className="flex items-center gap-3 justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
+              <button onClick={() => setEditingPlan(null)} className="px-4 py-2 bg-white text-gray-600 font-medium rounded-lg text-sm border border-gray-200 hover:bg-gray-50 transition-all dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-700">Cancel</button>
               <button onClick={handleUpdate} disabled={updating || !editForm.title} className="inline-flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-sm transition-all disabled:opacity-50">
                 {updating && <Loader2 size={14} className="animate-spin" />}
                 {updating ? 'Saving...' : 'Save Changes'}
@@ -571,11 +571,11 @@ const Development: React.FC = () => {
       {/* Delete Confirmation */}
       {deleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-2">Delete Plan</h2>
-            <p className="text-sm text-gray-500 mb-6">Are you sure you want to delete this development plan? This action cannot be undone.</p>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 dark:bg-gray-900 dark:border dark:border-gray-700">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Delete Plan</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Are you sure you want to delete this development plan? This action cannot be undone.</p>
             <div className="flex items-center justify-end gap-3">
-              <button onClick={() => setDeleteId(null)} className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition">Cancel</button>
+              <button onClick={() => setDeleteId(null)} className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition dark:text-gray-300 dark:hover:text-gray-100">Cancel</button>
               <button onClick={handleDelete} disabled={deleting} className="inline-flex items-center gap-2 bg-red-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50 transition">
                 {deleting && <Loader2 size={14} className="animate-spin" />}
                 {deleting ? 'Deleting...' : 'Delete'}

@@ -331,18 +331,18 @@ const Contracts: React.FC = () => {
       {/* Contract Detail Modal */}
       {viewDetail && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center" onClick={() => setViewDetail(null)}>
-          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] shadow-2xl overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] shadow-2xl overflow-hidden flex flex-col dark:bg-gray-900 dark:border dark:border-gray-700" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700">
               <div>
-                <h3 className="text-lg font-bold text-gray-900">{viewDetail.title}</h3>
-                <p className="text-xs text-gray-500 capitalize">{CONTRACT_TYPE_LABELS[viewDetail.type] || viewDetail.type}</p>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{viewDetail.title}</h3>
+                <p className="text-xs text-gray-500 capitalize dark:text-gray-400">{CONTRACT_TYPE_LABELS[viewDetail.type] || viewDetail.type}</p>
               </div>
               <div className="flex items-center gap-2">
                 <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold"
                   style={{ background: `${STATUS_COLORS[viewDetail.status]}15`, color: STATUS_COLORS[viewDetail.status] }}>
                   {viewDetail.status.replace(/_/g, ' ')}
                 </span>
-                <button onClick={() => setViewDetail(null)} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400"><X size={18} /></button>
+                <button onClick={() => setViewDetail(null)} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 dark:text-gray-500 dark:hover:bg-gray-800"><X size={18} /></button>
               </div>
             </div>
             <div className="flex-1 overflow-y-auto p-6 space-y-5">
@@ -361,8 +361,8 @@ const Contracts: React.FC = () => {
                   ['Auto-Renew', viewDetail.autoRenew ? 'Yes' : 'No'],
                 ].map(([label, value]) => (
                   <div key={label}>
-                    <p className="text-xs text-gray-400">{label}</p>
-                    <p className="text-sm font-medium text-gray-900">{value}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">{label}</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{value}</p>
                   </div>
                 ))}
               </div>
@@ -370,14 +370,14 @@ const Contracts: React.FC = () => {
               {/* Parties */}
               {viewDetail.parties && viewDetail.parties.length > 0 && (
                 <div>
-                  <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Parties Involved</h4>
-                  <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                  <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2 dark:text-gray-400">Parties Involved</h4>
+                  <div className="bg-gray-50 rounded-lg p-3 dark:bg-gray-800 space-y-2">
                     {viewDetail.parties.map((p, i) => (
                       <div key={i} className="flex items-center gap-3 text-sm">
-                        <span className="font-medium text-gray-900">{p.name}</span>
-                        <span className="text-gray-400">·</span>
-                        <span className="text-gray-600">{p.role}</span>
-                        {p.entity && <><span className="text-gray-400">·</span><span className="text-gray-500 text-xs">{p.entity}</span></>}
+                        <span className="font-medium text-gray-900 dark:text-gray-100">{p.name}</span>
+                        <span className="text-gray-400 dark:text-gray-500">·</span>
+                        <span className="text-gray-600 dark:text-gray-300">{p.role}</span>
+                        {p.entity && <><span className="text-gray-400 dark:text-gray-500">·</span><span className="text-gray-500 text-xs dark:text-gray-400">{p.entity}</span></>}
                       </div>
                     ))}
                   </div>
@@ -387,11 +387,11 @@ const Contracts: React.FC = () => {
               {/* Recoupment */}
               {viewDetail.recoupment && viewDetail.recoupment.type !== 'none' && (
                 <div>
-                  <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Recoupment</h4>
-                  <div className="bg-gray-50 rounded-lg p-3 grid grid-cols-3 gap-3 text-sm">
-                    <div><p className="text-xs text-gray-400">Type</p><p className="font-medium capitalize">{viewDetail.recoupment.type.replace(/_/g, ' ')}</p></div>
-                    <div><p className="text-xs text-gray-400">Advance</p><p className="font-medium">${(viewDetail.recoupment.advanceAmount || 0).toLocaleString()}</p></div>
-                    <div><p className="text-xs text-gray-400">Rate</p><p className="font-medium">{viewDetail.recoupment.recoupmentRate}%</p></div>
+                  <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2 dark:text-gray-400">Recoupment</h4>
+                  <div className="bg-gray-50 rounded-lg p-3 dark:bg-gray-800 grid grid-cols-3 gap-3 text-sm">
+                    <div><p className="text-xs text-gray-400 dark:text-gray-500">Type</p><p className="font-medium capitalize dark:text-gray-100">{viewDetail.recoupment.type.replace(/_/g, ' ')}</p></div>
+                    <div><p className="text-xs text-gray-400 dark:text-gray-500">Advance</p><p className="font-medium dark:text-gray-100">${(viewDetail.recoupment.advanceAmount || 0).toLocaleString()}</p></div>
+                    <div><p className="text-xs text-gray-400 dark:text-gray-500">Rate</p><p className="font-medium dark:text-gray-100">{viewDetail.recoupment.recoupmentRate}%</p></div>
                   </div>
                 </div>
               )}
@@ -399,11 +399,11 @@ const Contracts: React.FC = () => {
               {/* Payment */}
               {viewDetail.paymentObligations && (
                 <div>
-                  <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Payment Obligations</h4>
-                  <div className="bg-gray-50 rounded-lg p-3 grid grid-cols-3 gap-3 text-sm">
-                    <div><p className="text-xs text-gray-400">Advance</p><p className="font-medium">${(viewDetail.paymentObligations.advanceAmount || 0).toLocaleString()}</p></div>
-                    <div><p className="text-xs text-gray-400">Frequency</p><p className="font-medium capitalize">{(viewDetail.paymentObligations.royaltyFrequency || '').replace(/_/g, ' ')}</p></div>
-                    <div><p className="text-xs text-gray-400">Min Guarantee</p><p className="font-medium">${(viewDetail.paymentObligations.minimumGuarantee || 0).toLocaleString()}</p></div>
+                  <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2 dark:text-gray-400">Payment Obligations</h4>
+                  <div className="bg-gray-50 rounded-lg p-3 dark:bg-gray-800 grid grid-cols-3 gap-3 text-sm">
+                    <div><p className="text-xs text-gray-400 dark:text-gray-500">Advance</p><p className="font-medium dark:text-gray-100">${(viewDetail.paymentObligations.advanceAmount || 0).toLocaleString()}</p></div>
+                    <div><p className="text-xs text-gray-400 dark:text-gray-500">Frequency</p><p className="font-medium capitalize dark:text-gray-100">{(viewDetail.paymentObligations.royaltyFrequency || '').replace(/_/g, ' ')}</p></div>
+                    <div><p className="text-xs text-gray-400 dark:text-gray-500">Min Guarantee</p><p className="font-medium dark:text-gray-100">${(viewDetail.paymentObligations.minimumGuarantee || 0).toLocaleString()}</p></div>
                   </div>
                 </div>
               )}
@@ -411,39 +411,39 @@ const Contracts: React.FC = () => {
               {/* Terms / Ownership */}
               {viewDetail.ownershipTerms && (
                 <div>
-                  <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Ownership Terms</h4>
-                  <p className="text-sm text-gray-700 bg-gray-50 rounded-lg p-3">{viewDetail.ownershipTerms}</p>
-                </div>
-              )}
+                  <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2 dark:text-gray-400">Ownership Terms</h4>
+                   <p className="text-sm text-gray-700 dark:text-gray-200 bg-gray-50 rounded-lg p-3 dark:bg-gray-800">{viewDetail.ownershipTerms}</p>
+                 </div>
+               )}
 
-              {/* Notes */}
-              {viewDetail.notes && (
-                <div>
-                  <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Notes</h4>
-                  <p className="text-sm text-gray-700 bg-gray-50 rounded-lg p-3">{viewDetail.notes}</p>
+               {/* Notes */}
+               {viewDetail.notes && (
+                 <div>
+                   <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2 dark:text-gray-400">Notes</h4>
+                   <p className="text-sm text-gray-700 dark:text-gray-200 bg-gray-50 rounded-lg p-3 dark:bg-gray-800">{viewDetail.notes}</p>
                 </div>
               )}
               {viewDetail.optionPeriods?.length > 0 && (
                 <div>
-                  <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Option Periods</h4>
+                  <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2 dark:text-gray-400">Option Periods</h4>
                   <div className="space-y-2">{viewDetail.optionPeriods.map((option, index) => (
-                    <div key={index} className="bg-gray-50 rounded-lg p-3 flex items-center justify-between gap-3 text-sm">
-                      <div><p className="font-medium text-gray-900">{option.label || `Option ${index + 1}`}</p><p className="text-xs text-gray-500">{option.durationMonths} months{option.exerciseDeadline ? ` · Exercise by ${new Date(option.exerciseDeadline).toLocaleDateString()}` : ''}</p></div>
-                      <span className={`text-[10px] font-semibold px-2 py-1 rounded-full ${option.exercised ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}>{option.exercised ? 'Exercised' : 'Open'}</span>
+                    <div key={index} className="bg-gray-50 rounded-lg p-3 dark:bg-gray-800 flex items-center justify-between gap-3 text-sm">
+                      <div><p className="font-medium text-gray-900 dark:text-gray-100">{option.label || `Option ${index + 1}`}</p><p className="text-xs text-gray-500 dark:text-gray-400">{option.durationMonths} months{option.exerciseDeadline ? ` · Exercise by ${new Date(option.exerciseDeadline).toLocaleDateString()}` : ''}</p></div>
+                      <span className={`text-[10px] font-semibold px-2 py-1 rounded-full ${option.exercised ? 'bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400' : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300'}`}>{option.exercised ? 'Exercised' : 'Open'}</span>
                     </div>
                   ))}</div>
                 </div>
               )}
               {viewDetail.fileUrl && (
-                <a href={viewDetail.fileUrl} target="_blank" rel="noreferrer" className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm font-medium text-indigo-600 hover:bg-gray-100">
+                <a href={viewDetail.fileUrl} target="_blank" rel="noreferrer" className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm font-medium text-indigo-600 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-indigo-400 dark:hover:bg-gray-700">
                   <span className="flex items-center gap-2"><FileText size={15} />{viewDetail.fileName || 'Contract document'}</span><Download size={15} />
                 </a>
               )}
             </div>
-            <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-gray-100">
-              <button onClick={() => setDeleteTarget(viewDetail._id)} className="px-3 py-2 bg-white border border-red-200 rounded-lg text-xs text-red-600 hover:bg-red-50">Delete</button>
-              <button onClick={() => openEdit(viewDetail)} className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-1.5"><Edit3 size={13} />Edit</button>
-              <button onClick={() => setViewDetail(null)} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50">Close</button>
+            <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-gray-100 dark:border-gray-700">
+              <button onClick={() => setDeleteTarget(viewDetail._id)} className="px-3 py-2 bg-white border border-red-200 rounded-lg text-xs text-red-600 hover:bg-red-50 dark:bg-gray-800 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-500/10">Delete</button>
+              <button onClick={() => openEdit(viewDetail)} className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-1.5 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-700"><Edit3 size={13} />Edit</button>
+              <button onClick={() => setViewDetail(null)} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-700">Close</button>
             </div>
           </div>
         </div>
@@ -452,108 +452,108 @@ const Contracts: React.FC = () => {
       {/* Create Modal */}
       {showCreate && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
-          <div className="bg-white rounded-2xl w-full max-w-xl max-h-[85vh] shadow-2xl overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl w-full max-w-xl max-h-[85vh] shadow-2xl overflow-y-auto p-6 dark:bg-gray-900 dark:border dark:border-gray-700" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-bold text-gray-900">{editingTarget ? 'Edit Contract' : 'New Contract'}</h3>
-              <button onClick={() => { setShowCreate(false); resetForm(); }} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400"><X size={18} /></button>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{editingTarget ? 'Edit Contract' : 'New Contract'}</h3>
+              <button onClick={() => { setShowCreate(false); resetForm(); }} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 dark:text-gray-500 dark:hover:bg-gray-800"><X size={18} /></button>
             </div>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
-                  <label className="text-xs font-semibold text-gray-600 mb-1 block">Title</label>
-                  <input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500" />
+                  <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Title</label>
+                  <input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-1 block">Type</label>
-                  <select value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm">
+                  <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Type</label>
+                  <select value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100">
                     {Object.entries(CONTRACT_TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-1 block">Status</label>
-                  <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value as any }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm">
+                  <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Status</label>
+                  <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value as any }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100">
                     {Object.keys(STATUS_COLORS).map(s => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
                   </select>
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-1 block">Start Date</label>
-                  <input type="date" value={form.startDate} onChange={e => setForm(p => ({ ...p, startDate: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" />
+                  <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Start Date</label>
+                  <input type="date" value={form.startDate} onChange={e => setForm(p => ({ ...p, startDate: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-1 block">End Date</label>
-                  <input type="date" value={form.endDate} onChange={e => setForm(p => ({ ...p, endDate: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" />
+                  <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">End Date</label>
+                  <input type="date" value={form.endDate} onChange={e => setForm(p => ({ ...p, endDate: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-1 block">Renewal Date</label>
-                  <input type="date" value={form.renewalDate} onChange={e => setForm(p => ({ ...p, renewalDate: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" />
+                  <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Renewal Date</label>
+                  <input type="date" value={form.renewalDate} onChange={e => setForm(p => ({ ...p, renewalDate: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-1 block">Date Signed</label>
-                  <input type="date" value={form.signedDate} onChange={e => setForm(p => ({ ...p, signedDate: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" />
+                  <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Date Signed</label>
+                  <input type="date" value={form.signedDate} onChange={e => setForm(p => ({ ...p, signedDate: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-1 block">Renewal Deadline</label>
-                  <input type="date" value={form.renewalDeadline} onChange={e => setForm(p => ({ ...p, renewalDeadline: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" />
+                  <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Renewal Deadline</label>
+                  <input type="date" value={form.renewalDeadline} onChange={e => setForm(p => ({ ...p, renewalDeadline: e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-1 block">Notice (days)</label>
-                  <input type="number" min="0" value={form.renewalNoticeDays} onChange={e => setForm(p => ({ ...p, renewalNoticeDays: +e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" />
+                  <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Notice (days)</label>
+                  <input type="number" min="0" value={form.renewalNoticeDays} onChange={e => setForm(p => ({ ...p, renewalNoticeDays: +e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
                 </div>
               </div>
               <label className="flex items-center gap-2 text-xs font-semibold text-gray-600"><input type="checkbox" checked={form.autoRenew} onChange={e => setForm(p => ({ ...p, autoRenew: e.target.checked }))} className="h-4 w-4 rounded" />Automatically renew under the recorded terms</label>
 
-              <div className="rounded-xl border border-gray-200 p-4">
-                <div className="mb-3 flex items-center justify-between"><div><h4 className="text-sm font-semibold text-gray-900">Parties involved</h4><p className="text-[10px] text-gray-500">Record every person or entity bound by this agreement.</p></div><button type="button" onClick={() => setForm(p => ({ ...p, parties: [...p.parties, { name: '', role: '', entity: '' }] }))} className="flex items-center gap-1 text-xs font-semibold text-indigo-600"><UserPlus size={13} />Add party</button></div>
-                <div className="space-y-2">{form.parties.map((party, index) => <div key={index} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2"><input placeholder="Name *" value={party.name} onChange={e => setForm(p => ({ ...p, parties: p.parties.map((item, i) => i === index ? { ...item, name: e.target.value } : item) }))} className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" /><input placeholder="Role *" value={party.role} onChange={e => setForm(p => ({ ...p, parties: p.parties.map((item, i) => i === index ? { ...item, role: e.target.value } : item) }))} className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" /><input placeholder="Company / entity" value={party.entity} onChange={e => setForm(p => ({ ...p, parties: p.parties.map((item, i) => i === index ? { ...item, entity: e.target.value } : item) }))} className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" /><button type="button" disabled={form.parties.length === 1} onClick={() => setForm(p => ({ ...p, parties: p.parties.filter((_, i) => i !== index) }))} className="p-2 text-gray-400 hover:text-red-500 disabled:opacity-30"><Trash2 size={15} /></button></div>)}</div>
+              <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+                <div className="mb-3 flex items-center justify-between"><div><h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Parties involved</h4><p className="text-[10px] text-gray-500 dark:text-gray-400">Record every person or entity bound by this agreement.</p></div><button type="button" onClick={() => setForm(p => ({ ...p, parties: [...p.parties, { name: '', role: '', entity: '' }] }))} className="flex items-center gap-1 text-xs font-semibold text-indigo-600"><UserPlus size={13} />Add party</button></div>
+                <div className="space-y-2">{form.parties.map((party, index) => <div key={index} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2"><input placeholder="Name *" value={party.name} onChange={e => setForm(p => ({ ...p, parties: p.parties.map((item, i) => i === index ? { ...item, name: e.target.value } : item) }))} className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" /><input placeholder="Role *" value={party.role} onChange={e => setForm(p => ({ ...p, parties: p.parties.map((item, i) => i === index ? { ...item, role: e.target.value } : item) }))} className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" /><input placeholder="Company / entity" value={party.entity} onChange={e => setForm(p => ({ ...p, parties: p.parties.map((item, i) => i === index ? { ...item, entity: e.target.value } : item) }))} className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" /><button type="button" disabled={form.parties.length === 1} onClick={() => setForm(p => ({ ...p, parties: p.parties.filter((_, i) => i !== index) }))} className="p-2 text-gray-400 hover:text-red-500 disabled:opacity-30"><Trash2 size={15} /></button></div>)}</div>
               </div>
 
-              <div className="rounded-xl border border-gray-200 p-4">
-                <div className="mb-3 flex items-center justify-between"><div><h4 className="text-sm font-semibold text-gray-900">Option periods</h4><p className="text-[10px] text-gray-500">Track each extension and its exercise deadline.</p></div><button type="button" onClick={() => setForm(p => ({ ...p, optionPeriods: [...p.optionPeriods, { label: `Option ${p.optionPeriods.length + 1}`, durationMonths: 12, exerciseDeadline: '', exercised: false, notes: '' }] }))} className="text-xs font-semibold text-indigo-600">+ Add option</button></div>
-                {form.optionPeriods.length === 0 ? <p className="py-2 text-center text-xs text-gray-400">No option periods</p> : <div className="space-y-3">{form.optionPeriods.map((option, index) => <div key={index} className="grid grid-cols-[1fr_100px_1fr_auto] gap-2"><input placeholder="Option label" value={option.label} onChange={e => setForm(p => ({ ...p, optionPeriods: p.optionPeriods.map((item, i) => i === index ? { ...item, label: e.target.value } : item) }))} className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" /><input type="number" min="1" title="Duration in months" value={option.durationMonths} onChange={e => setForm(p => ({ ...p, optionPeriods: p.optionPeriods.map((item, i) => i === index ? { ...item, durationMonths: +e.target.value } : item) }))} className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" /><input type="date" title="Exercise deadline" value={option.exerciseDeadline} onChange={e => setForm(p => ({ ...p, optionPeriods: p.optionPeriods.map((item, i) => i === index ? { ...item, exerciseDeadline: e.target.value } : item) }))} className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" /><button type="button" onClick={() => setForm(p => ({ ...p, optionPeriods: p.optionPeriods.filter((_, i) => i !== index) }))} className="p-2 text-gray-400 hover:text-red-500"><Trash2 size={15} /></button></div>)}</div>}
+              <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+                <div className="mb-3 flex items-center justify-between"><div><h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Option periods</h4><p className="text-[10px] text-gray-500 dark:text-gray-400">Track each extension and its exercise deadline.</p></div><button type="button" onClick={() => setForm(p => ({ ...p, optionPeriods: [...p.optionPeriods, { label: `Option ${p.optionPeriods.length + 1}`, durationMonths: 12, exerciseDeadline: '', exercised: false, notes: '' }] }))} className="text-xs font-semibold text-indigo-600">+ Add option</button></div>
+                {form.optionPeriods.length === 0 ? <p className="py-2 text-center text-xs text-gray-400 dark:text-gray-500">No option periods</p> : <div className="space-y-3">{form.optionPeriods.map((option, index) => <div key={index} className="grid grid-cols-[1fr_100px_1fr_auto] gap-2"><input placeholder="Option label" value={option.label} onChange={e => setForm(p => ({ ...p, optionPeriods: p.optionPeriods.map((item, i) => i === index ? { ...item, label: e.target.value } : item) }))} className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" /><input type="number" min="1" title="Duration in months" value={option.durationMonths} onChange={e => setForm(p => ({ ...p, optionPeriods: p.optionPeriods.map((item, i) => i === index ? { ...item, durationMonths: +e.target.value } : item) }))} className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" /><input type="date" title="Exercise deadline" value={option.exerciseDeadline} onChange={e => setForm(p => ({ ...p, optionPeriods: p.optionPeriods.map((item, i) => i === index ? { ...item, exerciseDeadline: e.target.value } : item) }))} className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" /><button type="button" onClick={() => setForm(p => ({ ...p, optionPeriods: p.optionPeriods.filter((_, i) => i !== index) }))} className="p-2 text-gray-400 hover:text-red-500"><Trash2 size={15} /></button></div>)}</div>}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-1 block">Contract Value ($)</label>
-                  <input type="number" value={form.value} onChange={e => setForm(p => ({ ...p, value: +e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" />
+                  <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Contract Value ($)</label>
+                  <input type="number" value={form.value} onChange={e => setForm(p => ({ ...p, value: +e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-1 block">Royalty Rate (%)</label>
-                  <input type="number" value={form.royaltyRate} onChange={e => setForm(p => ({ ...p, royaltyRate: +e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" />
+                  <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Royalty Rate (%)</label>
+                  <input type="number" value={form.royaltyRate} onChange={e => setForm(p => ({ ...p, royaltyRate: +e.target.value }))} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
                 </div>
               </div>
-              <div className="rounded-xl border border-gray-200 p-4 space-y-3">
-                <h4 className="text-sm font-semibold text-gray-900">Recoupment terms</h4>
-                <div className="grid grid-cols-3 gap-3"><select value={form.recoupment.type} onChange={e => setForm(p => ({ ...p, recoupment: { ...p.recoupment, type: e.target.value as any } }))} className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm"><option value="none">Not recoupable</option><option value="recoupable">Recoupable</option><option value="partially_recoupable">Partially recoupable</option><option value="cross_collateralized">Cross-collateralized</option></select><input type="number" min="0" placeholder="Advance" value={form.recoupment.advanceAmount} onChange={e => setForm(p => ({ ...p, recoupment: { ...p.recoupment, advanceAmount: +e.target.value } }))} className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" /><input type="number" min="0" max="100" placeholder="Recoupment %" value={form.recoupment.recoupmentRate} onChange={e => setForm(p => ({ ...p, recoupment: { ...p.recoupment, recoupmentRate: +e.target.value } }))} className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" /></div>
-                <textarea placeholder="Recoupment notes" value={form.recoupment.notes} onChange={e => setForm(p => ({ ...p, recoupment: { ...p.recoupment, notes: e.target.value } }))} rows={2} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" />
+              <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700 space-y-3">
+                <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Recoupment terms</h4>
+                <div className="grid grid-cols-3 gap-3"><select value={form.recoupment.type} onChange={e => setForm(p => ({ ...p, recoupment: { ...p.recoupment, type: e.target.value as any } }))} className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"><option value="none">Not recoupable</option><option value="recoupable">Recoupable</option><option value="partially_recoupable">Partially recoupable</option><option value="cross_collateralized">Cross-collateralized</option></select><input type="number" min="0" placeholder="Advance" value={form.recoupment.advanceAmount} onChange={e => setForm(p => ({ ...p, recoupment: { ...p.recoupment, advanceAmount: +e.target.value } }))} className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" /><input type="number" min="0" max="100" placeholder="Recoupment %" value={form.recoupment.recoupmentRate} onChange={e => setForm(p => ({ ...p, recoupment: { ...p.recoupment, recoupmentRate: +e.target.value } }))} className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" /></div>
+                <textarea placeholder="Recoupment notes" value={form.recoupment.notes} onChange={e => setForm(p => ({ ...p, recoupment: { ...p.recoupment, notes: e.target.value } }))} rows={2} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
               </div>
-              <div className="rounded-xl border border-gray-200 p-4 space-y-3">
-                <h4 className="text-sm font-semibold text-gray-900">Payment obligations</h4>
-                <div className="grid grid-cols-3 gap-3"><input type="number" min="0" placeholder="Advance amount" value={form.paymentObligations.advanceAmount} onChange={e => setForm(p => ({ ...p, paymentObligations: { ...p.paymentObligations, advanceAmount: +e.target.value } }))} className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" /><select value={form.paymentObligations.royaltyFrequency} onChange={e => setForm(p => ({ ...p, paymentObligations: { ...p.paymentObligations, royaltyFrequency: e.target.value as any } }))} className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm"><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option><option value="semi_annual">Semi-annual</option><option value="annual">Annual</option></select><input type="number" min="0" placeholder="Minimum guarantee" value={form.paymentObligations.minimumGuarantee} onChange={e => setForm(p => ({ ...p, paymentObligations: { ...p.paymentObligations, minimumGuarantee: +e.target.value } }))} className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" /></div>
-                <textarea placeholder="Payment notes and obligations" value={form.paymentObligations.notes} onChange={e => setForm(p => ({ ...p, paymentObligations: { ...p.paymentObligations, notes: e.target.value } }))} rows={2} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-gray-600 mb-1 block">Ownership Terms</label>
-                <textarea value={form.ownershipTerms} onChange={e => setForm(p => ({ ...p, ownershipTerms: e.target.value }))} rows={2} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" />
+              <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700 space-y-3">
+                <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Payment obligations</h4>
+                <div className="grid grid-cols-3 gap-3"><input type="number" min="0" placeholder="Advance amount" value={form.paymentObligations.advanceAmount} onChange={e => setForm(p => ({ ...p, paymentObligations: { ...p.paymentObligations, advanceAmount: +e.target.value } }))} className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" /><select value={form.paymentObligations.royaltyFrequency} onChange={e => setForm(p => ({ ...p, paymentObligations: { ...p.paymentObligations, royaltyFrequency: e.target.value as any } }))} className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option><option value="semi_annual">Semi-annual</option><option value="annual">Annual</option></select><input type="number" min="0" placeholder="Minimum guarantee" value={form.paymentObligations.minimumGuarantee} onChange={e => setForm(p => ({ ...p, paymentObligations: { ...p.paymentObligations, minimumGuarantee: +e.target.value } }))} className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" /></div>
+                <textarea placeholder="Payment notes and obligations" value={form.paymentObligations.notes} onChange={e => setForm(p => ({ ...p, paymentObligations: { ...p.paymentObligations, notes: e.target.value } }))} rows={2} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-600 mb-1 block">General Contract Terms</label>
-                <textarea value={form.terms} onChange={e => setForm(p => ({ ...p, terms: e.target.value }))} rows={3} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" />
+                <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Ownership Terms</label>
+                <textarea value={form.ownershipTerms} onChange={e => setForm(p => ({ ...p, ownershipTerms: e.target.value }))} rows={2} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-600 mb-1 block">Contract File</label>
-                <label className="flex cursor-pointer items-center justify-between rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm text-gray-600 hover:border-indigo-400"><span className="flex items-center gap-2"><Upload size={15} />{contractFile?.name || (editingTarget?.fileName ? `Replace ${editingTarget.fileName}` : 'Upload PDF, DOC, DOCX, image, or TXT')}</span><input type="file" className="hidden" accept=".pdf,.doc,.docx,.txt,image/jpeg,image/png,image/webp" onChange={e => setContractFile(e.target.files?.[0] || null)} /></label>
+                <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">General Contract Terms</label>
+                <textarea value={form.terms} onChange={e => setForm(p => ({ ...p, terms: e.target.value }))} rows={3} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-600 mb-1 block">Notes</label>
-                <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} rows={2} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" />
+                <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Contract File</label>
+                <label className="flex cursor-pointer items-center justify-between rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm text-gray-600 hover:border-indigo-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"><span className="flex items-center gap-2"><Upload size={15} />{contractFile?.name || (editingTarget?.fileName ? `Replace ${editingTarget.fileName}` : 'Upload PDF, DOC, DOCX, image, or TXT')}</span><input type="file" className="hidden" accept=".pdf,.doc,.docx,.txt,image/jpeg,image/png,image/webp" onChange={e => setContractFile(e.target.files?.[0] || null)} /></label>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-600 mb-1 block dark:text-gray-300">Notes</label>
+                <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} rows={2} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
               </div>
             </div>
-            <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-gray-100">
-              <button onClick={() => { setShowCreate(false); resetForm(); }} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50">Cancel</button>
+            <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-gray-100 dark:border-gray-700">
+              <button onClick={() => { setShowCreate(false); resetForm(); }} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-700">Cancel</button>
               <button onClick={handleSave} className="px-5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700">{editingTarget ? 'Save Changes' : 'Create Contract'}</button>
             </div>
           </div>

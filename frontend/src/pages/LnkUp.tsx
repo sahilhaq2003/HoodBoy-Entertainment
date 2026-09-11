@@ -179,7 +179,7 @@ const LnkUp: React.FC = () => {
     { label: 'Total Views', value: stats.views.toLocaleString(), icon: <Eye size={20} className="text-cyan-600" />, bg: 'bg-cyan-50' },
   ] : [];
 
-  const inputClass = "w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:border-violet-500";
+  const inputClass = "w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 outline-none focus:border-violet-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100";
 
   if (loading) {
     return <div className="flex justify-center py-20"><RefreshCw size={24} className="text-violet-500 animate-spin" /></div>;
@@ -330,28 +330,28 @@ const LnkUp: React.FC = () => {
       {/* Add/Edit modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowForm(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <h2 className="text-base font-bold text-gray-900">{editing ? 'Edit Episode' : 'New Episode'}</h2>
-              <button onClick={() => setShowForm(false)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400"><X size={18} /></button>
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col dark:bg-gray-900 dark:border dark:border-gray-700" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">{editing ? 'Edit Episode' : 'New Episode'}</h2>
+              <button onClick={() => setShowForm(false)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 dark:text-gray-500 dark:hover:bg-gray-800"><X size={18} /></button>
             </div>
             <div className="p-6 overflow-y-auto space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Episode Title *</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1 dark:text-gray-300">Episode Title *</label>
                   <input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
                     placeholder="e.g. Season 3 Premiere / Live From The Studio" className={inputClass} />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Season</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1 dark:text-gray-300">Season</label>
                   <input type="number" min={1} value={form.season} onChange={e => setForm(p => ({ ...p, season: e.target.value }))} className={inputClass} />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Episode #</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1 dark:text-gray-300">Episode #</label>
                   <input type="number" min={1} value={form.episode} onChange={e => setForm(p => ({ ...p, episode: e.target.value }))} className={inputClass} />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Featured Artist</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1 dark:text-gray-300">Featured Artist</label>
                   <select value={form.artist} onChange={e => setForm(p => ({ ...p, artist: e.target.value }))} className={inputClass}>
                     <option value="">Showcase / Feature</option>
                     {artists.map(a => (
@@ -360,62 +360,62 @@ const LnkUp: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Status</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1 dark:text-gray-300">Status</label>
                   <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))} className={inputClass}>
                     {Object.entries(STATUS_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Air Date</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1 dark:text-gray-300">Air Date</label>
                   <input type="date" value={form.airDate} onChange={e => setForm(p => ({ ...p, airDate: e.target.value }))} className={inputClass} />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Platform</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1 dark:text-gray-300">Platform</label>
                   <select value={form.platform} onChange={e => setForm(p => ({ ...p, platform: e.target.value }))} className={inputClass}>
                     {PLATFORMS.map(p => <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
                   </select>
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Guests (comma separated)</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1 dark:text-gray-300">Guests (comma separated)</label>
                   <input value={form.guests} onChange={e => setForm(p => ({ ...p, guests: e.target.value }))}
                     placeholder="e.g. DJ Khaled, Megan Thee Stallion" className={inputClass} />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Description</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1 dark:text-gray-300">Description</label>
                   <textarea rows={2} value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
                     placeholder="Short synopsis of the episode..." className={`${inputClass} resize-none`} />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Thumbnail URL</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1 dark:text-gray-300">Thumbnail URL</label>
                   <input value={form.thumbnail} onChange={e => setForm(p => ({ ...p, thumbnail: e.target.value }))}
                     placeholder="https://..." className={inputClass} />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Tags (comma separated)</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1 dark:text-gray-300">Tags (comma separated)</label>
                   <input value={form.tags} onChange={e => setForm(p => ({ ...p, tags: e.target.value }))}
                     placeholder="e.g. premiere, interview, live" className={inputClass} />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Views</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1 dark:text-gray-300">Views</label>
                   <input type="number" min={0} value={form.views} onChange={e => setForm(p => ({ ...p, views: e.target.value }))} className={inputClass} />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Likes</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1 dark:text-gray-300">Likes</label>
                   <input type="number" min={0} value={form.likes} onChange={e => setForm(p => ({ ...p, likes: e.target.value }))} className={inputClass} />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Notes</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1 dark:text-gray-300">Notes</label>
                   <textarea rows={2} value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
                     placeholder="Internal production notes..." className={`${inputClass} resize-none`} />
                 </div>
-                <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer dark:text-gray-200">
                   <input type="checkbox" checked={form.featured} onChange={e => setForm(p => ({ ...p, featured: e.target.checked }))} className="accent-violet-600" />
                   Featured episode
                 </label>
               </div>
             </div>
-            <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-gray-200 bg-gray-50">
-              <button onClick={() => setShowForm(false)} className="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-100">Cancel</button>
+            <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
+              <button onClick={() => setShowForm(false)} className="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700">Cancel</button>
               <button onClick={handleSave} disabled={saving}
                 className="px-4 py-2 bg-violet-600 text-white rounded-lg text-sm font-semibold hover:bg-violet-700 disabled:opacity-50">
                 {saving ? 'Saving...' : editing ? 'Save Changes' : 'Create Episode'}
