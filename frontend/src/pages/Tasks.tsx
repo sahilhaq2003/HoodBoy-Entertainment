@@ -4,6 +4,13 @@ import {
   ChevronRight, ChevronDown, X, RefreshCw, ArrowRight, Target, Shield,
   Check, UserRound, Loader2, RotateCw, Send, MessageSquare, Activity,
 } from 'lucide-react';
+import {
+  DndContext, DragOverlay, PointerSensor, useSensor, useSensors, pointerWithin,
+  useDroppable,
+} from '@dnd-kit/core';
+import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import type { DragStartEvent, DragOverEvent, DragEndEvent } from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
 import { tasksApi } from '../services/api';
 import type { Task, KanbanColumns, TeamMemberPerformance, TaskStats, User } from '../types';
 import toast from 'react-hot-toast';
@@ -38,6 +45,131 @@ const avatarColor = (name: string) => {
 };
 
 const initials = (name: string) => name?.split(' ').filter(Boolean).map(part => part[0]).join('').toUpperCase().slice(0, 2) || '?';
+
+const COLUMN_KEYS = COLUMNS.map(c => c.key) as (keyof KanbanColumns)[];
+
+const emptyColumns = (): KanbanColumns => ({
+  not_started: [], in_progress: [], waiting_approval: [], blocked: [], delayed: [], completed: [],
+});
+
+const cloneKanban = (kanban: KanbanColumns): KanbanColumns => {
+  const built = emptyColumns();
+  for (const key of COLUMN_KEYS) built[key] = [...(kanban[key] || [])];
+  return built;
+};
+
+const findColumnOfTask = (kanban: KanbanColumns | null, taskId: string): keyof KanbanColumns | undefined => {
+  if (!kanban) return undefined;
+  return COLUMN_KEYS.find(key => (kanban[key] || []).some(task => task._id === taskId));
+};
+
+const findTaskInKanban = (kanban: KanbanColumns | null, taskId: string): Task | null => {
+  if (!kanban) return null;
+  for (const key of COLUMN_KEYS) {
+    const found = (kanban[key] || []).find(task => task._id === taskId);
+    if (found) return found;
+  }
+  return null;
+};
+
+const daysUntilDate = (date: string) => Math.ceil((new Date(date).getTime() - Date.now()) / 86400000);
+
+const TaskCardBody: React.FC<{ task: Task; compact?: boolean }> = ({ task, compact = false }) => {
+  const days = daysUntilDate(task.deadline);
+  const isOverdue = days < 0 && task.status !== 'completed';
+  return (
+    <>
+      <div className={`${compact ? 'text-[11px]' : 'text-xs'} font-semibold text-gray-900 mb-1.5 leading-snug`}>{task.title}</div>
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: `${PRIORITY_COLORS[task.priority]}15`, color: PRIORITY_COLORS[task.priority] }}>
+          {task.priority}
+        </span>
+        <span className={`text-[10px] font-bold ${isOverdue ? 'text-red-600' : days <= 3 ? 'text-amber-600' : 'text-gray-500'}`}>
+          {task.status === 'completed' ? 'Done' : isOverdue ? `${Math.abs(days)}d late` : `${days}d`}
+        </span>
+      </div>
+      {task.deliverable && (
+        <div className="text-[10px] text-gray-400 truncate mb-1.5 flex items-center gap-1">
+          <Target size={9} /> {task.deliverable}
+        </div>
+      )}
+      {task.assignedTo && (
+        <div className="flex items-center gap-1.5 pt-1.5 border-t border-gray-100">
+          <div className="w-4 h-4 rounded flex items-center justify-center text-[8px] font-bold text-white" style={{ background: avatarColor(task.assignedTo.name) }}>
+            {initials(task.assignedTo.name)}
+          </div>
+          <span className="text-[10px] text-gray-500 truncate">{task.assignedTo.name}</span>
+        </div>
+      )}
+    </>
+  );
+};
+
+interface SortableTaskCardProps {
+  task: Task;
+  onOpen: (task: Task) => void;
+}
+
+const SortableTaskCard: React.FC<SortableTaskCardProps> = ({ task, onOpen }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: task._id,
+    data: { task },
+  });
+  const days = daysUntilDate(task.deadline);
+  const isOverdue = days < 0 && task.status !== 'completed';
+  return (
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      onClick={() => onOpen(task)}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.35 : 1,
+        cursor: isDragging ? 'grabbing' : 'grab',
+        zIndex: isDragging ? 30 : undefined,
+      }}
+      className={`p-3 rounded-xl bg-white border shadow-sm hover:shadow-md transition-shadow ${isOverdue ? 'border-red-200' : 'border-gray-100'} ${isDragging ? 'relative' : ''}`}
+    >
+      <TaskCardBody task={task} />
+    </div>
+  );
+};
+
+interface TaskColumnProps {
+  col: { key: keyof KanbanColumns; label: string; color: string };
+  tasks: Task[];
+  onOpen: (task: Task) => void;
+}
+
+const TaskColumn: React.FC<TaskColumnProps> = ({ col, tasks, onOpen }) => {
+  const { setNodeRef, isOver } = useDroppable({ id: col.key, data: { status: col.key } });
+  return (
+    <div
+      ref={setNodeRef}
+      className={`min-w-44 h-full rounded-xl flex flex-col gap-2.5 p-1 -m-1 transition-colors duration-150 ${isOver ? 'bg-indigo-50/80 ring-2 ring-indigo-300/70 ring-inset dark:bg-indigo-500/10 dark:ring-indigo-500/40' : ''}`}
+    >
+      <div className="flex items-center justify-between mb-0.5 px-2 pt-1">
+        <div className="flex items-center gap-1.5">
+          <div className="w-2 h-2 rounded-full" style={{ background: col.color }} />
+          <span className="text-xs font-semibold text-gray-700">{col.label}</span>
+        </div>
+        <span className="text-[10px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full">{tasks.length}</span>
+      </div>
+      <SortableContext items={tasks.map(t => t._id)} strategy={verticalListSortingStrategy}>
+        <div className={`min-h-16 flex-1 rounded-lg space-y-2 px-2 py-1 transition-colors duration-150 ${isOver ? 'bg-indigo-100/50 dark:bg-indigo-500/10' : 'bg-transparent'}`}>
+          {tasks.map(task => <SortableTaskCard key={task._id} task={task} onOpen={onOpen} />)}
+          {tasks.length === 0 && (
+            <div className={`text-[10px] text-gray-400 text-center py-4 border border-dashed rounded-lg transition-colors ${isOver ? 'border-indigo-300 bg-indigo-50/60 text-indigo-500 dark:border-indigo-500/50 dark:bg-indigo-500/10' : 'border-gray-200'}`}>
+              Drop here
+            </div>
+          )}
+        </div>
+      </SortableContext>
+    </div>
+  );
+};
 
 interface AssigneeSelectProps {
   users: User[];
@@ -187,6 +319,10 @@ const Tasks: React.FC = () => {
   const [comment, setComment] = useState('');
   const [sendingComment, setSendingComment] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const dragSnapshotRef = useRef<KanbanColumns | null>(null);
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
   const [form, setForm] = useState({
     title: '', description: '', assignedTo: '', deadline: '', priority: 'medium',
@@ -263,6 +399,23 @@ const Tasks: React.FC = () => {
     setTasks(prev => prev.map(t => t._id === updated._id ? updated : t));
   };
 
+  const applyTaskInPlace = (updated: Task) => {
+    setKanban(prev => {
+      if (!prev) return prev;
+      const built = cloneKanban(prev);
+      const target = built[updated.status as keyof KanbanColumns];
+      const idx = target.findIndex(t => t._id === updated._id);
+      if (idx < 0) {
+        for (const key of COLUMN_KEYS) built[key] = built[key].filter(t => t._id !== updated._id);
+        target.unshift(updated);
+      } else {
+        target[idx] = updated;
+      }
+      return built;
+    });
+    setTasks(prev => prev.map(t => t._id === updated._id ? updated : t));
+  };
+
   const handleCreate = async () => {
     if (!form.title || !form.deadline) return toast.error('Title and deadline required');
     if (!form.deliverable) return toast.error('Deliverable is required');
@@ -277,13 +430,112 @@ const Tasks: React.FC = () => {
     } catch { toast.error('Failed to create task'); }
   };
 
-  const handleStatusChange = async (taskId: string, newStatus: string) => {
+  const persistStatus = async (taskId: string, newStatus: string, opts: { silent?: boolean; inPlace?: boolean; onError?: () => void } = {}) => {
+    const { silent = false, inPlace = false, onError } = opts;
     try {
       const response = await tasksApi.update(taskId, { status: newStatus });
-      applyTaskUpdate(response.data.data);
-      setViewTask((previous): Task | null => previous ? { ...previous, ...response.data.data } : previous);
-      toast.success('Task updated');
-    } catch { toast.error('Failed to update'); }
+      if (inPlace) applyTaskInPlace(response.data.data);
+      else applyTaskUpdate(response.data.data);
+      setViewTask(previous => previous?._id === taskId ? { ...previous, ...response.data.data } : previous);
+      if (!silent) toast.success('Task updated');
+    } catch {
+      onError?.();
+      toast.error('Failed to update status');
+    }
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    if (!kanban) return;
+    const task = findTaskInKanban(kanban, event.active.id as string);
+    if (task) {
+      dragSnapshotRef.current = cloneKanban(kanban);
+      setActiveTask(task);
+    }
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+    const activeId = active.id as string;
+    const overId = over.id as string;
+    if (activeId === overId) return;
+
+    const overCol = COLUMN_KEYS.includes(overId as keyof KanbanColumns)
+      ? overId as keyof KanbanColumns
+      : findColumnOfTask(kanban, overId);
+    const activeCol = findColumnOfTask(kanban, activeId);
+    if (!overCol || !activeCol || activeCol === overCol) return;
+
+    setKanban(prev => {
+      if (!prev) return prev;
+      const built = cloneKanban(prev);
+      const fromIndex = built[activeCol].findIndex(t => t._id === activeId);
+      if (fromIndex < 0) return prev;
+      const [moved] = built[activeCol].splice(fromIndex, 1);
+      const target = built[overCol];
+      let insertIndex = target.findIndex(t => t._id === overId);
+      if (insertIndex < 0) insertIndex = target.length;
+      target.splice(insertIndex, 0, moved);
+      return built;
+    });
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveTask(null);
+    const snapshot = dragSnapshotRef.current;
+    dragSnapshotRef.current = null;
+
+    if (!over || !snapshot) {
+      if (snapshot) setKanban(snapshot);
+      return;
+    }
+    const activeId = active.id as string;
+    const overId = over.id as string;
+
+    const overCol = COLUMN_KEYS.includes(overId as keyof KanbanColumns)
+      ? overId as keyof KanbanColumns
+      : findColumnOfTask(kanban, overId) ?? findColumnOfTask(snapshot, overId);
+    if (!overCol) {
+      setKanban(snapshot);
+      return;
+    }
+
+    const homeCol = findColumnOfTask(snapshot, activeId);
+    const homeTask = findTaskInKanban(snapshot, activeId);
+    if (!homeCol || !homeTask) return;
+
+    if (overCol === homeCol) {
+      if (overId !== overCol && overId !== activeId) {
+        setKanban(prev => {
+          if (!prev) return prev;
+          const built = cloneKanban(prev);
+          const arr = built[overCol];
+          const from = arr.findIndex(t => t._id === activeId);
+          let to = arr.findIndex(t => t._id === overId);
+          if (from < 0 || to < 0 || from === to) return prev;
+          const [moved] = arr.splice(from, 1);
+          arr.splice(to > from ? to - 1 : to, 0, moved);
+          return built;
+        });
+      }
+      return;
+    }
+
+    if (findColumnOfTask(kanban, activeId) !== overCol) {
+      applyTaskUpdate({ ...homeTask, status: overCol });
+    }
+    persistStatus(activeId, overCol, {
+      silent: true,
+      inPlace: true,
+      onError: () => setKanban(snapshot),
+    });
+  };
+
+  const handleDragCancel = () => {
+    setActiveTask(null);
+    if (dragSnapshotRef.current) setKanban(dragSnapshotRef.current);
+    dragSnapshotRef.current = null;
   };
 
   const handleAssignChange = async (taskId: string, userId: string) => {
@@ -401,62 +653,33 @@ const Tasks: React.FC = () => {
 
       {/* Board View */}
       {activeTab === 'board' && kanban && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 overflow-x-auto">
-          {COLUMNS.map(col => {
-            const colTasks = (kanban[col.key] || []).filter(t => {
-              const ms = !search || t.title.toLowerCase().includes(search.toLowerCase());
-              const mp = !priorityFilter || t.priority === priorityFilter;
-              return ms && mp;
-            });
-            return (
-              <div key={col.key} className="min-w-44">
-                <div className="flex items-center justify-between mb-2.5 px-1">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full" style={{ background: col.color }} />
-                    <span className="text-xs font-semibold text-gray-700">{col.label}</span>
-                  </div>
-                  <span className="text-[10px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full">{colTasks.length}</span>
-                </div>
-                <div className="space-y-2">
-                  {colTasks.map(task => {
-                    const days = daysUntil(task.deadline);
-                    const isOverdue = days < 0 && task.status !== 'completed';
-                    return (
-                      <div key={task._id} onClick={() => setViewTask(task)}
-                        className={`p-3 rounded-xl cursor-pointer bg-white border shadow-sm hover:shadow-md transition-all ${isOverdue ? 'border-red-200' : 'border-gray-100'}`}>
-                        <div className="text-xs font-semibold text-gray-900 mb-1.5 leading-snug">{task.title}</div>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: `${PRIORITY_COLORS[task.priority]}15`, color: PRIORITY_COLORS[task.priority] }}>
-                            {task.priority}
-                          </span>
-                          <span className={`text-[10px] font-bold ${isOverdue ? 'text-red-600' : days <= 3 ? 'text-amber-600' : 'text-gray-500'}`}>
-                            {task.status === 'completed' ? 'Done' : isOverdue ? `${Math.abs(days)}d late` : `${days}d`}
-                          </span>
-                        </div>
-                        {task.deliverable && (
-                          <div className="text-[10px] text-gray-400 truncate mb-1.5 flex items-center gap-1">
-                            <Target size={9} /> {task.deliverable}
-                          </div>
-                        )}
-                        {task.assignedTo && (
-                          <div className="flex items-center gap-1.5 pt-1.5 border-t border-gray-100">
-                            <div className="w-4 h-4 rounded flex items-center justify-center text-[8px] font-bold text-white" style={{ background: getAvatarColor(task.assignedTo.name) }}>
-                              {getInitials(task.assignedTo.name)}
-                            </div>
-                            <span className="text-[10px] text-gray-500 truncate">{task.assignedTo.name}</span>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                  {colTasks.length === 0 && (
-                    <div className="text-[10px] text-gray-400 text-center py-4 border border-dashed border-gray-200 rounded-lg">Empty</div>
-                  )}
-                </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={pointerWithin}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
+        >
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 overflow-x-auto">
+            {COLUMNS.map(col => {
+              const colTasks = (kanban[col.key] || []).filter(t => {
+                const ms = !search || t.title.toLowerCase().includes(search.toLowerCase());
+                const mp = !priorityFilter || t.priority === priorityFilter;
+                return ms && mp;
+              });
+              return <TaskColumn key={col.key} col={col} tasks={colTasks} onOpen={task => setViewTask(task)} />;
+            })}
+          </div>
+
+          <DragOverlay dropAnimation={null}>
+            {activeTask && (
+              <div className="p-3 rounded-xl bg-white border border-indigo-300 shadow-2xl rotate-2 opacity-95 pointer-events-none w-56">
+                <TaskCardBody task={activeTask} />
               </div>
-            );
-          })}
-        </div>
+            )}
+          </DragOverlay>
+        </DndContext>
       )}
 
       {/* List View */}
@@ -584,7 +807,7 @@ const Tasks: React.FC = () => {
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div><p className="text-xs text-gray-400 dark:text-gray-500">Status</p>
-                  <select value={viewTask.status} onChange={e => { handleStatusChange(viewTask._id, e.target.value); setViewTask({ ...viewTask, status: e.target.value as any }); }}
+                  <select value={viewTask.status} onChange={e => { persistStatus(viewTask._id, e.target.value); setViewTask({ ...viewTask, status: e.target.value as any }); }}
                     className="w-full mt-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100">
                     {COLUMNS.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
                   </select>

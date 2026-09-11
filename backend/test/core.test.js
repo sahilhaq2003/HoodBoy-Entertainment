@@ -12,6 +12,8 @@ const SongMetadata = require('../models/SongMetadata');
 const Task = require('../models/Task');
 const { validateOwnershipRecord } = require('../services/ownershipValidationService');
 const { errorHandler } = require('../middleware/errorHandler');
+const { _totp, _verifyTotp } = require('../controllers/authController');
+const { makePdf, makeSilentWav } = require('../scripts/seedDemo');
 
 const validSources = (amount) => ({
   streaming: amount, publishing: 0, mechanical: 0, performance: 0,
@@ -193,4 +195,20 @@ test('API error handler returns safe client errors for oversized and rejected up
   const rejected = invoke({ code: 'LIMIT_UNEXPECTED_FILE', message: 'Unsupported or mismatched file type: .exe' });
   assert.equal(rejected.statusCode, 400);
   assert.match(rejected.body.message, /mismatched/);
+});
+
+test('authenticator codes and generated demo fixtures are valid', () => {
+  const secret = 'JBSWY3DPEHPK3PXP';
+  const code = _totp(secret);
+  assert.match(code, /^\d{6}$/);
+  assert.equal(_verifyTotp(secret, code), true);
+  assert.equal(_verifyTotp(secret, '00000'), false);
+
+  const pdf = makePdf('Test statement');
+  assert.equal(pdf.subarray(0, 8).toString(), '%PDF-1.4');
+  assert.match(pdf.toString(), /startxref/);
+  const wav = makeSilentWav();
+  assert.equal(wav.subarray(0, 4).toString(), 'RIFF');
+  assert.equal(wav.subarray(8, 12).toString(), 'WAVE');
+  assert.equal(wav.length, 16044);
 });

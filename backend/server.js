@@ -11,7 +11,11 @@ connectDB();
 const app = express();
 
 // Middleware
-app.use(cors({ origin: ['http://localhost:5173', 'http://localhost:5174'], credentials: true }));
+const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:5173,http://localhost:5174')
+  .split(',')
+  .map(origin => origin.trim())
+  .filter(Boolean);
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 if (process.env.NODE_ENV === 'development') app.use(morgan('dev'));
@@ -53,6 +57,7 @@ app.use('/api/artist-balances', require('./routes/artistBalances'));
 app.use('/api/per-song-analytics', require('./routes/perSongAnalytics'));
 app.use('/api/lnk-up', require('./routes/lnkUp'));
 app.use('/api/users', require('./routes/users'));
+app.use('/api/search', require('./routes/search'));
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -68,6 +73,7 @@ app.use(notFound);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`🚀 HBE Label API running on http://localhost:${PORT}`);
+const HOST = process.env.HOST || '127.0.0.1';
+app.listen(PORT, HOST, () => {
+  console.log(`🚀 HBE Label API running on http://${HOST}:${PORT}`);
 });

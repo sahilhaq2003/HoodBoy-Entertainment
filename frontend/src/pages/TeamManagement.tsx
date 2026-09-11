@@ -241,11 +241,11 @@ const TeamManagement: React.FC = () => {
             <p className="text-xs text-gray-500 mt-1">Add your first team member to get started</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-50">
+          <div className="divide-y divide-gray-50 dark:divide-gray-700">
             {users.map(u => {
               const rc = ROLE_CONFIG[u.role] || ROLE_CONFIG.manager;
               return (
-                <div key={u._id} className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50/50 transition-colors">
+                <div key={u._id} className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50/50 dark:hover:bg-gray-800/60 transition-colors">
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
                     style={{ background: `linear-gradient(135deg, ${rc.color}, ${rc.color}99)` }}>
                     {u.avatar ? <img src={u.avatar} alt={u.name} className="w-full h-full object-cover rounded-xl" /> : u.name.charAt(0)}
@@ -265,16 +265,16 @@ const TeamManagement: React.FC = () => {
                   </span>
                   <span className="text-xs text-gray-400 flex-shrink-0 hidden md:block">Joined {formatDate(u.createdAt)}</span>
                   <div className="flex items-center gap-1 flex-shrink-0">
-                    <button onClick={() => openEditModal(u)} title="Edit" className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
+                    <button onClick={() => openEditModal(u)} title="Edit" className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors">
                       <Edit2 size={14} />
                     </button>
-                    <button onClick={() => { setPasswordUserId(u._id); setShowPasswordModal(true); setNewPassword(''); }} title="Reset Password" className="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors">
+                    <button onClick={() => { setPasswordUserId(u._id); setShowPasswordModal(true); setNewPassword(''); }} title="Reset Password" className="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors">
                       <Key size={14} />
                     </button>
-                    <button onClick={() => handleToggleActive(u)} title={u.isActive ? 'Deactivate' : 'Activate'} className={`p-1.5 rounded-lg transition-colors ${u.isActive ? 'text-gray-400 hover:text-red-600 hover:bg-red-50' : 'text-gray-400 hover:text-green-600 hover:bg-green-50'}`}>
+                    <button onClick={() => handleToggleActive(u)} title={u.isActive ? 'Deactivate' : 'Activate'} className={`p-1.5 rounded-lg transition-colors ${u.isActive ? 'text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10' : 'text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-500/10'}`}>
                       {u.isActive ? <PowerOff size={14} /> : <Power size={14} />}
                     </button>
-                    <button onClick={() => setDeleteTarget(u)} title="Delete" className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors">
+                    <button onClick={() => setDeleteTarget(u)} title="Delete" className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
                       <Trash2 size={14} />
                     </button>
                   </div>

@@ -256,6 +256,17 @@ const Royalties: React.FC = () => {
     setShowStatementModal(true);
   };
 
+  const handlePrintStatement = (entry: RoyaltyEntry) => {
+    const popup = window.open('', '_blank', 'noopener,noreferrer,width=900,height=700');
+    if (!popup) return toast.error('Allow pop-ups to print the statement');
+    const escapeHtml = (value: unknown) => String(value ?? '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char] || char));
+    const artistName = escapeHtml(getArtistName(entry.artist));
+    const safePeriod = escapeHtml(entry.period);
+    const rows = Object.entries(entry.incomeBySource).map(([source, amount]) => `<tr><td>${formatStatus(source)}</td><td>$${Number(amount || 0).toFixed(2)}</td></tr>`).join('');
+    popup.document.write(`<!doctype html><html><head><title>Royalty Statement - ${safePeriod}</title><style>body{font:14px Arial;color:#111;padding:36px;max-width:800px;margin:auto}h1{margin-bottom:4px}.muted{color:#666}table{width:100%;border-collapse:collapse;margin:24px 0}td,th{padding:9px;border:1px solid #ddd;text-align:left}.total{font-weight:bold;background:#f4f1ff}.footer{margin-top:36px;font-size:11px;color:#666}@media print{button{display:none}}</style></head><body><button onclick="window.print()">Print / Save as PDF</button><h1>Royalty Statement</h1><p class="muted">HoodBoy Entertainment &middot; ${artistName} &middot; ${safePeriod}</p><p>${formatDate(entry.periodStart)} – ${formatDate(entry.periodEnd)}</p><table><thead><tr><th>Income source</th><th>Amount</th></tr></thead><tbody>${rows}<tr class="total"><td>Gross income</td><td>${formatCurrency(entry.grossIncome)}</td></tr></tbody></table><table><tbody><tr><td>Total deductions</td><td>${formatCurrency(entry.totalDeductions)}</td></tr><tr><td>Net income</td><td>${formatCurrency(entry.netIncome)}</td></tr><tr><td>Artist share (${entry.artistPercentage}%)</td><td>${formatCurrency(entry.artistShare)}</td></tr><tr><td>Label share (${entry.labelPercentage}%)</td><td>${formatCurrency(entry.labelShare)}</td></tr><tr><td>Total paid</td><td>${formatCurrency(entry.totalPaid)}</td></tr><tr class="total"><td>Remaining balance</td><td>${formatCurrency(entry.remainingBalance)}</td></tr></tbody></table><p class="footer">Generated ${new Date().toLocaleString()} from the approved royalty ledger record. Review before distribution.</p><script>window.onload=()=>window.print()<\/script></body></html>`);
+    popup.document.close();
+  };
+
   const getArtistName = (artist: Artist) => artist.stageName || artist.artistName || artist.name;
 
   const sourceLabels: Record<keyof IncomeBySource, string> = {
@@ -869,7 +880,7 @@ const Royalties: React.FC = () => {
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Royalty Statement</h2>
-              <button
+              <div className="flex items-center gap-2"><button onClick={() => handlePrintStatement(selectedEntry)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold"><Download size={14} /> Print / PDF</button><button
                 onClick={() => {
                   setShowStatementModal(false);
                   setSelectedEntry(null);
@@ -877,7 +888,7 @@ const Royalties: React.FC = () => {
                 className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
               >
                 <XCircle size={20} />
-              </button>
+              </button></div>
             </div>
             <div className="p-6 space-y-6">
               <div className="flex items-center justify-between">

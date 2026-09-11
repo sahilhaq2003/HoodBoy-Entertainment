@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth, getDashboardPath } from './contexts/AuthContext';
 import Layout from './components/layout/Layout';
 import ErrorBoundary from './components/ui/ErrorBoundary';
+import { applyAppearance, getAppearance } from './utils/appearance';
 
 // Pages
 import Login from './pages/Login';
@@ -147,8 +148,8 @@ const AppRoutes: React.FC = () => {
         <Route path="royalties" element={<RoleConditional artist={<RoleGuard roles={['artist']}><MyRoyalties /></RoleGuard>} staff={<AccessGuard resource="royalties"><Royalties /></AccessGuard>} />} />
         <Route path="tasks" element={<AccessGuard resource="tasks"><Tasks /></AccessGuard>} />
 
-        {/* Settings - Admin only */}
-        <Route path="settings" element={<RoleGuard roles={['admin']}><Settings /></RoleGuard>} />
+        {/* Personal settings are available to every signed-in role. */}
+        <Route path="settings" element={<Settings />} />
         <Route path="team" element={<RoleGuard roles={['admin']}><TeamManagement /></RoleGuard>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
@@ -158,12 +159,7 @@ const AppRoutes: React.FC = () => {
 
 const ThemeInit: React.FC = () => {
   useEffect(() => {
-    const stored = localStorage.getItem('hbe_theme') as 'light' | 'dark' | null;
-    if (stored === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    applyAppearance(getAppearance(), false);
   }, []);
   return null;
 };

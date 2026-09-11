@@ -78,15 +78,15 @@
 <section class="cover">
   <div class="brand"><img src="../frontend/public/logo.png" alt="HoodBoy Entertainment logo"><div><div class="brand-name">HoodBoy Entertainment</div><div class="brand-sub">Lnkup Label Management Platform</div></div></div>
   <div class="cover-main"><div class="eyebrow">Client User Manual</div><h1>Complete Platform<br>User &amp; Workflow Guide</h1><p class="cover-lead">A practical reference for every role, dashboard, module, workflow, status, form, and day-to-day operating procedure in the platform.</p></div>
-  <div class="cover-meta"><span>Version 1.0</span><span>Prepared 10 September 2026</span><span>HoodBoy Entertainment</span></div>
+  <div class="cover-meta"><span>Version 1.1</span><span>Updated 11 September 2026</span><span>HoodBoy Entertainment</span></div>
 </section>
 
 <section class="page">
   <div class="chapter"><span class="chapter-num">i</span><h1>About this manual</h1></div>
   <p>This manual documents the client-facing behavior of the current HoodBoy Entertainment Lnkup Label Management Platform. It is written for administrators, managers, artists, finance staff, marketing staff, and operational users.</p>
   <table>
-    <tr><th>Document</th><td>Client User &amp; Workflow Manual</td><th>Version</th><td>1.0</td></tr>
-    <tr><th>System</th><td>Lnkup Label Management Platform</td><th>Review date</th><td>10 September 2026</td></tr>
+    <tr><th>Document</th><td>Client User &amp; Workflow Manual</td><th>Version</th><td>1.1</td></tr>
+    <tr><th>System</th><td>Lnkup Label Management Platform</td><th>Review date</th><td>11 September 2026</td></tr>
     <tr><th>Audience</th><td colspan="3">HoodBoy Entertainment staff, artists, finance and marketing users, system administrators, and approved client stakeholders</td></tr>
     <tr><th>Source of truth</th><td colspan="3">Current application routes, page behavior, authorization policy, data models, validations, and file-handling rules in the supplied web application</td></tr>
   </table>
@@ -137,7 +137,7 @@
     <a href="#songanalytics"><span>28. Per-Song Analytics</span><small>Insights</small></a>
     <a href="#files"><span>29. File Manager</span><small>Files</small></a>
     <a href="#team"><span>30. Team Management</span><small>Admin</small></a>
-    <a href="#settings"><span>31. Settings and notifications</span><small>Admin</small></a>
+    <a href="#settings"><span>31. Settings and notifications</span><small>Account</small></a>
     <a href="#operations"><span>32. Operating standards</span><small>Governance</small></a>
     <a href="#troubleshooting"><span>33. Troubleshooting</span><small>Help</small></a>
     <a href="#glossary"><span>Appendix A. Status glossary</span><small>Reference</small></a>
@@ -171,7 +171,10 @@
   <div class="chapter"><span class="chapter-num">2</span><h1>Sign in and sign out</h1></div>
   <h3>Sign in</h3>
   <ol class="steps"><li>Open the platform login page.</li><li>Enter the email address assigned by the administrator.</li><li>Enter the password. Use the eye icon to show or hide it.</li><li>Select <b>Sign In</b>. A confirmation screen appears while the correct role dashboard loads.</li></ol>
-  <div class="callout"><strong>First-time access</strong>Accounts are created and roles are assigned in Team Management by an administrator. The administrator should provide the login address and temporary password through an approved secure channel.</div>
+  <div class="callout"><strong>First-time access</strong>An artist can select <b>Create an account</b>; the system creates both the artist login and linked starter profile. Administrators create staff accounts and assign roles in Team Management.</div>
+  <h3>Password recovery and two-factor sign-in</h3>
+  <ol class="steps"><li>Select <b>Forgot password?</b>, enter the account email, and submit.</li><li>Open the time-limited link delivered by the configured recovery service. Development/demo deployments can load the one-time code directly.</li><li>Enter and confirm a new password of at least eight characters.</li><li>If two-factor authentication is enabled, complete password sign-in with the current six-digit authenticator code.</li></ol>
+  <p><b>Keep me signed in</b> stores the session persistently in that browser. Leave it clear to use session storage, which ends when the browser session closes.</p>
   <h3>Login errors</h3>
   <table>
     <tr><th>Message or symptom</th><th>Meaning / action</th></tr>
@@ -181,7 +184,7 @@
   </table>
   <h3>Sign out</h3>
   <p>Select the user avatar at the top right and choose <b>Sign out</b>, or select <b>Sign Out</b> at the bottom of the sidebar. Signing out clears locally stored account, navigation, access, and session details.</p>
-  <div class="callout warn"><strong>Shared devices</strong>Always sign out after use. Closing the browser alone is not a substitute because the platform stores the session locally until sign-out or expiry.</div>
+  <div class="callout warn"><strong>Shared devices</strong>Leave <b>Keep me signed in</b> clear and always sign out after use. Signing out clears both persistent and session-scoped application credentials.</div>
 </section>
 
 <section id="navigation" class="page">
@@ -191,6 +194,7 @@
     <tr><td>Left sidebar</td><td>Shows only the pages assigned to the signed-in role, grouped into Overview, Catalog, Operations, Finance, Insights, and Account.</td></tr>
     <tr><td>Mobile menu</td><td>On smaller screens, select the menu icon to open the sidebar; select the shaded background or X to close it.</td></tr>
     <tr><td>Page title</td><td>The top bar identifies the current page.</td></tr>
+    <tr><td>Workspace search</td><td>Searches accessible artists, songs, releases, projects, contracts, contacts, tasks, and campaigns. Select a result to open its module. Press Ctrl/Command-K to focus it.</td></tr>
     <tr><td>Notification bell</td><td>Shows unread count, the latest 20 notifications, priority, relative time, mark-read, mark-all-read, delete, and linked navigation.</td></tr>
     <tr><td>Theme button</td><td>Switches between light and dark mode and remembers the selection on that browser.</td></tr>
     <tr><td>User menu</td><td>Displays name, email, role, Profile, Settings, and Sign out.</td></tr>
@@ -199,7 +203,7 @@
   </table>
   <h3>Common list controls</h3>
   <p><span class="tag">Search</span> narrows records by keywords. <span class="tag">Filter</span> limits status, type, role, year, artist, or period. <span class="tag">View</span> opens detail. <span class="tag">Edit</span> opens a populated form. <span class="tag">Delete</span> removes the record after confirmation. Many dashboards use clickable cards that lead to the relevant module.</p>
-  <div class="callout note"><strong>Search scope</strong>Use each module's own search field for working searches. The top-bar workspace search is currently a visual control and does not execute a cross-module search in this release.</div>
+  <div class="callout note"><strong>Search scope</strong>Workspace search respects the signed-in role and returns only accessible record categories. Use a module's own search and filters for detailed narrowing.</div>
 </section>
 
 <section id="roles" class="page">
@@ -209,21 +213,21 @@
     <tr><th>Module</th><th>Admin</th><th>Manager</th><th>Artist</th><th>Finance</th><th>Marketing</th></tr>
     <tr><td>Dashboard</td><td class="yes">RW</td><td class="yes">RW</td><td class="yes">RW</td><td class="yes">RW</td><td class="yes">RW</td></tr>
     <tr><td>Artists</td><td class="yes">RW</td><td class="yes">RW</td><td class="no">-</td><td class="read">R</td><td class="read">R</td></tr>
-    <tr><td>Songs / Releases</td><td class="yes">RW</td><td class="yes">RW</td><td class="read">Listed links*</td><td class="no">-/R release</td><td class="read">R</td></tr>
+    <tr><td>Songs / Releases</td><td class="yes">RW</td><td class="yes">RW</td><td class="read">Own views</td><td class="no">-/R release</td><td class="read">R</td></tr>
     <tr><td>The Lnk Up</td><td class="yes">RW</td><td class="yes">RW</td><td class="no">-</td><td class="no">-</td><td class="no">-</td></tr>
-    <tr><td>Projects / Development / Tasks</td><td class="yes">RW</td><td class="yes">RW</td><td class="read">Dashboard / listed task link*</td><td class="no">-</td><td class="no">-</td></tr>
+    <tr><td>Projects / Development / Tasks</td><td class="yes">RW</td><td class="yes">RW</td><td class="read">Own tasks R</td><td class="read">Own tasks R</td><td class="read">Own tasks R</td></tr>
     <tr><td>Contracts</td><td class="yes">RW</td><td class="read">R</td><td class="no">-</td><td class="read">R</td><td class="no">-</td></tr>
     <tr><td>Contract Templates</td><td class="yes">RW</td><td class="no">-</td><td class="no">-</td><td class="yes">RW</td><td class="no">-</td></tr>
-    <tr><td>Finance / Budgets / Royalties / Balances / Tax</td><td class="yes">RW</td><td class="no">-</td><td class="read">Royalty link listed*</td><td class="yes">RW</td><td class="no">-</td></tr>
+    <tr><td>Finance / Budgets / Royalties / Balances / Tax</td><td class="yes">RW</td><td class="no">-</td><td class="read">Own royalties R</td><td class="yes">RW</td><td class="no">-</td></tr>
     <tr><td>Analytics</td><td class="read">R</td><td class="read">R</td><td class="no">-</td><td class="read">R</td><td class="read">R</td></tr>
     <tr><td>Per-Song Analytics</td><td class="yes">RW</td><td class="no">-</td><td class="no">-</td><td class="yes">RW</td><td class="read">R</td></tr>
     <tr><td>Campaigns / Contacts</td><td class="yes">RW</td><td class="yes">RW</td><td class="no">-</td><td class="no">-</td><td class="yes">RW</td></tr>
     <tr><td>Ownership</td><td class="yes">RW</td><td class="read">R</td><td class="no">-</td><td class="no">-</td><td class="no">-</td></tr>
     <tr><td>Files / Metadata</td><td class="yes">RW</td><td class="yes">RW</td><td class="no">-</td><td class="no">-</td><td class="no">-</td></tr>
     <tr><td>Weekly Reports</td><td class="yes">RW</td><td class="yes">RW</td><td class="no">-</td><td class="no">-</td><td class="no">-</td></tr>
-    <tr><td>Team / Settings</td><td class="yes">RW</td><td class="no">-</td><td class="no">-</td><td class="no">-</td><td class="no">-</td></tr>
+    <tr><td>Team / Personal Settings</td><td class="yes">RW</td><td class="read">Settings</td><td class="read">Settings</td><td class="read">Settings</td><td class="read">Settings</td></tr>
   </table>
-  <p class="fine">*Artist navigation includes My Music, My Releases, Royalties, Tasks, and Profile, but the current backend matrix denies the general songs, releases, royalties, and tasks resources. The Artist Dashboard is the dependable current source; see Appendix B.</p>
+  <p class="fine">Artist music, release, royalty, and profile pages use role-scoped dashboard endpoints; artists do not receive unrestricted access to the staff catalog or finance ledgers. Task participants can read and comment on their assigned tasks but cannot create, reassign, or delete tasks.</p>
   <h3>Role summaries</h3>
   <ul><li><b>Administrator:</b> full system, user, configuration, operational, financial, and approval control.</li><li><b>Manager:</b> roster and day-to-day catalog/operations management plus campaigns, contacts, files, metadata, and analytics.</li><li><b>Artist:</b> personal dashboard and own-facing music, release, royalty, task, and profile views.</li><li><b>Finance:</b> finance, budgets, royalties, artist balances, tax calendar, templates, and read-only related information.</li><li><b>Marketing:</b> campaigns, contacts, analytics, per-song analytics, and read-only artists/songs/releases.</li></ul>
 </section>
@@ -313,7 +317,7 @@
 </section>
 
 <section id="songs" class="page">
-  <div class="module-head"><h2>10. Music Catalog</h2><div class="access">Access: Administrator RW; Manager RW; Marketing R; artist link is listed but currently restricted</div></div>
+  <div class="module-head"><h2>10. Music Catalog</h2><div class="access">Access: Administrator RW; Manager RW; Marketing R; Artist own music R</div></div>
   <h3>Create or edit a song</h3>
   <p>Enter title*, artist*, album, genre, status, priority, release date, duration, producer, writer, ISRC, notes, credits, and beat/license information. Credit roles include songwriter, composer, producer, engineer, mixer, masterer, featured artist, vocalist, musician, and other.</p>
   <p><b>Statuses:</b> demo, in production, mixing, mastering, awaiting approval, approved, released, shelved. <b>Priorities:</b> low, medium, high, critical.</p>
@@ -362,7 +366,7 @@
 </section>
 
 <section id="releases" class="page">
-  <div class="module-head"><h2>13. Releases</h2><div class="access">Access: Administrator RW; Manager RW; Finance R; Marketing R; artist link is listed but currently restricted</div></div>
+  <div class="module-head"><h2>13. Releases</h2><div class="access">Access: Administrator RW; Manager RW; Finance R; Marketing R; Artist own releases R</div></div>
   <h3>Release fields</h3>
   <p>Title*, artist*, one or more songs*, project, release date*, type, status, current phase, ownership/master/artwork/metadata readiness flags, distribution platforms and links, marketing budget, cover art URL, UPC, assigned user, priority, genre, language, explicit flag, pre-save link, press release URL, and notes.</p>
   <p><b>Types:</b> album, EP, single, mixtape, compilation. <b>Statuses:</b> scheduled, in preparation, submitted, approved, released, delayed, cancelled.</p>
@@ -392,7 +396,7 @@
 </section>
 
 <section id="tasks" class="page">
-  <div class="module-head"><h2>15. Tasks &amp; Responsibilities</h2><div class="access">Access: Administrator RW; Manager RW; artist link is listed but currently restricted</div></div>
+  <div class="module-head"><h2>15. Tasks &amp; Responsibilities</h2><div class="access">Access: Administrator RW; Manager RW; Artist/Finance/Marketing assigned tasks R + comments</div></div>
   <p>The task board is a Kanban workflow with summary statistics and team-performance information. Columns are Not Started, In Progress, Waiting Approval, Blocked, Delayed, and Completed.</p>
   <h3>Create a task</h3>
   <p>Complete title*, description, assignee, related project, related artist, deadline*, status, priority, category, deliverable, tags, and notes. Categories: production, marketing, finance, legal, distribution, and general.</p>
@@ -514,7 +518,7 @@
 </section>
 
 <section id="royalties" class="page">
-  <div class="module-head"><h2>24. Royalties</h2><div class="access">Access: Administrator RW; Finance RW; artist link is listed but currently restricted</div></div>
+  <div class="module-head"><h2>24. Royalties</h2><div class="access">Access: Administrator RW; Finance RW; Artist own statements R</div></div>
   <p>The royalty ledger manages an artist/period from draft through calculation, approval, and payment. Search/filter entries, open detail, calculate, generate a statement record, approve, record payments, edit, or delete according to role.</p>
   <table class="compact"><tr><th>Group</th><th>Fields and rules</th></tr>
     <tr><td>Scope</td><td>Artist*, period*, start/end*, optional release, song, contract, ownership, finance transactions, supporting files.</td></tr>
@@ -527,7 +531,7 @@
   </table>
   <p><b>Status:</b> draft, calculated, approved, paid, disputed. Period end must be on/after period start.</p>
   <h3>Safe processing sequence</h3>
-  <ol class="steps"><li>Create and link source records.</li><li>Enter income, deductions, recoupment, and splits.</li><li>Calculate and independently review.</li><li>Resolve disputes before approval.</li><li>Approve; generate statement record.</li><li>Pay and immediately record payment details.</li></ol>
+  <ol class="steps"><li>Create and link source records.</li><li>Enter income, deductions, recoupment, and splits.</li><li>Calculate and independently review.</li><li>Resolve disputes before approval.</li><li>Approve and generate the statement.</li><li>Open the statement and select <b>Print / PDF</b>; use the browser print dialog to print or save a PDF.</li><li>Pay and immediately record payment details.</li></ol>
 </section>
 
 <section id="balances" class="page">
@@ -608,15 +612,15 @@
 </section>
 
 <section id="settings" class="page">
-  <div class="module-head"><h2>31. Settings and notifications</h2><div class="access">Settings page: Administrator only. Notification bell: all roles with notification read access.</div></div>
+  <div class="module-head"><h2>31. Settings and notifications</h2><div class="access">Personal settings and notification bell: all roles. Permissions and Team Management: Administrator only.</div></div>
   <h3>Profile</h3>
   <p>Change name, phone, department, and avatar; email and role are displayed but disabled. Images must be under 3 MB in the client and are stored as an image data URI within the server limit. Remove the photo with X and select <b>Save Changes</b>.</p>
   <h3>Security</h3>
-  <p>Change password with current password, new password, and confirmation; minimum length is 6. Two-factor authentication is displayed but not enabled in this deployment.</p>
+  <p>Change password with current password, new password, and confirmation. To enable two-factor authentication, select the toggle, add the displayed setup key to any standards-based authenticator app, enter the current six-digit code, and verify. Disabling 2FA requires the current password.</p>
   <h3>Notification preferences</h3>
   <p>Toggle and save task deadline alerts, release reminders, contract expiry warnings, approval requests, finance reports, and campaign updates. The bell polls unread count every minute and loads the latest 20 items when opened.</p>
   <h3>Appearance, integrations, permissions</h3>
-  <p>The top-bar theme toggle actively persists light/dark mode. The Settings appearance choices (Light, Light Indigo, Light Warm and font size) are currently local preview controls and are not applied by a dedicated save routine. Integrations currently show no configured connections. Permissions provides an overview and a link to Team Management.</p>
+  <p>Choose Light, Light Indigo, Light Warm, or Dark plus small/default/large font sizing, then select <b>Save Changes</b>; the choice is applied and retained. Platform Integrations stores validated Spotify, Apple Music, and distributor web links for one-click access. It does not claim to import private platform data. Administrators also see the permissions overview and Team Management link.</p>
   <h3>Notification actions</h3>
   <p>Select an item to follow its link; use the check to mark one read, <b>Mark all read</b> for all, or trash to delete where authorized. High-priority alerts use a red priority dot and are counted in the footer.</p>
 </section>
@@ -687,27 +691,27 @@
 
 <section id="deployment" class="page">
   <div class="chapter"><span class="chapter-num">B</span><h1>Current-deployment notes</h1></div>
-  <p>This section prevents users from mistaking visible placeholder controls for completed workflows in the audited release.</p>
+  <p>Version 1.1 replaces the previously visible demo/placeholder controls with operational workflows. The table records what is now live and which capabilities still require deployment configuration.</p>
   <table>
-    <tr><th>Feature/control</th><th>Current behavior</th><th>User guidance</th></tr>
-    <tr><td>Top-bar workspace search / Command-K hint</td><td>Visual input only; no cross-module search handler is connected.</td><td>Use the search inside each module.</td></tr>
-    <tr><td>Forgot password</td><td>Visible on login but no recovery workflow is connected.</td><td>Ask an administrator to reset the password in Team Management.</td></tr>
-    <tr><td>Create an account</td><td>Visible link is intentionally non-navigating.</td><td>Administrator creates accounts in Team Management.</td></tr>
-    <tr><td>Keep me signed in</td><td>Checkbox is visual; session data is stored locally regardless until sign-out/expiry.</td><td>Always sign out on shared devices.</td></tr>
-    <tr><td>Two-factor authentication</td><td>Control reports that provider setup is not enabled.</td><td>Use strong unique passwords; enable only after deployment configuration.</td></tr>
-    <tr><td>Settings appearance tiles/font size</td><td>Selection state is shown but no persistent application routine is connected.</td><td>Use the top-bar light/dark button for the active theme feature.</td></tr>
-    <tr><td>Integrations</td><td>No streaming/distribution integrations configured in the page.</td><td>Enter data/import results through supported module workflows until integrations are commissioned.</td></tr>
-    <tr><td>Weekly Report navigation</td><td>Route and role permissions exist, but it is not currently listed in Admin/Manager sidebar navigation.</td><td>Use the direct <code>/weekly-report</code> route or request a navigation update.</td></tr>
-    <tr><td>User-menu Profile/Settings for non-admins</td><td>Both point to admin-only Settings and may redirect non-admin roles to their dashboard.</td><td>Use role-specific Profile where provided; ask Admin for account changes.</td></tr>
-    <tr><td>Artist Profile direct route</td><td>The profile page expects an artist ID; the role-specific <code>/profile</code> route does not supply one in the current implementation.</td><td>Use the Artist Dashboard information and report the missing profile load for correction.</td></tr>
-    <tr><td>Artist My Music / My Releases / Royalties / Tasks</td><td>Links are included in artist navigation, while the underlying general-resource permission matrix denies artist access; pages may redirect or fail to load their data.</td><td>Use the Artist Dashboard as the current personal summary and request reconciliation of navigation, route guards, and API permissions.</td></tr>
-    <tr><td>Backups</td><td>Cloud and external copies work only when server paths are configured and available.</td><td>Check Storage Overview configuration and verified timestamps.</td></tr>
-    <tr><td>Royalty statement</td><td>Marks/generates statement data in the ledger workflow; a downloadable formatted client PDF is not guaranteed by the current UI.</td><td>Review the returned statement information and follow the approved statement-delivery process.</td></tr>
+    <tr><th>Feature/control</th><th>Version 1.1 behavior</th><th>Operating note</th></tr>
+    <tr><td>Workspace search / Ctrl- or Command-K</td><td>Live role-aware cross-module results with direct navigation.</td><td>Enter at least two characters; module search remains best for detailed filters.</td></tr>
+    <tr><td>Forgot password</td><td>Expiring one-time token and reset form are live.</td><td>Production requires <code>FRONTEND_URL</code> and <code>PASSWORD_RESET_WEBHOOK_URL</code>; without delivery configuration the API reports a service error instead of pretending that mail was sent.</td></tr>
+    <tr><td>Create an account</td><td>Creates an artist user and linked starter artist profile, then signs in.</td><td>Staff accounts and role assignment remain administrator-controlled in Team Management.</td></tr>
+    <tr><td>Keep me signed in</td><td>Checked uses persistent browser storage; clear uses session storage.</td><td>Leave clear on shared devices and always sign out.</td></tr>
+    <tr><td>Two-factor authentication</td><td>Standards-based authenticator setup, verification at login, and password-confirmed disable are live.</td><td>Store the setup key securely; losing the authenticator requires administrator password assistance and database-level 2FA recovery.</td></tr>
+    <tr><td>Appearance</td><td>Four themes and three root font sizes apply and persist.</td><td>The top-bar button remains a fast light/dark switch.</td></tr>
+    <tr><td>Platform links</td><td>Validated Spotify, Apple Music, and distributor links persist and open in a new tab.</td><td>These are launch links, not OAuth connections or automatic data imports.</td></tr>
+    <tr><td>Weekly Report</td><td>Listed in Administrator and Manager navigation with existing read/write authorization.</td><td>Use Current Week and History from the module.</td></tr>
+    <tr><td>Role-safe account pages</td><td>All roles can open personal Settings; artist Profile uses the linked own-profile endpoint.</td><td>Administrator-only permission/team controls remain hidden from other roles.</td></tr>
+    <tr><td>Artist personal modules</td><td>My Music, My Releases, Royalties, Tasks, and Profile use own-data/scoped endpoints.</td><td>They do not expose unrestricted staff catalog or finance records.</td></tr>
+    <tr><td>Royalty statement</td><td>Generated statements open in-app and provide Print / PDF.</td><td>Review the record, then use the browser print dialog to save the formatted PDF.</td></tr>
+    <tr><td>Demo file fixtures</td><td>The demo seeder creates real managed PDF, JPEG, WAV, and CSV fixtures with valid protected paths.</td><td>For an older seeded database, run <code>npm run demo:repair</code> in <code>backend</code> once; the repair is restricted to IDs recorded in <code>_demomarkers</code>.</td></tr>
+    <tr><td>Backups</td><td>Primary handling is live; cloud and external copies remain configuration-dependent.</td><td>Configure mounted <code>CLOUD_BACKUP_PATH</code> and <code>EXTERNAL_BACKUP_PATH</code>, then verify checksums and timestamps.</td></tr>
   </table>
   <div class="callout note"><strong>Change control</strong>Update this manual when routes, permissions, validations, field sets, or placeholder controls change. Record the new version and review date on the document-control page.</div>
   <h3>Client acceptance checklist</h3>
   <ul class="checklist"><li>Each role can sign in and sees only intended navigation.</li><li>One complete test artist progresses through onboarding approval.</li><li>One song completes metadata and ownership validation and enters a release.</li><li>One finance/royalty/balance period reconciles from source to payment.</li><li>File upload, protected preview/download, and all configured backup destinations are verified.</li><li>Administrator can create, deactivate, reset, and safely reassign a test user.</li><li>Known deployment notes are accepted or scheduled for correction.</li></ul>
-  <p class="footer-note">End of manual &middot; HoodBoy Entertainment &middot; Lnkup Label Management Platform &middot; Client User Manual v1.0</p>
+  <p class="footer-note">End of manual &middot; HoodBoy Entertainment &middot; Lnkup Label Management Platform &middot; Client User Manual v1.1</p>
 </section>
 </body>
 </html>

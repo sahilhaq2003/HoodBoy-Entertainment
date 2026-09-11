@@ -1,8 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Menu, LogOut, User, Settings, ChevronDown, Search, CalendarDays, Command, Sun, Moon } from 'lucide-react';
+import { Menu, LogOut, User, Settings, ChevronDown, Search, CalendarDays, Command, Sun, Moon, Loader2, X } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import NotificationBell from '../notifications/NotificationBell';
+import { searchApi } from '../../services/api';
+import { applyAppearance, getAppearance } from '../../utils/appearance';
+
+interface SearchResult { id: string; category: string; title: string; subtitle?: string; path: string }
 
 const pageTitles: Record<string, string> = {
   '/': 'Executive Dashboard',
@@ -60,14 +64,25 @@ const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     return (localStorage.getItem('hbe_theme') as 'light' | 'dark') || 'light';
   });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   const toggleTheme = () => {
     const next = theme === 'light' ? 'dark' : 'light';
     setTheme(next);
-    localStorage.setItem('hbe_theme', next);
-    document.documentElement.classList.toggle('dark', next === 'dark');
+    const appearance = getAppearance();
+    applyAppearance({ ...appearance, theme: next });
   };
+
+  useEffect(() => {
+    const syncTheme = () => setTheme(getAppearance().theme === 'dark' ? 'dark' : 'light');
+    window.addEventListener('hbe-appearance-change', syncTheme);
+    return () => window.removeEventListener('hbe-appearance-change', syncTheme);
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -78,6 +93,36 @@ const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    const onShortcut = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        searchRef.current?.focus();
+        setSearchOpen(true);
+      }
+      if (event.key === 'Escape') setSearchOpen(false);
+    };
+    document.addEventListener('keydown', onShortcut);
+    return () => document.removeEventListener('keydown', onShortcut);
+  }, []);
+
+  useEffect(() => {
+    if (searchQuery.trim().length < 2) { setSearchResults([]); setSearching(false); return; }
+    setSearching(true);
+    const timer = window.setTimeout(() => {
+      searchApi.search(searchQuery.trim())
+        .then(res => setSearchResults(res.data.data || []))
+        .catch(() => setSearchResults([]))
+        .finally(() => setSearching(false));
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [searchQuery]);
+
+  const openResult = (result: SearchResult) => {
+    setSearchOpen(false); setSearchQuery(''); setSearchResults([]);
+    navigate(result.path);
+  };
 
   const getTitle = () => {
     for (const [path, title] of Object.entries(pageTitles)) {
@@ -107,17 +152,28 @@ const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
         <h1 className="text-[15px] font-bold text-[var(--hbe-text)] truncate mt-0.5">{getTitle()}</h1>
       </div>
 
-      <div className="header-search hidden md:flex flex-1 max-w-xl items-center gap-3 px-4 py-[9px]">
+      <div className="header-search hidden md:flex flex-1 max-w-xl items-center gap-3 px-4 py-[9px] relative">
         <Search size={15} className="text-[var(--hbe-muted)]" />
         <input
+          ref={searchRef}
           type="text"
+          value={searchQuery}
+          onChange={e => { setSearchQuery(e.target.value); setSearchOpen(true); }}
+          onFocus={() => setSearchOpen(true)}
           placeholder="Search artists, songs, contracts..."
           aria-label="Search workspace"
           className="bg-transparent text-[12.5px] text-[var(--hbe-text-soft)] placeholder-[var(--hbe-muted)] outline-none flex-1"
         />
+        {searching ? <Loader2 size={13} className="animate-spin text-[var(--hbe-muted)]" /> : searchQuery && <button onClick={() => { setSearchQuery(''); setSearchResults([]); }} aria-label="Clear search"><X size={13} /></button>}
         <span className="hidden xl:inline-flex items-center gap-1 rounded-lg border border-(--hbe-line) bg-(--hbe-fill) px-2 py-1 text-[9.5px] font-semibold text-[var(--hbe-muted)]">
           <Command size={9} />K
         </span>
+        {searchOpen && searchQuery.trim().length >= 2 && (
+          <div className="absolute left-0 right-0 top-[calc(100%+8px)] max-h-80 overflow-y-auto rounded-2xl border border-(--hbe-line) bg-(--hbe-panel) shadow-2xl z-50 p-2">
+            {!searching && searchResults.length === 0 && <p className="px-3 py-6 text-center text-xs text-[var(--hbe-muted)]">No accessible records found.</p>}
+            {searchResults.map(result => <button key={`${result.category}-${result.id}`} onMouseDown={e => e.preventDefault()} onClick={() => openResult(result)} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left hover:bg-(--hbe-hover-fill)"><span className="text-[9px] uppercase tracking-wide font-bold text-purple-600 w-16 flex-shrink-0">{result.category}</span><span className="min-w-0"><span className="block text-xs font-semibold text-[var(--hbe-text)] truncate">{result.title}</span>{result.subtitle && <span className="block text-[10px] text-[var(--hbe-muted)] truncate capitalize">{result.subtitle.replace(/_/g, ' ')}</span>}</span></button>)}
+          </div>
+        )}
       </div>
 
       <div className="ml-auto hidden xl:flex items-center gap-2.5 rounded-xl border border-(--hbe-line) bg-(--hbe-fill-soft) px-3.5 py-2 text-[11px] font-semibold text-[var(--hbe-muted)]">
@@ -174,7 +230,7 @@ const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
             </div>
             <div className="py-1.5">
               <button
-                onClick={() => { setUserMenuOpen(false); navigate('/settings'); }}
+                onClick={() => { setUserMenuOpen(false); navigate(user?.role === 'artist' ? '/profile' : '/settings'); }}
                 className="w-full flex items-center gap-3 px-4 py-2.5 text-[13px] text-[var(--hbe-text-soft)] hover:bg-(--hbe-hover-fill) hover:text-[var(--hbe-text)] transition-colors"
               >
                 <User size={15} className="text-[var(--hbe-muted)]" />

@@ -7,7 +7,7 @@
  *
  * Run:  node scripts/seedDemo.js   (from the backend directory)
  *
- * Demo login (all use password: DemoPass123!)
+ * Demo logins use the password supplied through DEMO_PASSWORD.
  *   demo.admin@hbe.local      (admin)
  *   demo.manager@hbe.local    (manager)
  *   demo.finance@hbe.local    (finance)
@@ -20,6 +20,8 @@
 
 require('dotenv').config({ path: __dirname + '/../.env' });
 const mongoose = require('mongoose');
+const fs = require('fs');
+const path = require('path');
 
 const User = require('../models/User');
 const Artist = require('../models/Artist');
@@ -48,7 +50,7 @@ const Notification = require('../models/Notification');
 const Activity = require('../models/Activity');
 const LnkUp = require('../models/LnkUp');
 
-const PASS = 'DemoPass123!';
+const PASS = process.env.DEMO_PASSWORD;
 const ids = {};
 const track = (modelName, result) => {
   const arr = Array.isArray(result) ? result : [result];
@@ -58,6 +60,57 @@ const track = (modelName, result) => {
 
 const daysFromNow = (n) => new Date(Date.now() + n * 86400000);
 const iso = (n) => daysFromNow(n).toISOString().slice(0, 10);
+
+const makePdf = (label) => {
+  const stream = `BT /F1 18 Tf 72 720 Td (${label.replace(/[()\\]/g, '\\$&')}) Tj ET`;
+  const objects = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>',
+    `<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}\nendstream`,
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+  ];
+  let pdf = '%PDF-1.4\n';
+  const offsets = [0];
+  objects.forEach((object, index) => { offsets.push(Buffer.byteLength(pdf)); pdf += `${index + 1} 0 obj\n${object}\nendobj\n`; });
+  const xref = Buffer.byteLength(pdf);
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets.slice(1).map(value => `${String(value).padStart(10, '0')} 00000 n `).join('\n')}\ntrailer << /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+  return Buffer.from(pdf);
+};
+
+const makeSilentWav = () => {
+  const sampleRate = 8000;
+  const samples = sampleRate;
+  const buffer = Buffer.alloc(44 + samples * 2);
+  buffer.write('RIFF', 0); buffer.writeUInt32LE(buffer.length - 8, 4); buffer.write('WAVEfmt ', 8);
+  buffer.writeUInt32LE(16, 16); buffer.writeUInt16LE(1, 20); buffer.writeUInt16LE(1, 22);
+  buffer.writeUInt32LE(sampleRate, 24); buffer.writeUInt32LE(sampleRate * 2, 28);
+  buffer.writeUInt16LE(2, 32); buffer.writeUInt16LE(16, 34); buffer.write('data', 36); buffer.writeUInt32LE(samples * 2, 40);
+  return buffer;
+};
+
+const ensureDemoAssets = () => {
+  const uploads = path.resolve(__dirname, '..', 'uploads');
+  const legacy = path.join(uploads, 'demo');
+  const managed = {
+    masters: path.join(uploads, 'files', 'Demo Masters'),
+    contracts: path.join(uploads, 'files', 'Demo Contracts'),
+    artwork: path.join(uploads, 'files', 'Demo Artwork'),
+  };
+  [legacy, ...Object.values(managed)].forEach(directory => fs.mkdirSync(directory, { recursive: true }));
+  const pdfFiles = ['kalo-agreement.pdf', 'kalo-w9.pdf', 'beat-license-nodays.pdf', 'invoice-1001.pdf'];
+  pdfFiles.forEach(name => fs.writeFileSync(path.join(legacy, name), makePdf(`HoodBoy demo document: ${name}`)));
+  ['kalo-agreement.pdf', 'invoice-1001.pdf'].forEach(name => fs.writeFileSync(path.join(managed.contracts, name), makePdf(`HoodBoy demo document: ${name}`)));
+  const wav = makeSilentWav();
+  ['no-days-off-explicit.wav', 'no-days-off-clean.wav', 'pressure-ref.wav', 'gbedu.wav', 'circles.wav'].forEach(name => fs.writeFileSync(path.join(legacy, name), wav));
+  ['no-days-off-mix1.wav', 'no-days-off-explicit.wav', 'pressure-ref.wav', 'gbedu.wav'].forEach(name => fs.writeFileSync(path.join(managed.masters, name), wav));
+  const jpeg = Buffer.from('/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////2wBDAf//////////////////////////////////////////////////////////////////////////////////////wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAf/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIQAxAAAAF//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABBQJ//8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAwEBPwF//8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAgEBPwF//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQAGPwJ//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPyF//9oADAMBAAIAAwAAABAf/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAwEBPxB//8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAgEBPxB//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxB//9k=', 'base64');
+  ['no-days-off-art.jpg', 'state-of-mind-art.jpg', 'belly-room-art.jpg', 'runner-art.jpg', 'daydream-art.jpg'].forEach(name => fs.writeFileSync(path.join(legacy, name), jpeg));
+  fs.writeFileSync(path.join(managed.artwork, 'no-days-off-art.jpg'), jpeg);
+  const csv = 'title,artist,isrc,status\nNo Days Off,Kalo,US-HBE-26-00001,released\n';
+  fs.writeFileSync(path.join(legacy, 'no-days-off.csv'), csv);
+  fs.writeFileSync(path.join(managed.masters, 'no-days-off.csv'), csv);
+};
 
 async function createAll(Model, docs) {
   const out = [];
@@ -94,6 +147,7 @@ async function saveMarkers() {
 }
 
 async function seed() {
+  ensureDemoAssets();
   const admin = await User.create({ name: 'Demo Admin', email: 'demo.admin@hbe.local', password: PASS, role: 'admin', department: 'executive', phone: '+1 (555) 000-0001' });
   const manager = await User.create({ name: 'Demo Manager', email: 'demo.manager@hbe.local', password: PASS, role: 'manager', department: 'operations', phone: '+1 (555) 000-0002' });
   const finUser = await User.create({ name: 'Demo Finance', email: 'demo.finance@hbe.local', password: PASS, role: 'finance', department: 'finance', phone: '+1 (555) 000-0003' });
@@ -196,7 +250,7 @@ async function seed() {
     status: 'awaiting_approval', producedBy: 'Demo (Producer)', writtenBy: 'Kalo',
     isrc: 'US-HBE-26-00002', streams: 0, revenue: 0, priority: 'high', assignedTo: aRUser._id,
     productionWorkflow: completedWf,
-    versions: [{ type: 'reference_mp3', fileUrl: '/uploads/demo/pressure-ref.mp3', fileName: 'pressure-ref.mp3', format: 'mp3', uploadedBy: admin._id }],
+    versions: [{ type: 'wav_high_quality', fileUrl: '/uploads/demo/pressure-ref.wav', fileName: 'pressure-ref.wav', format: 'wav', uploadedBy: admin._id, notes: 'Functional reference-audio demo fixture' }],
     credits: [
       { name: 'Kalo', role: 'songwriter', percentage: 100 },
       { name: 'Demo (Producer)', role: 'producer', percentage: 50 },
@@ -1041,27 +1095,27 @@ async function seed() {
   track('WeeklyReport', [wr1doc, wr2doc]);
 
   // ---- Files & folders --------------------------------------------------
-  const fMasters = await Folder.create([{ name: 'Demo Masters', parentId: null, path: '/Demo/Masters', icon: 'masters', color: '#8B5CF6', createdBy: admin._id }]);
-  const fContracts = await Folder.create([{ name: 'Demo Contracts', parentId: null, path: '/Demo/Contracts', icon: 'contract', color: '#EF4444', createdBy: admin._id }]);
-  const fArtwork = await Folder.create([{ name: 'Demo Artwork', parentId: null, path: '/Demo/Artwork', icon: 'art', color: '#F59E0B', createdBy: admin._id }]);
+  const fMasters = await Folder.create([{ name: 'Demo Masters', parentId: null, path: '/files/Demo Masters', icon: 'masters', color: '#8B5CF6', createdBy: admin._id }]);
+  const fContracts = await Folder.create([{ name: 'Demo Contracts', parentId: null, path: '/files/Demo Contracts', icon: 'contract', color: '#EF4444', createdBy: admin._id }]);
+  const fArtwork = await Folder.create([{ name: 'Demo Artwork', parentId: null, path: '/files/Demo Artwork', icon: 'art', color: '#F59E0B', createdBy: admin._id }]);
   const [fMastersDoc] = fMasters;
   const [fContractsDoc] = fContracts;
   const [fArtworkDoc] = fArtwork;
   track('Folder', [fMastersDoc, fContractsDoc, fArtworkDoc]);
 
   const files = await createAll(File, [
-    { name: 'no-days-off-explicit.wav', originalName: 'no-days-off-explicit.wav', path: 'uploads/demo/no-days-off-explicit.wav', folderId: fMastersDoc._id, mimeType: 'audio/wav', size: 52428800, type: 'audio', category: 'master', tags: ['master', 'explicit'], artistId: kalo._id, songId: s1doc._id, releaseId: r1doc._id, version: 2, versionNote: 'Final master', backup: { primary: true, cloud: true, external: false, checksum: 'sha256:abcd1234', primaryVerifiedAt: daysFromNow(-30), cloudVerifiedAt: daysFromNow(-30), lastBackupAt: daysFromNow(-30) }, uploadedBy: admin._id, downloads: 12, starred: true },
-    { name: 'pressure-ref.mp3', originalName: 'pressure-ref.mp3', path: 'uploads/demo/pressure-ref.mp3', folderId: fMastersDoc._id, mimeType: 'audio/mpeg', size: 5200000, type: 'audio', category: 'mix', tags: ['mix', 'reference'], artistId: kalo._id, songId: s2doc._id, uploadedBy: manager._id },
-    { name: 'kalo-agreement.pdf', originalName: 'kalo-agreement.pdf', path: 'uploads/demo/kalo-agreement.pdf', folderId: fContractsDoc._id, mimeType: 'application/pdf', size: 820000, type: 'document', category: 'contract', tags: ['contract', 'artist'], artistId: kalo._id, contractId: con1doc._id, uploadedBy: admin._id, downloads: 5, starred: true },
-    { name: 'gbedu.wav', originalName: 'gbedu.wav', path: 'uploads/demo/gbedu.wav', folderId: fMastersDoc._id, mimeType: 'audio/wav', size: 66200000, type: 'audio', category: 'master', tags: ['master'], artistId: jae._id, songId: s5doc._id, releaseId: r4doc._id, version: 1, uploadedBy: admin._id },
-    { name: 'no-days-off-art.jpg', originalName: 'no-days-off-art.jpg', path: 'uploads/demo/no-days-off-art.jpg', folderId: fArtworkDoc._id, mimeType: 'image/jpeg', size: 450000, type: 'image', category: 'artwork', tags: ['artwork', 'single'], artistId: kalo._id, releaseId: r1doc._id, uploadedBy: mktUser._id },
-    { name: 'invoice-1001.pdf', originalName: 'invoice-1001.pdf', path: 'uploads/demo/invoice-1001.pdf', folderId: fContractsDoc._id, mimeType: 'application/pdf', size: 210000, type: 'document', category: 'invoice', tags: ['invoice', 'studio'], financeId: finDocs[2]._id, uploadedBy: finUser._id },
-    { name: 'no-days-off.csv', originalName: 'no-days-off.csv', path: 'uploads/demo/no-days-off.csv', folderId: fMastersDoc._id, mimeType: 'text/csv', size: 98000, type: 'document', category: 'metadata', tags: ['metadata', 'export'], songId: s1doc._id, uploadedBy: admin._id },
+    { name: 'no-days-off-explicit.wav', originalName: 'no-days-off-explicit.wav', path: '/uploads/files/Demo Masters/no-days-off-explicit.wav', folderId: fMastersDoc._id, mimeType: 'audio/wav', size: 16044, type: 'audio', category: 'master', tags: ['master', 'explicit'], artistId: kalo._id, songId: s1doc._id, releaseId: r1doc._id, version: 2, versionNote: 'Functional silent demo fixture', uploadedBy: admin._id, downloads: 0, starred: true },
+    { name: 'pressure-ref.wav', originalName: 'pressure-ref.wav', path: '/uploads/files/Demo Masters/pressure-ref.wav', folderId: fMastersDoc._id, mimeType: 'audio/wav', size: 16044, type: 'audio', category: 'mix', tags: ['mix', 'reference'], artistId: kalo._id, songId: s2doc._id, uploadedBy: manager._id },
+    { name: 'kalo-agreement.pdf', originalName: 'kalo-agreement.pdf', path: '/uploads/files/Demo Contracts/kalo-agreement.pdf', folderId: fContractsDoc._id, mimeType: 'application/pdf', size: 700, type: 'document', category: 'contract', tags: ['contract', 'artist'], artistId: kalo._id, contractId: con1doc._id, uploadedBy: admin._id, downloads: 0, starred: true },
+    { name: 'gbedu.wav', originalName: 'gbedu.wav', path: '/uploads/files/Demo Masters/gbedu.wav', folderId: fMastersDoc._id, mimeType: 'audio/wav', size: 16044, type: 'audio', category: 'master', tags: ['master'], artistId: jae._id, songId: s5doc._id, releaseId: r4doc._id, version: 1, uploadedBy: admin._id },
+    { name: 'no-days-off-art.jpg', originalName: 'no-days-off-art.jpg', path: '/uploads/files/Demo Artwork/no-days-off-art.jpg', folderId: fArtworkDoc._id, mimeType: 'image/jpeg', size: 631, type: 'image', category: 'artwork', tags: ['artwork', 'single'], artistId: kalo._id, releaseId: r1doc._id, uploadedBy: mktUser._id },
+    { name: 'invoice-1001.pdf', originalName: 'invoice-1001.pdf', path: '/uploads/files/Demo Contracts/invoice-1001.pdf', folderId: fContractsDoc._id, mimeType: 'application/pdf', size: 700, type: 'document', category: 'invoice', tags: ['invoice', 'studio'], financeId: finDocs[2]._id, uploadedBy: finUser._id },
+    { name: 'no-days-off.csv', originalName: 'no-days-off.csv', path: '/uploads/files/Demo Masters/no-days-off.csv', folderId: fMastersDoc._id, mimeType: 'text/csv', size: 70, type: 'document', category: 'metadata', tags: ['metadata', 'export'], songId: s1doc._id, uploadedBy: admin._id },
   ]);
 
   const fv = await createAll(FileVersion, [
-    { file: files[0]._id, versionNumber: 1, fileName: 'no-days-off-mix1.wav', fileUrl: 'uploads/demo/no-days-off-mix1.wav', fileSize: 52400000, changeNote: 'First mix', uploadedBy: manager._id },
-    { file: files[0]._id, versionNumber: 2, fileName: 'no-days-off-explicit.wav', fileUrl: 'uploads/demo/no-days-off-explicit.wav', fileSize: 52428800, changeNote: 'Final master after client feedback', uploadedBy: admin._id },
+    { file: files[0]._id, versionNumber: 1, fileName: 'no-days-off-mix1.wav', fileUrl: '/uploads/files/Demo Masters/no-days-off-mix1.wav', fileSize: 16044, changeNote: 'Reference mix', uploadedBy: manager._id },
+    { file: files[0]._id, versionNumber: 2, fileName: 'no-days-off-explicit.wav', fileUrl: '/uploads/files/Demo Masters/no-days-off-explicit.wav', fileSize: 16044, changeNote: 'Functional silent demo fixture', uploadedBy: admin._id },
   ]);
 
   // ---- Notifications ----------------------------------------------------
@@ -1099,8 +1153,11 @@ async function seed() {
   console.log('\nTo remove all demo data:  node scripts/clearDemo.js');
 }
 
-(async () => {
+const run = async () => {
   try {
+    if (!PASS || PASS.length < 12) {
+      throw new Error('DEMO_PASSWORD must be set to at least 12 characters before seeding demo accounts');
+    }
     await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/hbe_label', {
       serverSelectionTimeoutMS: 10000,
     });
@@ -1120,4 +1177,8 @@ async function seed() {
   } finally {
     await mongoose.disconnect();
   }
-})();
+};
+
+if (require.main === module) run();
+
+module.exports = { ensureDemoAssets, makePdf, makeSilentWav };

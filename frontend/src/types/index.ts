@@ -6,6 +6,9 @@ export interface User {
   avatar?: string;
   phone?: string;
   notificationPreferences?: Array<{ key: string; enabled: boolean }>;
+  appearance?: { theme: 'light' | 'indigo' | 'warm' | 'dark'; fontSize: 'small' | 'default' | 'large' };
+  integrationLinks?: { spotify?: string; appleMusic?: string; distributor?: string };
+  twoFactorEnabled?: boolean;
   department?: string;
   isActive: boolean;
 }

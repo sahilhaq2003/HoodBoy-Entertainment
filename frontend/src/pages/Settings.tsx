@@ -1,9 +1,11 @@
 import React, { useState, useRef } from 'react';
-import { Settings as SettingsIcon, User, Lock, Bell, Palette, Database, Shield, Save, Loader2, Camera, X, Users } from 'lucide-react';
+import { User, Lock, Bell, Palette, Database, Shield, Save, Loader2, Camera, X, Users, ExternalLink, Copy } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
 import { settingsApi } from '../services/api';
+import { authApi } from '../services/api';
+import { applyAppearance, getAppearance, type AppearanceFontSize, type AppearanceTheme } from '../utils/appearance';
 
 const sections = [
   { id: 'profile', label: 'Profile', icon: <User size={16} /> },
@@ -36,7 +38,11 @@ const Settings: React.FC = () => {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [twoFactorEnabled] = useState(false);
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(Boolean(user?.twoFactorEnabled));
+  const [twoFactorSetup, setTwoFactorSetup] = useState<{ secret: string; uri: string } | null>(null);
+  const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [twoFactorPassword, setTwoFactorPassword] = useState('');
+  const [updatingTwoFactor, setUpdatingTwoFactor] = useState(false);
 
   const defaultNotifPrefs: NotificationPref[] = [
     { key: 'task_deadline', label: 'Task Deadline Alerts', desc: 'Get notified 24h before task deadlines', enabled: true },
@@ -52,8 +58,10 @@ const Settings: React.FC = () => {
   })));
   const [savingNotifs, setSavingNotifs] = useState(false);
 
-  const [selectedTheme, setSelectedTheme] = useState('Light');
-  const [fontSize, setFontSize] = useState('Default (14px)');
+  const initialAppearance = user?.appearance || getAppearance();
+  const [selectedTheme, setSelectedTheme] = useState<AppearanceTheme>(initialAppearance.theme);
+  const [fontSize, setFontSize] = useState<AppearanceFontSize>(initialAppearance.fontSize);
+  const [integrationLinks, setIntegrationLinks] = useState({ spotify: '', appleMusic: '', distributor: '', ...user?.integrationLinks });
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -109,7 +117,58 @@ const Settings: React.FC = () => {
     setChangingPassword(false);
   };
 
-  const handleToggle2FA = () => toast.error('Two-factor authentication requires an authenticator-provider setup and is not enabled in this deployment.');
+  const handleToggle2FA = async () => {
+    if (twoFactorEnabled) return;
+    setUpdatingTwoFactor(true);
+    try {
+      const res = await authApi.setupTwoFactor();
+      setTwoFactorSetup(res.data.data);
+      toast.success('Authenticator setup started');
+    } catch (e: any) { toast.error(e.response?.data?.message || 'Could not start 2FA setup'); }
+    finally { setUpdatingTwoFactor(false); }
+  };
+
+  const handleConfirm2FA = async () => {
+    setUpdatingTwoFactor(true);
+    try {
+      await authApi.confirmTwoFactor(twoFactorCode);
+      setTwoFactorEnabled(true); setTwoFactorSetup(null); setTwoFactorCode('');
+      updateUser({ twoFactorEnabled: true });
+      toast.success('Two-factor authentication enabled');
+    } catch (e: any) { toast.error(e.response?.data?.message || 'Invalid authenticator code'); }
+    finally { setUpdatingTwoFactor(false); }
+  };
+
+  const handleDisable2FA = async () => {
+    if (!twoFactorPassword) return toast.error('Enter your current password to disable 2FA');
+    setUpdatingTwoFactor(true);
+    try {
+      await authApi.disableTwoFactor(twoFactorPassword);
+      setTwoFactorEnabled(false); setTwoFactorPassword(''); updateUser({ twoFactorEnabled: false });
+      toast.success('Two-factor authentication disabled');
+    } catch (e: any) { toast.error(e.response?.data?.message || 'Could not disable 2FA'); }
+    finally { setUpdatingTwoFactor(false); }
+  };
+
+  const handleSaveAppearance = async () => {
+    setSaving(true);
+    try {
+      const appearance = { theme: selectedTheme, fontSize };
+      const res = await settingsApi.updateProfile({ appearance });
+      applyAppearance(appearance); updateUser(res.data.user);
+      toast.success('Appearance saved and applied');
+    } catch (e: any) { toast.error(e.response?.data?.message || 'Failed to save appearance'); }
+    finally { setSaving(false); }
+  };
+
+  const handleSaveIntegrations = async () => {
+    setSaving(true);
+    try {
+      const res = await settingsApi.updateProfile({ integrationLinks });
+      updateUser(res.data.user); toast.success('Platform links saved');
+    } catch (e: any) { toast.error(e.response?.data?.message || 'Failed to save platform links'); }
+    finally { setSaving(false); }
+  };
 
   const handleSaveNotifications = async () => {
     setSavingNotifs(true);
@@ -128,7 +187,7 @@ const Settings: React.FC = () => {
         <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-5 h-fit dark:bg-gray-800 dark:border-gray-700">
           <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 dark:text-gray-400">Settings</h3>
           <nav className="space-y-0.5">
-            {sections.map(s => (
+            {sections.filter(s => s.id !== 'permissions' || user?.role === 'admin').map(s => (
               <button
                 key={s.id}
                 onClick={() => setActiveSection(s.id)}
@@ -234,12 +293,15 @@ const Settings: React.FC = () => {
                     </div>
                     <button
                       onClick={handleToggle2FA}
-                      title="Authenticator-based two-factor authentication is not configured"
+                      disabled={updatingTwoFactor || twoFactorEnabled}
+                      title={twoFactorEnabled ? 'Two-factor authentication is enabled' : 'Set up authenticator-based security'}
                       className={`w-10 h-6 rounded-full relative cursor-pointer transition-all ${twoFactorEnabled ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'}`}
                     >
                       <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all shadow-sm ${twoFactorEnabled ? 'right-1' : 'left-1'}`} />
                     </button>
                   </div>
+                  {twoFactorSetup && <div className="mt-3 p-4 rounded-xl border border-indigo-200 bg-indigo-50 dark:bg-indigo-500/10 dark:border-indigo-800 space-y-3"><p className="text-xs text-gray-700 dark:text-gray-200">Add an account in your authenticator app using this setup key, then enter its current code.</p><div className="flex items-center gap-2"><code className="text-xs font-bold tracking-wider break-all">{twoFactorSetup.secret}</code><button onClick={() => { navigator.clipboard.writeText(twoFactorSetup.secret); toast.success('Setup key copied'); }} title="Copy setup key"><Copy size={14} /></button></div><input value={twoFactorCode} onChange={e => setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" placeholder="6-digit code" className="w-44 px-3 py-2 border rounded-lg bg-white dark:bg-gray-800 dark:border-gray-600" /><div className="flex gap-2"><button onClick={handleConfirm2FA} disabled={updatingTwoFactor || twoFactorCode.length !== 6} className="px-3 py-2 bg-indigo-600 text-white rounded-lg text-xs disabled:opacity-50">Verify &amp; Enable</button><button onClick={() => { setTwoFactorSetup(null); setTwoFactorCode(''); }} className="px-3 py-2 border rounded-lg text-xs dark:border-gray-600">Cancel</button></div></div>}
+                  {twoFactorEnabled && <div className="mt-3 p-4 rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-500/10 dark:border-emerald-800"><p className="text-xs text-emerald-700 dark:text-emerald-300 mb-3">Enabled. A current authenticator code is required after password sign-in.</p><div className="flex gap-2"><input type="password" value={twoFactorPassword} onChange={e => setTwoFactorPassword(e.target.value)} placeholder="Current password" className="px-3 py-2 border rounded-lg bg-white text-sm dark:bg-gray-800 dark:border-gray-600" /><button onClick={handleDisable2FA} disabled={updatingTwoFactor} className="px-3 py-2 bg-red-600 text-white rounded-lg text-xs disabled:opacity-50">Disable 2FA</button></div></div>}
                 </div>
               </div>
             </div>
@@ -281,28 +343,29 @@ const Settings: React.FC = () => {
                   <label className="block text-xs font-medium text-gray-500 mb-3">Theme</label>
                   <div className="grid grid-cols-3 gap-3">
                     {[
-                      { name: 'Light', bg: '#FFFFFF', accent: '#4F46E5', border: '#E5E7EB' },
-                      { name: 'Light Indigo', bg: '#F9FAFB', accent: '#4F46E5', border: '#E5E7EB' },
-                      { name: 'Light Warm', bg: '#FFFBEB', accent: '#D97706', border: '#FDE68A' },
+                      { name: 'Light', value: 'light' as const, bg: '#FFFFFF', accent: '#4F46E5', border: '#E5E7EB' },
+                      { name: 'Light Indigo', value: 'indigo' as const, bg: '#F5F3FF', accent: '#4F46E5', border: '#DDD6FE' },
+                      { name: 'Light Warm', value: 'warm' as const, bg: '#FFFBEB', accent: '#D97706', border: '#FDE68A' },
+                      { name: 'Dark', value: 'dark' as const, bg: '#111827', accent: '#8B5CF6', border: '#374151' },
                     ].map((theme) => (
                       <div
                         key={theme.name}
-                        onClick={() => setSelectedTheme(theme.name)}
-                        className={`p-3 rounded-xl cursor-pointer transition-all ${selectedTheme === theme.name ? 'ring-2 ring-indigo-500' : 'hover:ring-2 hover:ring-gray-200'}`}
+                        onClick={() => setSelectedTheme(theme.value)}
+                        className={`p-3 rounded-xl cursor-pointer transition-all ${selectedTheme === theme.value ? 'ring-2 ring-indigo-500' : 'hover:ring-2 hover:ring-gray-200'}`}
                         style={{ background: theme.bg, border: `1px solid ${theme.border}` }}
                       >
                         <div className="w-full h-6 rounded-lg mb-2" style={{ background: theme.accent }} />
-                        <div className="text-xs text-gray-500 text-center">{theme.name}</div>
+                        <div className={`text-xs text-center ${theme.value === 'dark' ? 'text-gray-200' : 'text-gray-500'}`}>{theme.name}</div>
                       </div>
                     ))}
                   </div>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1.5 dark:text-gray-400">Font Size</label>
-                  <select value={fontSize} onChange={e => setFontSize(e.target.value)} className="w-48 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100">
-                    <option>Default (14px)</option>
-                    <option>Small (12px)</option>
-                    <option>Large (16px)</option>
+                  <select value={fontSize} onChange={e => setFontSize(e.target.value as AppearanceFontSize)} className="w-48 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100">
+                    <option value="default">Default (14px)</option>
+                    <option value="small">Small (12px)</option>
+                    <option value="large">Large (16px)</option>
                   </select>
                 </div>
               </div>
@@ -312,11 +375,12 @@ const Settings: React.FC = () => {
           {activeSection === 'integrations' && (
             <div>
               <h2 className="text-lg font-bold text-gray-900 mb-5 dark:text-gray-100">Platform Integrations</h2>
-              <div className="text-center py-12">
-                <Database size={40} className="mx-auto text-gray-300 mb-3 dark:text-gray-600" />
-                <p className="text-sm font-medium text-gray-900 mb-1 dark:text-gray-100">No integrations configured</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Connect your streaming platforms and distribution services here.</p>
-              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-5">Save the label’s platform and distributor dashboard links for one-click access. These links do not import private platform data.</p>
+              <div className="space-y-4">{[
+                { key: 'spotify' as const, label: 'Spotify for Artists / label profile' },
+                { key: 'appleMusic' as const, label: 'Apple Music for Artists / label profile' },
+                { key: 'distributor' as const, label: 'Distributor dashboard' },
+              ].map(item => <div key={item.key}><label className="block text-xs font-medium text-gray-500 mb-1.5 dark:text-gray-400">{item.label}</label><div className="flex gap-2"><input type="url" value={integrationLinks[item.key] || ''} onChange={e => setIntegrationLinks(prev => ({ ...prev, [item.key]: e.target.value }))} placeholder="https://..." className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />{/^https?:\/\//i.test(integrationLinks[item.key] || '') && <a href={integrationLinks[item.key]} target="_blank" rel="noreferrer" className="p-2 border rounded-lg text-indigo-600 dark:border-gray-600" title="Open link"><ExternalLink size={17} /></a>}</div></div>)}</div>
             </div>
           )}
 
@@ -372,12 +436,12 @@ const Settings: React.FC = () => {
             </div>
           )}
 
-          <div className="mt-6 pt-5 flex justify-end border-t border-gray-100 dark:border-gray-700">
-            <button onClick={handleSaveProfile} disabled={saving} className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-sm transition-all duration-200 shadow-sm hover:shadow-md flex items-center gap-2 disabled:opacity-50">
+          {['profile', 'appearance', 'integrations'].includes(activeSection) && <div className="mt-6 pt-5 flex justify-end border-t border-gray-100 dark:border-gray-700">
+            <button onClick={activeSection === 'appearance' ? handleSaveAppearance : activeSection === 'integrations' ? handleSaveIntegrations : handleSaveProfile} disabled={saving} className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-sm transition-all duration-200 shadow-sm hover:shadow-md flex items-center gap-2 disabled:opacity-50">
               {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
               {saving ? 'Saving...' : 'Save Changes'}
             </button>
-          </div>
+          </div>}
         </div>
       </div>
     </div>

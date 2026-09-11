@@ -23,6 +23,10 @@ html, body, #root {
   letter-spacing: -0.011em;
 }
 
+html[data-hbe-font-size="small"] { font-size: 12px; }
+html[data-hbe-font-size="default"] { font-size: 14px; }
+html[data-hbe-font-size="large"] { font-size: 16px; }
+
 .dark html,
 .dark body,
 .dark #root {
@@ -122,6 +126,25 @@ html, body, #root {
   --hbe-radius-lg: 20px;
   --hbe-shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.06);
   --hbe-shadow-float: 0 4px 6px rgba(15, 23, 42, 0.04), 0 20px 60px rgba(15, 23, 42, 0.14), 0 0 0 1px rgba(15, 23, 42, 0.03);
+}
+
+:root[data-hbe-theme="indigo"] {
+  --hbe-bg: #F5F3FF;
+  --hbe-workspace: #F8F7FF;
+  --hbe-sidebar: #FAF9FF;
+  --hbe-panel-soft: #F5F3FF;
+  --hbe-hover-fill: #EDE9FE;
+}
+
+:root[data-hbe-theme="warm"] {
+  --hbe-bg: #FFFBEB;
+  --hbe-workspace: #FFFCF3;
+  --hbe-sidebar: #FFFDF7;
+  --hbe-panel-soft: #FFFBEB;
+  --hbe-hover-fill: #FEF3C7;
+  --hbe-accent: #D97706;
+  --hbe-accent-bright: #F59E0B;
+  --hbe-accent-deep: #B45309;
 }
 
 .dark {

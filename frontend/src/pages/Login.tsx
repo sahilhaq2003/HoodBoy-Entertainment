@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, AlertCircle, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, AlertCircle, ArrowRight, CheckCircle2, KeyRound } from 'lucide-react';
 import { useAuth, getDashboardPath } from '../contexts/AuthContext';
+import { authApi } from '../services/api';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -11,8 +12,14 @@ const Login: React.FC = () => {
   const [error, setError] = useState('');
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [redirecting, setRedirecting] = useState(false);
+  const [mode, setMode] = useState<'login' | 'forgot' | 'reset'>(() => new URLSearchParams(window.location.search).get('resetToken') ? 'reset' : 'login');
+  const [remember, setRemember] = useState(false);
+  const [challengeToken, setChallengeToken] = useState('');
+  const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [resetToken, setResetToken] = useState(() => new URLSearchParams(window.location.search).get('resetToken') || '');
+  const [message, setMessage] = useState('');
   const hasRedirected = useRef(false);
-  const { login, user } = useAuth();
+  const { login, verifyTwoFactor, user } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -20,12 +27,48 @@ const Login: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      await login(email, password);
+      if (challengeToken) {
+        await verifyTwoFactor(challengeToken, twoFactorCode, remember);
+      } else {
+        const result = await login(email, password, remember);
+        if (result.requiresTwoFactor && result.challengeToken) {
+          setChallengeToken(result.challengeToken);
+          setLoading(false);
+        }
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Login failed. Please try again.');
       setLoading(false);
     }
   };
+
+  const handleForgot = async (e: React.FormEvent) => {
+    e.preventDefault(); setLoading(true); setError(''); setMessage('');
+    try {
+      const res = await authApi.forgotPassword(email);
+      setMessage(res.data.message);
+      if (res.data.demoToken) {
+        setResetToken(res.data.demoToken);
+        setMode('reset');
+        setMessage('Demo recovery code loaded. Choose a new password.');
+      }
+    } catch (err: any) { setError(err.response?.data?.message || 'Could not start password recovery.'); }
+    finally { setLoading(false); }
+  };
+
+  const handleReset = async (e: React.FormEvent) => {
+    e.preventDefault(); setError(''); setMessage('');
+    if (password.length < 8) return setError('Password must be at least 8 characters.');
+    setLoading(true);
+    try {
+      const res = await authApi.resetPassword(resetToken, password);
+      setMessage(res.data.message); setPassword(''); setMode('login');
+      window.history.replaceState({}, '', '/login');
+    } catch (err: any) { setError(err.response?.data?.message || 'Password reset failed.'); }
+    finally { setLoading(false); }
+  };
+
+  const changeMode = (next: typeof mode) => { setMode(next); setError(''); setMessage(''); setChallengeToken(''); setPassword(''); };
 
   useEffect(() => {
     if (user && !hasRedirected.current) {
@@ -165,8 +208,12 @@ const Login: React.FC = () => {
               <>
                 {/* Login form */}
                 <div className="mb-7">
-                  <h2 className="text-2xl font-bold text-gray-900 tracking-tight dark:text-gray-100">Welcome back</h2>
-                  <p className="text-sm text-gray-500 mt-1.5 dark:text-gray-400">Sign in to your account to continue</p>
+                  <h2 className="text-2xl font-bold text-gray-900 tracking-tight dark:text-gray-100">
+                    {challengeToken ? 'Verify your identity' : mode === 'forgot' ? 'Recover your account' : mode === 'reset' ? 'Choose a new password' : 'Welcome back'}
+                  </h2>
+                  <p className="text-sm text-gray-500 mt-1.5 dark:text-gray-400">
+                    {challengeToken ? 'Enter the current 6-digit code from your authenticator app.' : mode === 'forgot' ? 'We will send a time-limited reset link.' : mode === 'reset' ? 'The recovery link expires after 15 minutes.' : 'Sign in to your account to continue'}
+                  </p>
                 </div>
 
                 {error && (
@@ -176,7 +223,14 @@ const Login: React.FC = () => {
                   </div>
                 )}
 
-                <form onSubmit={handleSubmit} className="space-y-5">
+                {message && <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl mb-5 text-sm font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 dark:text-emerald-400 dark:bg-emerald-500/10 dark:border-emerald-800"><CheckCircle2 size={16} /><span>{message}</span></div>}
+
+                {mode === 'login' && <form onSubmit={handleSubmit} className="space-y-5">
+                  {challengeToken ? <div>
+                    <label className="block text-[13px] font-semibold text-gray-700 mb-1.5 dark:text-gray-200">Authenticator code</label>
+                    <div className="relative"><KeyRound size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" /><input value={twoFactorCode} onChange={e => setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" required className="w-full h-12 pl-11 pr-4 bg-gray-100/70 border border-gray-200 rounded-xl text-sm tracking-[0.3em] dark:bg-gray-700/50 dark:border-gray-600 dark:text-gray-100" placeholder="000000" /></div>
+                    <button type="button" onClick={() => { setChallengeToken(''); setTwoFactorCode(''); }} className="mt-3 text-xs font-medium text-purple-600">Back to sign in</button>
+                  </div> : <>
                   <div>
                     <label className="block text-[13px] font-semibold text-gray-700 mb-1.5 dark:text-gray-200">Email address</label>
                     <div className="relative">
@@ -197,7 +251,7 @@ const Login: React.FC = () => {
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
                       <label className="block text-[13px] font-semibold text-gray-700 dark:text-gray-200">Password</label>
-                      <button type="button" className="text-xs font-medium text-purple-600 hover:text-purple-700 transition-colors">
+                      <button type="button" onClick={() => changeMode('forgot')} className="text-xs font-medium text-purple-600 hover:text-purple-700 transition-colors">
                         Forgot password?
                       </button>
                     </div>
@@ -223,10 +277,14 @@ const Login: React.FC = () => {
                     </div>
                   </div>
 
+                  </>}
+
                   <div className="flex items-center gap-2">
                     <input
                       type="checkbox"
                       id="remember"
+                      checked={remember}
+                      onChange={e => setRemember(e.target.checked)}
                       className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500/20 accent-purple-600"
                     />
                     <label htmlFor="remember" className="text-sm text-gray-600 cursor-pointer dark:text-gray-300">
@@ -243,23 +301,16 @@ const Login: React.FC = () => {
                       <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     ) : (
                       <>
-                        Sign In
+                        {challengeToken ? 'Verify & Sign In' : 'Sign In'}
                         <ArrowRight size={16} />
                       </>
                     )}
                   </button>
-                </form>
+                </form>}
 
-                <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
-                  Don&apos;t have an account?{' '}
-                  <a
-                    href="#"
-                    onClick={e => e.preventDefault()}
-                    className="font-semibold text-purple-600 hover:text-purple-700 hover:underline transition-colors dark:text-purple-400 dark:hover:text-purple-300"
-                  >
-                    Create an account
-                  </a>
-                </p>
+                {mode === 'forgot' && <form onSubmit={handleForgot} className="space-y-4"><div><label className="block text-[13px] font-semibold text-gray-700 mb-1.5 dark:text-gray-200">Account email</label><input type="email" value={email} onChange={e => setEmail(e.target.value)} required autoFocus className="w-full h-12 px-4 bg-gray-100/70 border border-gray-200 rounded-xl text-sm dark:bg-gray-700/50 dark:border-gray-600 dark:text-gray-100" /></div><button type="submit" disabled={loading} className="w-full h-12 bg-purple-600 text-white font-semibold rounded-xl text-sm disabled:opacity-60">{loading ? 'Sending...' : 'Send Reset Link'}</button></form>}
+
+                {mode === 'reset' && <form onSubmit={handleReset} className="space-y-4"><input type="hidden" value={resetToken} /><div><label className="block text-xs font-semibold mb-1 dark:text-gray-200">New password</label><input type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={8} autoFocus className="w-full h-12 px-4 bg-gray-100/70 border border-gray-200 rounded-xl text-sm dark:bg-gray-700/50 dark:border-gray-600 dark:text-gray-100" /></div><button type="submit" disabled={loading || !resetToken} className="w-full h-12 bg-purple-600 text-white font-semibold rounded-xl text-sm disabled:opacity-60">{loading ? 'Resetting...' : 'Reset Password'}</button></form>}
               </>
             )}
 

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { authApi } from '../services/api';
 import { authStore } from '../store';
 import type { User } from '../types';
+import { applyAppearance } from '../utils/appearance';
 
 interface NavItem {
   path: string;
@@ -19,7 +20,8 @@ interface AuthContextType {
   dashboardPath: string;
   nav: NavItem[];
   access: RoleAccess;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, remember?: boolean) => Promise<{ requiresTwoFactor?: boolean; challengeToken?: string }>;
+  verifyTwoFactor: (challengeToken: string, code: string, remember?: boolean) => Promise<void>;
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
   canAccess: (resource: string, action?: string) => boolean;
@@ -50,12 +52,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('hbe_token');
-    const storedUser = localStorage.getItem('hbe_user');
-    const storedNav = localStorage.getItem('hbe_nav');
-    const storedAccess = localStorage.getItem('hbe_access');
-    const storedDashboard = localStorage.getItem('hbe_dashboard_path');
-    const storedRoleDesc = localStorage.getItem('hbe_role_description');
+    const storage = localStorage.getItem('hbe_token') ? localStorage : sessionStorage;
+    const storedToken = storage.getItem('hbe_token');
+    const storedUser = storage.getItem('hbe_user');
+    const storedNav = storage.getItem('hbe_nav');
+    const storedAccess = storage.getItem('hbe_access');
+    const storedDashboard = storage.getItem('hbe_dashboard_path');
+    const storedRoleDesc = storage.getItem('hbe_role_description');
     if (storedToken && storedUser) {
       const parsedUser = JSON.parse(storedUser);
       setToken(storedToken);
@@ -69,15 +72,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(false);
   }, []);
 
-  const login = async (email: string, password: string) => {
-    const res = await authApi.login(email, password);
-    const { token: newToken, user: newUser, roleDescription: roleDesc, dashboardPath: dashPath, nav: userNav, access: userAccess } = res.data;
-    localStorage.setItem('hbe_token', newToken);
-    localStorage.setItem('hbe_user', JSON.stringify(newUser));
-    localStorage.setItem('hbe_role_description', roleDesc || '');
-    localStorage.setItem('hbe_dashboard_path', dashPath || '/');
-    localStorage.setItem('hbe_nav', JSON.stringify(userNav || []));
-    localStorage.setItem('hbe_access', JSON.stringify(userAccess || {}));
+  const storeAuthResponse = (data: any, remember = false) => {
+    const storage = remember ? localStorage : sessionStorage;
+    const otherStorage = remember ? sessionStorage : localStorage;
+    ['hbe_token', 'hbe_user', 'hbe_role_description', 'hbe_dashboard_path', 'hbe_nav', 'hbe_access'].forEach(key => otherStorage.removeItem(key));
+    const { token: newToken, user: newUser, roleDescription: roleDesc, dashboardPath: dashPath, nav: userNav, access: userAccess } = data;
+    storage.setItem('hbe_token', newToken);
+    storage.setItem('hbe_user', JSON.stringify(newUser));
+    storage.setItem('hbe_role_description', roleDesc || '');
+    storage.setItem('hbe_dashboard_path', dashPath || '/');
+    storage.setItem('hbe_nav', JSON.stringify(userNav || []));
+    storage.setItem('hbe_access', JSON.stringify(userAccess || {}));
     setToken(newToken);
     setUser(newUser);
     setRoleDescription(roleDesc || '');
@@ -85,13 +90,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setNav(userNav || []);
     setAccess(userAccess || {});
     authStore.getState().setAuth(newUser, newToken);
+    if (newUser.appearance) applyAppearance(newUser.appearance);
+  };
+
+  const login = async (email: string, password: string, remember = false) => {
+    const res = await authApi.login(email, password);
+    if (res.data.requiresTwoFactor) return { requiresTwoFactor: true, challengeToken: res.data.challengeToken };
+    storeAuthResponse(res.data, remember);
+    return {};
+  };
+
+  const verifyTwoFactor = async (challengeToken: string, code: string, remember = false) => {
+    const res = await authApi.verifyTwoFactor(challengeToken, code);
+    storeAuthResponse(res.data, remember);
   };
 
   const updateUser = (updates: Partial<User>) => {
     setUser(prev => {
       if (!prev) return prev;
       const merged = { ...prev, ...updates };
-      localStorage.setItem('hbe_user', JSON.stringify(merged));
+      const storage = localStorage.getItem('hbe_token') ? localStorage : sessionStorage;
+      storage.setItem('hbe_user', JSON.stringify(merged));
       authStore.getState().setAuth(merged, token);
       return merged;
     });
@@ -104,6 +123,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     localStorage.removeItem('hbe_dashboard_path');
     localStorage.removeItem('hbe_nav');
     localStorage.removeItem('hbe_access');
+    ['hbe_token', 'hbe_user', 'hbe_role_description', 'hbe_dashboard_path', 'hbe_nav', 'hbe_access'].forEach(key => sessionStorage.removeItem(key));
     setToken(null);
     setUser(null);
     setRoleDescription('');
@@ -126,7 +146,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, roleDescription, dashboardPath, nav, access, login, logout, updateUser, canAccess, isLoading }}>
+    <AuthContext.Provider value={{ user, token, roleDescription, dashboardPath, nav, access, login, verifyTwoFactor, logout, updateUser, canAccess, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

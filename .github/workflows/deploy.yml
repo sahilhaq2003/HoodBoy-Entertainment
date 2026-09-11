@@ -1,0 +1,34 @@
+name: Deploy production
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: hbe-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Configure SSH
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/hbe_deploy
+          chmod 600 ~/.ssh/hbe_deploy
+          ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts
+
+      - name: Deploy on VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/hbe_deploy -o BatchMode=yes "$VPS_USER@$VPS_HOST" \
+            'cd /var/www/hbe && git fetch origin main && git reset --hard origin/main && bash deployment/deploy.sh'

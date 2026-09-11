@@ -17,6 +17,19 @@ const userSchema = new mongoose.Schema({
     key: { type: String, required: true },
     enabled: { type: Boolean, default: true },
   }],
+  appearance: {
+    theme: { type: String, enum: ['light', 'indigo', 'warm', 'dark'], default: 'light' },
+    fontSize: { type: String, enum: ['small', 'default', 'large'], default: 'default' },
+  },
+  integrationLinks: {
+    spotify: { type: String, default: '' },
+    appleMusic: { type: String, default: '' },
+    distributor: { type: String, default: '' },
+  },
+  twoFactorEnabled: { type: Boolean, default: false },
+  twoFactorSecret: { type: String, default: '', select: false },
+  passwordResetToken: { type: String, default: '', select: false },
+  passwordResetExpires: { type: Date, select: false },
   isActive: { type: Boolean, default: true },
 }, { timestamps: true });
 
@@ -32,6 +45,9 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
 userSchema.methods.toJSON = function () {
   const obj = this.toObject();
   delete obj.password;
+  delete obj.twoFactorSecret;
+  delete obj.passwordResetToken;
+  delete obj.passwordResetExpires;
   return obj;
 };
 

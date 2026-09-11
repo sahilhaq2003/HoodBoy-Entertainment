@@ -1,18 +1,17 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Users, Search, Music, DollarSign, TrendingUp,
-  Filter, UserPlus, Clock, CheckCircle, XCircle, AlertCircle, FileText,
-  ArrowUpRight, RefreshCw, Grid3X3, List, Disc3, Edit2, Trash2, X, Loader2,
-  Calendar,
+  Users, Search, DollarSign, TrendingUp,
+  Filter, UserPlus, Clock, CheckCircle, XCircle, AlertCircle,
+  RefreshCw, Grid3X3, List, Disc3, Loader2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { artistsApi } from '../services/api';
 import type { Artist, OnboardingStats } from '../types';
 import StatusBadge from '../components/ui/StatusBadge';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
-import OnboardingProgress from '../components/onboarding/OnboardingProgress';
-import { formatCurrency, formatNumber, formatDate, getInitials, getAvatarColor } from '../utils/helpers';
+import ArtistCard from '../components/artists/ArtistCard';
+import { formatCurrency, formatNumber, getInitials, getAvatarColor } from '../utils/helpers';
 
 const Artists: React.FC = () => {
   const navigate = useNavigate();
@@ -176,118 +175,14 @@ const Artists: React.FC = () => {
         <div className="flex justify-center py-16"><LoadingSpinner size={28} text="Loading artists..." /></div>
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {artists.map(artist => {
-            const displayName = artist.artistName || artist.stageName || artist.name;
-            const name = displayName || 'Artist';
-            const avatarColor = getAvatarColor(name);
-            const hasDocs = artist.documents && artist.documents.length > 0;
-            return (
-              <div
-                key={artist._id}
-                className="group relative bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-xl hover:border-gray-300 hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden flex flex-col"
-                onClick={() => navigate(`/artists/${artist._id}`)}
-              >
-                {/* Cover banner */}
-                <div
-                  className="relative h-16 flex items-start justify-end p-2.5 flex-shrink-0"
-                  style={{ background: `linear-gradient(135deg, ${avatarColor} 0%, ${avatarColor}55 100%)` }}
-                >
-                  <div className="absolute inset-0 bg-gradient-to-t from-white via-white/5 to-transparent" />
-                  <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); navigate(`/artists/${artist._id}`); }}
-                      className="p-1.5 rounded-lg bg-white/25 text-white hover:bg-white/40 backdrop-blur-sm transition-all"
-                      title="Edit"
-                    >
-                      <Edit2 size={13} />
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setDeleteId(artist._id); }}
-                      className="p-1.5 rounded-lg bg-white/25 text-white hover:bg-red-600/80 backdrop-blur-sm transition-all"
-                      title="Delete"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-                  <div className="relative z-10">
-                    <StatusBadge status={artist.status} />
-                  </div>
-                </div>
-
-                {/* Body */}
-                <div className="relative px-5 pb-5 flex-1 flex flex-col">
-                  {/* Avatar */}
-                  <div className="-mt-6 mb-3">
-                    <div
-                      className="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold text-lg flex-shrink-0 ring-4 ring-white shadow-md overflow-hidden"
-                      style={{ background: avatarColor }}
-                    >
-                      {artist.image ? (
-                        <img src={artist.image} alt={name} className="w-full h-full object-cover" />
-                      ) : (
-                        getInitials(name)
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Identity */}
-                  <div>
-                    <h3 className="text-base font-bold text-gray-900 leading-tight truncate group-hover:text-indigo-600 transition-colors">{name}</h3>
-                    {artist.name && artist.name !== displayName && (
-                      <p className="text-xs text-gray-400 truncate">{artist.name}</p>
-                    )}
-                    <div className="mt-2 flex items-center gap-1.5">
-                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-gray-100 text-gray-500 text-[11px] font-medium">
-                        <Music size={11} /> {artist.genre || 'No genre'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Stats */}
-                  <div className="grid grid-cols-2 gap-3 mt-4">
-                    <div className="rounded-xl bg-gray-50 border border-gray-100 px-3 py-2.5">
-                      <div className="text-[11px] text-gray-500 flex items-center gap-1 mb-0.5"><TrendingUp size={11} className="text-indigo-500" /> Streams</div>
-                      <div className="text-lg font-bold text-gray-900">{formatNumber(artist.totalStreams || 0)}</div>
-                    </div>
-                    <div className="rounded-xl bg-gray-50 border border-gray-100 px-3 py-2.5">
-                      <div className="text-[11px] text-gray-500 flex items-center gap-1 mb-0.5"><DollarSign size={11} className="text-emerald-500" /> Revenue</div>
-                      <div className="text-lg font-bold text-gray-900">{formatCurrency(artist.totalRevenue || 0)}</div>
-                    </div>
-                  </div>
-
-                  {/* Onboarding progress */}
-                  <div className="mt-4">
-                    <OnboardingProgress currentStep={artist.onboardingStep} onboardingStatus={artist.onboardingStatus} compact />
-                  </div>
-
-                  {/* Footer */}
-                  <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500 gap-2">
-                    {artist.contractEnd ? (
-                      <span className="flex items-center gap-1.5 min-w-0">
-                        <Calendar size={11} className="text-gray-400 flex-shrink-0" />
-                        <span className="truncate">Ends <span className="font-semibold text-gray-700">{formatDate(artist.contractEnd)}</span></span>
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1.5">
-                        <Calendar size={11} className="text-gray-400" />
-                        No contract
-                      </span>
-                    )}
-                    {hasDocs && (
-                      <span className="flex items-center gap-1 flex-shrink-0">
-                        <FileText size={11} className="text-gray-400" />
-                        {artist.documents!.length} doc{artist.documents!.length > 1 ? 's' : ''}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <ArrowUpRight size={16} className="text-indigo-500" />
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+          {artists.map(artist => (
+            <ArtistCard
+              key={artist._id}
+              artist={artist}
+              onOpen={() => navigate(`/artists/${artist._id}`)}
+              onDelete={setDeleteId}
+            />
+          ))}
 
           {artists.length === 0 && (
             <div className="col-span-full text-center py-16">

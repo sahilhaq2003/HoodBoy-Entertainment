@@ -1,13 +1,13 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_URL || '/api',
   headers: { 'Content-Type': 'application/json' },
 });
 
 // Add auth token to all requests
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('hbe_token');
+  const token = localStorage.getItem('hbe_token') || sessionStorage.getItem('hbe_token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
@@ -16,30 +16,18 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // 403 while the app believes the user has access (e.g. admin) means the
-    // stored token belongs to a different/stale session. Clear it and re-login.
-    if (error.response?.status === 403) {
-      let storedUser: { role?: string } | null = null;
-      try {
-        storedUser = JSON.parse(localStorage.getItem('hbe_user') || 'null');
-      } catch { /* ignore malformed */ }
-      const isStaleToken =
-        storedUser?.role === 'admin' ||
-        (storedUser?.role && storedUser.role !== 'artist');
-      if (isStaleToken && !window.location.pathname.startsWith('/login')) {
-        localStorage.removeItem('hbe_token');
-        localStorage.removeItem('hbe_user');
-        localStorage.removeItem('hbe_access');
-        localStorage.removeItem('hbe_role_description');
-        localStorage.removeItem('hbe_dashboard_path');
-        localStorage.removeItem('hbe_nav');
-        window.location.href = '/login';
-        return Promise.reject(error);
-      }
-    }
-    if (error.response?.status === 401) {
+    // A 403 is a permission decision and must never destroy a valid session.
+    // Credential-validation endpoints also use 401 for expected input errors;
+    // only an authenticated resource 401 means the stored session has expired.
+    const requestUrl = String(error.config?.url || '');
+    const credentialEndpoint = [
+      '/auth/login', '/auth/login/2fa', '/auth/password', '/auth/2fa/disable',
+      '/auth/reset-password', '/auth/forgot-password',
+    ].some(path => requestUrl === path);
+    if (error.response?.status === 401 && !credentialEndpoint) {
       localStorage.removeItem('hbe_token');
       localStorage.removeItem('hbe_user');
+      ['hbe_token', 'hbe_user', 'hbe_access', 'hbe_role_description', 'hbe_dashboard_path', 'hbe_nav'].forEach(key => sessionStorage.removeItem(key));
       window.location.href = '/login';
     }
     return Promise.reject(error);
@@ -49,8 +37,17 @@ api.interceptors.response.use(
 // Auth
 export const authApi = {
   login: (email: string, password: string) => api.post('/auth/login', { email, password }),
-  register: (data: object) => api.post('/auth/register', data),
+  verifyTwoFactor: (challengeToken: string, code: string) => api.post('/auth/login/2fa', { challengeToken, code }),
+  forgotPassword: (email: string) => api.post('/auth/forgot-password', { email }),
+  resetPassword: (token: string, newPassword: string) => api.post('/auth/reset-password', { token, newPassword }),
   me: () => api.get('/auth/me'),
+  setupTwoFactor: () => api.post('/auth/2fa/setup'),
+  confirmTwoFactor: (code: string) => api.post('/auth/2fa/confirm', { code }),
+  disableTwoFactor: (password: string) => api.post('/auth/2fa/disable', { password }),
+};
+
+export const searchApi = {
+  search: (q: string) => api.get('/search', { params: { q } }),
 };
 
 // Dashboard
@@ -368,8 +365,8 @@ export const artistBalancesApi = {
   create: (data: object) => api.post('/artist-balances', data),
   update: (id: string, data: object) => api.put(`/artist-balances/${id}`, data),
   delete: (id: string) => api.delete(`/artist-balances/${id}`),
-  addPayment: (id: string, data: object) => api.post(`/artist-balances/${id}/payments`, data),
-  getPayments: (id: string) => api.get(`/artist-balances/${id}/payments`),
+  addTransaction: (id: string, data: object) => api.post(`/artist-balances/${id}/transactions`, data),
+  getHistory: (artistId: string) => api.get(`/artist-balances/artist/${artistId}/history`),
 };
 
 // Tax Calendar

@@ -224,7 +224,7 @@ const OwnershipTracker: React.FC = () => {
           <div key={o._id} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
             {/* Header */}
             <div
-              className="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-gray-50"
+              className="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/70 transition-colors"
               onClick={() => {
                 if (editing === o._id) setEditing(null);
                 else { loadForm(o); setEditing(o._id); }
