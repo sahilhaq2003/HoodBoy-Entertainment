@@ -31,5 +31,15 @@ npm ci --omit=dev
 pm2 startOrReload ecosystem.config.cjs --env production
 pm2 save
 
-curl --fail --silent --show-error http://127.0.0.1:5000/api/health >/dev/null
+for attempt in {1..15}; do
+  if curl --fail --silent http://127.0.0.1:5000/api/health >/dev/null; then
+    break
+  fi
+  if [[ "$attempt" -eq 15 ]]; then
+    echo "Backend health check failed after 30 seconds." >&2
+    pm2 logs hbe-backend --lines 50 --nostream >&2
+    exit 1
+  fi
+  sleep 2
+done
 echo "Deployment completed successfully."
