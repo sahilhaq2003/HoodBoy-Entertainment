@@ -78,15 +78,15 @@
 <section class="cover">
   <div class="brand"><img src="../frontend/public/logo.png" alt="HoodBoy Entertainment logo"><div><div class="brand-name">HoodBoy Entertainment</div><div class="brand-sub">Lnkup Label Management Platform</div></div></div>
   <div class="cover-main"><div class="eyebrow">Client User Manual</div><h1>Complete Platform<br>User &amp; Workflow Guide</h1><p class="cover-lead">A practical reference for every role, dashboard, module, workflow, status, form, and day-to-day operating procedure in the platform.</p></div>
-  <div class="cover-meta"><span>Version 1.1</span><span>Updated 11 September 2026</span><span>HoodBoy Entertainment</span></div>
+  <div class="cover-meta"><span>Version 1.2</span><span>Updated 15 September 2026</span><span>HoodBoy Entertainment</span></div>
 </section>
 
 <section class="page">
   <div class="chapter"><span class="chapter-num">i</span><h1>About this manual</h1></div>
   <p>This manual documents the client-facing behavior of the current HoodBoy Entertainment Lnkup Label Management Platform. It is written for administrators, managers, artists, finance staff, marketing staff, and operational users.</p>
   <table>
-    <tr><th>Document</th><td>Client User &amp; Workflow Manual</td><th>Version</th><td>1.1</td></tr>
-    <tr><th>System</th><td>Lnkup Label Management Platform</td><th>Review date</th><td>11 September 2026</td></tr>
+    <tr><th>Document</th><td>Client User &amp; Workflow Manual</td><th>Version</th><td>1.2</td></tr>
+    <tr><th>System</th><td>Lnkup Label Management Platform</td><th>Review date</th><td>15 September 2026</td></tr>
     <tr><th>Audience</th><td colspan="3">HoodBoy Entertainment staff, artists, finance and marketing users, system administrators, and approved client stakeholders</td></tr>
     <tr><th>Source of truth</th><td colspan="3">Current application routes, page behavior, authorization policy, data models, validations, and file-handling rules in the supplied web application</td></tr>
   </table>
@@ -108,7 +108,7 @@
   <div class="chapter"><span class="chapter-num">ii</span><h1>Contents</h1></div>
   <div class="toc">
     <a href="#overview"><span>1. Platform overview</span><small>Start</small></a>
-    <a href="#login"><span>2. Sign in and sign out</span><small>Access</small></a>
+    <a href="#login"><span>2. Landing page, sign in and sign out</span><small>Access</small></a>
     <a href="#navigation"><span>3. Navigation and shared controls</span><small>Basics</small></a>
     <a href="#roles"><span>4. Roles and permissions</span><small>Access</small></a>
     <a href="#dashboards"><span>5. Role dashboards</span><small>Overview</small></a>
@@ -168,10 +168,16 @@
 </section>
 
 <section id="login" class="page">
-  <div class="chapter"><span class="chapter-num">2</span><h1>Sign in and sign out</h1></div>
+  <div class="chapter"><span class="chapter-num">2</span><h1>Landing page, sign in and sign out</h1></div>
+  <h3>Public landing page</h3>
+  <p>When a signed-out visitor opens the platform root address, the public HoodBoy Entertainment landing page appears. It introduces the Lnkup platform through four capability cards: <b>One Workspace</b>, <b>Release Ready</b>, <b>Clear Numbers</b>, and <b>Built to Grow</b>.</p>
+  <ol class="steps"><li>Select a capability card to display its related headline and platform summary.</li><li>Use the previous and next arrow controls to move through the cards. On a desktop keyboard, the left and right arrow keys provide the same control.</li><li>Select <b>Sign in</b> in the header or <b>Enter the platform</b> in the hero area to open the login page.</li></ol>
+  <p>The desktop presentation fits inside the browser viewport without page scrolling. On smaller screens, the content stacks vertically, the capability cards can be swiped horizontally, and normal vertical scrolling remains available.</p>
+  <div class="callout note"><strong>Signed-in root route</strong>An authenticated user who opens the root address is taken into the application and shown the dashboard appropriate to the account role.</div>
   <h3>Sign in</h3>
-  <ol class="steps"><li>Open the platform login page.</li><li>Enter the email address assigned by the administrator.</li><li>Enter the password. Use the eye icon to show or hide it.</li><li>Select <b>Sign In</b>. A confirmation screen appears while the correct role dashboard loads.</li></ol>
-  <div class="callout"><strong>First-time access</strong>An artist can select <b>Create an account</b>; the system creates both the artist login and linked starter profile. Administrators create staff accounts and assign roles in Team Management.</div>
+  <ol class="steps"><li>Open the platform login page from the landing page or directly.</li><li>Enter the email address assigned to the account.</li><li>Enter the password. Use the eye icon to show or hide it.</li><li>Select <b>Sign In</b>. A confirmation screen appears while the correct role dashboard loads.</li></ol>
+  <p>Select <b>Home</b> at the upper left of the login page to return to the public landing page.</p>
+  <div class="callout"><strong>First-time access</strong>Administrators create staff accounts and assign roles in Team Management. Artist login credentials are created as part of the artist approval workflow; the authorized manager or administrator must provide the generated temporary credentials securely.</div>
   <h3>Password recovery and two-factor sign-in</h3>
   <ol class="steps"><li>Select <b>Forgot password?</b>, enter the account email, and submit.</li><li>Open the time-limited link delivered by the configured recovery service. Development/demo deployments can load the one-time code directly.</li><li>Enter and confirm a new password of at least eight characters.</li><li>If two-factor authentication is enabled, complete password sign-in with the current six-digit authenticator code.</li></ol>
   <p><b>Keep me signed in</b> stores the session persistently in that browser. Leave it clear to use session storage, which ends when the browser session closes.</p>
@@ -691,12 +697,14 @@
 
 <section id="deployment" class="page">
   <div class="chapter"><span class="chapter-num">B</span><h1>Current-deployment notes</h1></div>
-  <p>Version 1.1 replaces the previously visible demo/placeholder controls with operational workflows. The table records what is now live and which capabilities still require deployment configuration.</p>
+  <p>Version 1.2 documents the public landing experience and current login navigation in addition to the operational workflows introduced previously. The table records what is now live and which capabilities still require deployment configuration.</p>
   <table>
-    <tr><th>Feature/control</th><th>Version 1.1 behavior</th><th>Operating note</th></tr>
+    <tr><th>Feature/control</th><th>Version 1.2 behavior</th><th>Operating note</th></tr>
+    <tr><td>Public landing page</td><td>Signed-out visitors at the root route see a responsive platform introduction with four interactive capability cards.</td><td>Use a card, carousel arrow, or desktop arrow key to change the feature story; use Sign in or Enter the platform to continue.</td></tr>
+    <tr><td>Login Home button</td><td>The login page includes a persistent Home control that returns to the public root route.</td><td>If already authenticated, opening the root route resolves to the role dashboard.</td></tr>
     <tr><td>Workspace search / Ctrl- or Command-K</td><td>Live role-aware cross-module results with direct navigation.</td><td>Enter at least two characters; module search remains best for detailed filters.</td></tr>
     <tr><td>Forgot password</td><td>Expiring one-time token and reset form are live.</td><td>Production requires <code>FRONTEND_URL</code> and <code>PASSWORD_RESET_WEBHOOK_URL</code>; without delivery configuration the API reports a service error instead of pretending that mail was sent.</td></tr>
-    <tr><td>Create an account</td><td>Creates an artist user and linked starter artist profile, then signs in.</td><td>Staff accounts and role assignment remain administrator-controlled in Team Management.</td></tr>
+    <tr><td>Account provisioning</td><td>Staff accounts are created in Team Management; artist credentials are generated when an artist is approved.</td><td>There is no public self-registration control on the current login page. Deliver temporary artist credentials through an approved secure channel.</td></tr>
     <tr><td>Keep me signed in</td><td>Checked uses persistent browser storage; clear uses session storage.</td><td>Leave clear on shared devices and always sign out.</td></tr>
     <tr><td>Two-factor authentication</td><td>Standards-based authenticator setup, verification at login, and password-confirmed disable are live.</td><td>Store the setup key securely; losing the authenticator requires administrator password assistance and database-level 2FA recovery.</td></tr>
     <tr><td>Appearance</td><td>Four themes and three root font sizes apply and persist.</td><td>The top-bar button remains a fast light/dark switch.</td></tr>
@@ -711,7 +719,7 @@
   <div class="callout note"><strong>Change control</strong>Update this manual when routes, permissions, validations, field sets, or placeholder controls change. Record the new version and review date on the document-control page.</div>
   <h3>Client acceptance checklist</h3>
   <ul class="checklist"><li>Each role can sign in and sees only intended navigation.</li><li>One complete test artist progresses through onboarding approval.</li><li>One song completes metadata and ownership validation and enters a release.</li><li>One finance/royalty/balance period reconciles from source to payment.</li><li>File upload, protected preview/download, and all configured backup destinations are verified.</li><li>Administrator can create, deactivate, reset, and safely reassign a test user.</li><li>Known deployment notes are accepted or scheduled for correction.</li></ul>
-  <p class="footer-note">End of manual &middot; HoodBoy Entertainment &middot; Lnkup Label Management Platform &middot; Client User Manual v1.1</p>
+  <p class="footer-note">End of manual &middot; HoodBoy Entertainment &middot; Lnkup Label Management Platform &middot; Client User Manual v1.2</p>
 </section>
 </body>
 </html>

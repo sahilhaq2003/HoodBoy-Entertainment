@@ -1,6 +1,6 @@
 # HoodBoy Entertainment — Label Management Platform
 
-The current client guide is [docs/HBE_Client_User_Manual.html](docs/HBE_Client_User_Manual.html) (version 1.1, updated 11 September 2026).
+The current client guide is [docs/HBE_Client_User_Manual.html](docs/HBE_Client_User_Manual.html) (version 1.2, updated 15 September 2026).
 
 ## Local start
 
