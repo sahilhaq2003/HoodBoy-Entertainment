@@ -133,4 +133,8 @@ artistSchema.pre('save', function() {
 
 artistSchema.set('toJSON', { virtuals: true });
 
+artistSchema.index({ status: 1, totalRevenue: -1 });
+artistSchema.index({ manager: 1, status: 1 });
+artistSchema.index({ email: 1 });
+
 module.exports = mongoose.model('Artist', artistSchema);

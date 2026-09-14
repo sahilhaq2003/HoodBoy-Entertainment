@@ -2,12 +2,12 @@ import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth, getDashboardPath } from './contexts/AuthContext';
-import Layout from './components/layout/Layout';
 import ErrorBoundary from './components/ui/ErrorBoundary';
 import { applyAppearance, getAppearance } from './utils/appearance';
 
 // Load only the page needed for the current route. This keeps the initial bundle
 // small and avoids downloading every dashboard and management screen up front.
+const Layout = lazy(() => import('./components/layout/Layout'));
 const Login = lazy(() => import('./pages/Login'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
@@ -45,15 +45,6 @@ const CampaignManager = lazy(() => import('./pages/CampaignManager'));
 const MetadataManager = lazy(() => import('./pages/MetadataManager'));
 const LnkUp = lazy(() => import('./pages/LnkUp'));
 const TeamManagement = lazy(() => import('./pages/TeamManagement'));
-
-const preloadPages = () => Promise.allSettled([
-  import('./pages/Dashboard'), import('./pages/AdminDashboard'), import('./pages/ManagerDashboard'),
-  import('./pages/ArtistDashboard'), import('./pages/FinanceDashboard'), import('./pages/MarketingDashboard'),
-  import('./pages/Artists'), import('./pages/ArtistProfile'), import('./pages/ArtistOnboarding'),
-  import('./pages/Songs'), import('./pages/Releases'), import('./pages/Contracts'), import('./pages/Finance'),
-  import('./pages/Royalties'), import('./pages/Analytics'), import('./pages/Projects'), import('./pages/Tasks'),
-  import('./pages/Settings'), import('./pages/FileManager'), import('./pages/CampaignManager'),
-]);
 
 const PageLoader = () => (
   <div className="flex min-h-64 items-center justify-center" role="status" aria-label="Loading page">
@@ -183,19 +174,6 @@ const ThemeInit: React.FC = () => {
 };
 
 const App: React.FC = () => {
-  useEffect(() => {
-    // Preserve a fast initial render, then warm the most-used route chunks so
-    // subsequent navigation is immediate and does not show a loading screen.
-    const startPreload = () => { void preloadPages(); };
-    const idleWindow = window as Window & { requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number; cancelIdleCallback?: (id: number) => void };
-    if (idleWindow.requestIdleCallback) {
-      const id = idleWindow.requestIdleCallback(startPreload, { timeout: 2500 });
-      return () => idleWindow.cancelIdleCallback?.(id);
-    }
-    const id = window.setTimeout(startPreload, 1200);
-    return () => window.clearTimeout(id);
-  }, []);
-
   return (
     <BrowserRouter>
       <ErrorBoundary>

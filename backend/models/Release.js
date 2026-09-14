@@ -96,5 +96,7 @@ releaseSchema.index({ artist: 1 });
 releaseSchema.index({ status: 1 });
 releaseSchema.index({ currentPhase: 1 });
 releaseSchema.index({ releaseDate: 1 });
+releaseSchema.index({ status: 1, releaseDate: 1 });
+releaseSchema.index({ assignedTo: 1, status: 1 });
 
 module.exports = mongoose.model('Release', releaseSchema);

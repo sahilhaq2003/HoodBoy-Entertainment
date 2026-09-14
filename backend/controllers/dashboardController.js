@@ -338,33 +338,37 @@ const getRoleDashboard = async (req, res) => {
         }),
         Project.countDocuments({ status: 'delayed' }),
       ]);
-      const topArtists = await Artist.find({ status: 'active' }).sort('-totalRevenue').limit(5).select('name stageName totalStreams totalRevenue image');
-      const recentActivity = await Activity.find().populate('user', 'name role').sort({ createdAt: -1 }).limit(15);
-      const contractAlerts = await Contract.find({ status: 'active', endDate: { $gte: now, $lte: new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000) } })
-        .populate('artist', 'name stageName').sort({ endDate: 1 }).limit(5);
-
       // Executive action center: actionable records instead of totals alone.
       const [attentionTasks, delayedProjectList, approvalTaskList, approvalSongList,
-        approvalProjectList, activeProjectList, upcomingReleaseList, activeCampaignList] = await Promise.all([
+        approvalProjectList, activeProjectList, upcomingReleaseList, activeCampaignList,
+        topArtists, recentActivity, contractAlerts] = await Promise.all([
         Task.find({
           status: { $nin: ['completed'] },
           $or: [{ deadline: { $lt: now } }, { status: { $in: ['blocked', 'delayed'] } }],
-        }).populate('assignedTo', 'name').populate('relatedProject', 'name').sort({ deadline: 1 }).limit(10),
-        Project.find({ status: 'delayed' }).populate('artist', 'name stageName').populate('assignedTo', 'name').sort({ releaseDate: 1 }).limit(10),
-        Task.find({ status: 'waiting_approval' }).populate('assignedTo', 'name').populate('relatedProject', 'name').sort({ deadline: 1 }).limit(10),
-        Song.find({ status: 'awaiting_approval' }).populate('artist', 'name stageName').populate('assignedTo', 'name').sort({ updatedAt: -1 }).limit(10),
-        Project.find({ status: 'waiting_approval' }).populate('artist', 'name stageName').populate('assignedTo', 'name').sort({ updatedAt: -1 }).limit(10),
+        }).select('title assignedTo relatedProject deadline status deliverable').populate('assignedTo', 'name').populate('relatedProject', 'name').sort({ deadline: 1 }).limit(10).lean(),
+        Project.find({ status: 'delayed' }).select('name artist assignedTo releaseDate status').populate('artist', 'name stageName').populate('assignedTo', 'name').sort({ releaseDate: 1 }).limit(10).lean(),
+        Task.find({ status: 'waiting_approval' }).select('title assignedTo relatedProject deadline deliverable').populate('assignedTo', 'name').populate('relatedProject', 'name').sort({ deadline: 1 }).limit(10).lean(),
+        Song.find({ status: 'awaiting_approval' }).select('title artist assignedTo updatedAt').populate('artist', 'name stageName').populate('assignedTo', 'name').sort({ updatedAt: -1 }).limit(10).lean(),
+        Project.find({ status: 'waiting_approval' }).select('name artist assignedTo updatedAt').populate('artist', 'name stageName').populate('assignedTo', 'name').sort({ updatedAt: -1 }).limit(10).lean(),
         Project.find({ status: { $in: ['not_started', 'in_progress', 'waiting_approval', 'delayed'] } })
-          .populate('artist', 'name stageName').populate('assignedTo', 'name').sort({ priority: -1, releaseDate: 1 }).limit(20),
+          .select('name artist assignedTo status priority releaseDate completionPercentage')
+          .populate('artist', 'name stageName').populate('assignedTo', 'name').sort({ priority: -1, releaseDate: 1 }).limit(20).lean(),
         Release.find({ releaseDate: { $gte: now }, status: { $nin: ['released', 'cancelled'] } })
-          .populate('artist', 'name stageName').populate('assignedTo', 'name').sort({ releaseDate: 1 }).limit(8),
-        Campaign.find({ status: 'active' }).populate('artist', 'name stageName').populate('assignedTo', 'name').sort({ endDate: 1 }).limit(8),
+          .select('title artist assignedTo status currentPhase releaseDate')
+          .populate('artist', 'name stageName').populate('assignedTo', 'name').sort({ releaseDate: 1 }).limit(8).lean(),
+        Campaign.find({ status: 'active' }).select('name artist assignedTo progress spent budget endDate')
+          .populate('artist', 'name stageName').populate('assignedTo', 'name').sort({ endDate: 1 }).limit(8).lean(),
+        Artist.find({ status: 'active' }).sort('-totalRevenue').limit(5).select('name stageName totalStreams totalRevenue image').lean(),
+        Activity.find().select('action entityType entityName userName user createdAt').populate('user', 'name role').sort({ createdAt: -1 }).limit(15).lean(),
+        Contract.find({ status: 'active', endDate: { $gte: now, $lte: new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000) } })
+          .select('title artist endDate').populate('artist', 'name stageName').sort({ endDate: 1 }).limit(5).lean(),
       ]);
 
       const projectIds = activeProjectList.map(project => project._id);
       const projectTasks = projectIds.length > 0
         ? await Task.find({ relatedProject: { $in: projectIds }, status: { $nin: ['completed'] } })
-          .populate('assignedTo', 'name').sort({ deadline: 1 })
+          .select('title deliverable relatedProject assignedTo deadline')
+          .populate('assignedTo', 'name').sort({ deadline: 1 }).lean()
         : [];
       const nextTaskByProject = new Map();
       projectTasks.forEach(task => {
@@ -438,19 +442,24 @@ const getRoleDashboard = async (req, res) => {
     }
 
     if (role === 'manager') {
-      const [myArtists, myProjects, myTasks, overdueTasks, tasksDueThisWeek, activeCampaigns] = await Promise.all([
+      const [
+        myArtists, myProjects, myTasks, overdueTasks, tasksDueThisWeek, activeCampaigns,
+        myArtistList, myTasksList, upcomingReleases,
+      ] = await Promise.all([
         Artist.countDocuments({ manager: req.user._id }),
         Project.countDocuments({ assignedTo: req.user._id }),
         Task.countDocuments({ assignedTo: req.user._id, status: { $nin: ['completed'] } }),
         Task.countDocuments({ assignedTo: req.user._id, deadline: { $lt: now }, status: { $nin: ['completed'] } }),
         Task.countDocuments({ assignedTo: req.user._id, deadline: { $gte: now, $lte: in7Days }, status: { $nin: ['completed'] } }),
         Campaign.countDocuments({ assignedTo: req.user._id, status: 'active' }),
+        Artist.find({ manager: req.user._id }).select('name stageName status totalStreams totalRevenue image').limit(10).lean(),
+        Task.find({ assignedTo: req.user._id, status: { $nin: ['completed'] } })
+          .select('title deadline priority status relatedArtist')
+          .populate('relatedArtist', 'name stageName').sort({ deadline: 1 }).limit(10).lean(),
+        Release.find({ releaseDate: { $gte: now, $lte: in30Days } })
+          .select('title artist releaseDate status')
+          .populate('artist', 'name stageName').sort('releaseDate').limit(5).lean(),
       ]);
-      const myArtistList = await Artist.find({ manager: req.user._id }).select('name stageName status totalStreams totalRevenue image').limit(10);
-      const myTasksList = await Task.find({ assignedTo: req.user._id, status: { $nin: ['completed'] } })
-        .populate('relatedArtist', 'name stageName').sort({ deadline: 1 }).limit(10);
-      const upcomingReleases = await Release.find({ releaseDate: { $gte: now, $lte: in30Days } })
-        .populate('artist', 'name stageName').sort('releaseDate').limit(5);
 
       return res.json({ success: true, data: {
         role: 'manager',
@@ -462,14 +471,16 @@ const getRoleDashboard = async (req, res) => {
     }
 
     if (role === 'artist') {
-      const artistDoc = await Artist.findOne({ email: req.user.email });
+      const artistDoc = await Artist.findOne({ email: req.user.email })
+        .select('name stageName image status genre')
+        .lean();
       if (!artistDoc) return res.json({ success: true, data: { role: 'artist', artist: null, kpis: { totalSongs: 0, totalReleases: 0, totalStreams: 0, totalRevenue: 0, totalRoyaltiesOwed: 0, totalPaid: 0, balance: 0 }, songs: [], releases: [], tasks: [], royalties: [] }});
 
       const [mySongs, myReleases, myTasks, myRoyalties] = await Promise.all([
-        Song.find({ artist: artistDoc._id }).select('title status genre streams revenue createdAt').sort('-createdAt'),
-        Release.find({ artist: artistDoc._id }).select('title releaseDate status type currentPhase').sort('-releaseDate'),
-        Task.find({ assignedTo: req.user._id }).populate('assignedBy', 'name').sort({ deadline: 1 }).limit(10),
-        RoyaltyLedger.find({ artist: artistDoc._id }).sort({ periodStart: -1 }).limit(5),
+        Song.find({ artist: artistDoc._id }).select('title status genre streams revenue createdAt').sort('-createdAt').lean(),
+        Release.find({ artist: artistDoc._id }).select('title releaseDate status type currentPhase').sort('-releaseDate').lean(),
+        Task.find({ assignedTo: req.user._id }).select('title deadline status priority assignedBy').populate('assignedBy', 'name').sort({ deadline: 1 }).limit(10).lean(),
+        RoyaltyLedger.find({ artist: artistDoc._id }).select('period grossIncome artistShare totalPaid remainingBalance status periodStart').sort({ periodStart: -1 }).limit(5).lean(),
       ]);
       const totalStreams = mySongs.reduce((s, song) => s + (song.streams || 0), 0);
       const totalRevenue = mySongs.reduce((s, song) => s + (song.revenue || 0), 0);
@@ -488,16 +499,19 @@ const getRoleDashboard = async (req, res) => {
     }
 
     if (role === 'finance') {
-      const [totalRevenue, totalExpenses, pendingPayments, totalBudgets, royaltyEntries] = await Promise.all([
+      const [
+        totalRevenue, totalExpenses, pendingPayments, totalBudgets, royaltyEntries,
+        totalRoyaltiesPaid, recentTransactions,
+      ] = await Promise.all([
         Finance.aggregate([{ $match: { year: currentYear, type: 'income' } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
         Finance.aggregate([{ $match: { year: currentYear, type: 'expense' } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
         Finance.countDocuments({ paymentStatus: 'pending' }),
         require('../models/Budget').countDocuments({ status: 'active' }),
         RoyaltyLedger.countDocuments(),
+        RoyaltyLedger.aggregate([{ $group: { _id: null, total: { $sum: '$totalPaid' } } }]),
+        Finance.find().select('type category amount description artist date paymentStatus')
+          .sort({ date: -1 }).limit(10).populate('artist', 'name stageName').lean(),
       ]);
-      const totalRoyaltiesPaid = await RoyaltyLedger.aggregate([{ $group: { _id: null, total: { $sum: '$totalPaid' } } }]);
-      const recentTransactions = await Finance.find().sort({ date: -1 }).limit(10)
-        .populate('artist', 'name stageName');
 
       return res.json({ success: true, data: {
         role: 'finance',
@@ -513,20 +527,23 @@ const getRoleDashboard = async (req, res) => {
     }
 
     if (role === 'marketing') {
-      const [activeCampaigns, totalCampaigns, totalContacts, totalContentItems] = await Promise.all([
+      const [
+        activeCampaigns, totalCampaigns, totalContacts, totalContentItems,
+        activeCampaignList, upcomingContent,
+      ] = await Promise.all([
         Campaign.countDocuments({ status: 'active' }),
         Campaign.countDocuments(),
         Contact.countDocuments(),
         Campaign.aggregate([{ $unwind: '$contentItems' }, { $count: 'total' }]),
-      ]);
-      const activeCampaignList = await Campaign.find({ status: 'active' })
-        .populate('artist', 'name stageName').select('name artist budget spent reach impressions progress platforms startDate endDate').limit(5);
-      const upcomingContent = await Campaign.aggregate([
-        { $unwind: '$contentItems' },
-        { $match: { 'contentItems.scheduledDate': { $gte: now, $lte: in30Days } } },
-        { $project: { title: '$contentItems.title', platform: '$contentItems.platform', scheduledDate: '$contentItems.scheduledDate', status: '$contentItems.status', campaignName: '$name' } },
-        { $sort: { scheduledDate: 1 } },
-        { $limit: 10 },
+        Campaign.find({ status: 'active' })
+          .populate('artist', 'name stageName').select('name artist budget spent reach impressions progress platforms startDate endDate').limit(5).lean(),
+        Campaign.aggregate([
+          { $unwind: '$contentItems' },
+          { $match: { 'contentItems.scheduledDate': { $gte: now, $lte: in30Days } } },
+          { $project: { title: '$contentItems.title', platform: '$contentItems.platform', scheduledDate: '$contentItems.scheduledDate', status: '$contentItems.status', campaignName: '$name' } },
+          { $sort: { scheduledDate: 1 } },
+          { $limit: 10 },
+        ]),
       ]);
 
       return res.json({ success: true, data: {

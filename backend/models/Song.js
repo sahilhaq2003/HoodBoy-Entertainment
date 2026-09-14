@@ -103,6 +103,8 @@ const songSchema = new mongoose.Schema({
 songSchema.statics.buildProductionWorkflow = () => DEFAULT_PRODUCTION_WORKFLOW.map(step => ({ ...step }));
 
 songSchema.index({ artist: 1, status: 1 });
+songSchema.index({ status: 1, updatedAt: -1 });
+songSchema.index({ assignedTo: 1, status: 1 });
 songSchema.index({ streams: -1 });
 
 // Auto-initialize the production workflow on new and legacy songs.

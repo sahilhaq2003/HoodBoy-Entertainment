@@ -82,6 +82,7 @@ contractSchema.index({ type: 1 });
 contractSchema.index({ status: 1 });
 contractSchema.index({ endDate: 1 });
 contractSchema.index({ renewalDeadline: 1 });
+contractSchema.index({ status: 1, endDate: 1 });
 
 contractSchema.pre('validate', function validateContractDates() {
   if (this.startDate && this.endDate && this.endDate < this.startDate) {

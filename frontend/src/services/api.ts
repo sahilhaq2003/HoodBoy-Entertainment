@@ -132,6 +132,7 @@ export const projectsApi = {
 
 // Tasks
 export const tasksApi = {
+  getOverview: () => api.get('/tasks/overview'),
   getAll: (params?: object) => api.get('/tasks', { params }),
   getById: (id: string) => api.get(`/tasks/${id}`),
   create: (data: object) => api.post('/tasks', data),

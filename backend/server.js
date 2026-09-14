@@ -1,6 +1,7 @@
 require('dotenv').config({ path: __dirname + '/.env' });
 const express = require('express');
 const cors = require('cors');
+const compression = require('compression');
 const morgan = require('morgan');
 const path = require('path');
 const connectDB = require('./config/db');
@@ -16,6 +17,9 @@ const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:5173,http:
   .map(origin => origin.trim())
   .filter(Boolean);
 app.use(cors({ origin: allowedOrigins, credentials: true }));
+// Large dashboard and management payloads compress especially well. This also
+// covers API traffic when the app is run without the production nginx proxy.
+app.use(compression({ threshold: 1024 }));
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 if (process.env.NODE_ENV === 'development') app.use(morgan('dev'));

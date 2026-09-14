@@ -75,7 +75,22 @@ const Settings: React.FC = () => {
       return;
     }
     const reader = new FileReader();
-    reader.onload = () => setAvatar(reader.result as string);
+    reader.onload = () => {
+      const image = new Image();
+      image.onload = () => {
+        const maxDimension = 256;
+        const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(image.width * scale));
+        canvas.height = Math.max(1, Math.round(image.height * scale));
+        canvas.getContext('2d')?.drawImage(image, 0, 0, canvas.width, canvas.height);
+        // A small profile thumbnail keeps login/session payloads fast even when
+        // the original camera image was several megabytes.
+        setAvatar(canvas.toDataURL('image/webp', 0.82));
+      };
+      image.onerror = () => toast.error('Could not process this image');
+      image.src = reader.result as string;
+    };
     reader.readAsDataURL(file);
   };
 

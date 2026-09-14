@@ -302,6 +302,7 @@ const Tasks: React.FC = () => {
   const { user, canAccess } = useAuth();
   const [searchParams] = useSearchParams();
   const openedTaskRef = useRef('');
+  const initialLoadStartedRef = useRef(false);
   const canManageTasks = canAccess('tasks', 'write');
   const [kanban, setKanban] = useState<KanbanColumns | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -350,20 +351,19 @@ const Tasks: React.FC = () => {
   const refreshData = useCallback(async (showError = false) => {
     setAssignableLoading(true);
     try {
-      const [kanbanRes, tasksRes, teamRes, statsRes] = await Promise.all([
-        tasksApi.getKanban(), tasksApi.getAll({ limit: 100 }),
-        canManageTasks ? tasksApi.getTeam() : Promise.resolve(null), tasksApi.getStats(),
-      ]);
-      setKanban(kanbanRes.data.data);
-      setTasks(tasksRes.data.data);
-      setTeam(teamRes?.data.data || []);
-      setStats(statsRes.data.data);
-    } catch { if (showError) toast.error('Failed to load tasks'); }
-    try {
-      const usersRes = await tasksApi.getAssignable();
-      setUsers(usersRes.data.data || []);
-    } catch { setUsers([]); }
-    setAssignableLoading(false);
+      const response = await tasksApi.getOverview();
+      const data = response.data.data;
+      setKanban(data.kanban);
+      setTasks((Object.values(data.kanban || {}) as Task[][]).flat());
+      setTeam(data.team || []);
+      setStats(data.stats);
+      setUsers(data.users || []);
+      setAssignableError('');
+    } catch {
+      if (showError) toast.error('Failed to load tasks');
+    } finally {
+      setAssignableLoading(false);
+    }
   }, [canManageTasks]);
 
   const loadData = useCallback(async () => {
@@ -372,7 +372,11 @@ const Tasks: React.FC = () => {
     setLoading(false);
   }, [refreshData]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    if (initialLoadStartedRef.current) return;
+    initialLoadStartedRef.current = true;
+    void loadData();
+  }, [loadData]);
 
   useEffect(() => {
     const taskId = searchParams.get('task');
@@ -382,6 +386,15 @@ const Tasks: React.FC = () => {
       .then(response => setViewTask(response.data.data))
       .catch((error: any) => toast.error(error.response?.data?.message || 'Unable to open this task'));
   }, [searchParams]);
+
+  const openTask = useCallback(async (task: Task) => {
+    try {
+      const response = await tasksApi.getById(task._id);
+      setViewTask(response.data.data);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Unable to open this task');
+    }
+  }, []);
 
   const applyTaskUpdate = (updated: Task) => {
     setKanban(prev => {
@@ -668,7 +681,7 @@ const Tasks: React.FC = () => {
                 const mp = !priorityFilter || t.priority === priorityFilter;
                 return ms && mp;
               });
-              return <TaskColumn key={col.key} col={col} tasks={colTasks} onOpen={task => setViewTask(task)} />;
+              return <TaskColumn key={col.key} col={col} tasks={colTasks} onOpen={openTask} />;
             })}
           </div>
 
@@ -698,7 +711,7 @@ const Tasks: React.FC = () => {
                 const days = daysUntil(t.deadline);
                 const isOverdue = days < 0 && t.status !== 'completed';
                 return (
-                  <tr key={t._id} onClick={() => setViewTask(t)} className="hover:bg-gray-50 cursor-pointer border-b border-gray-50">
+                  <tr key={t._id} onClick={() => openTask(t)} className="hover:bg-gray-50 cursor-pointer border-b border-gray-50">
                     <td className="px-4 py-3">
                       <div className="text-sm font-medium text-gray-900">{t.title}</div>
                       {t.description && <div className="text-xs text-gray-500 truncate max-w-xs">{t.description}</div>}

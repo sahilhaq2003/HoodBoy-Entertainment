@@ -30,4 +30,8 @@ const projectSchema = new mongoose.Schema({
   completionPercentage: { type: Number, default: 0, min: 0, max: 100 },
 }, { timestamps: true });
 
+projectSchema.index({ status: 1, releaseDate: 1 });
+projectSchema.index({ assignedTo: 1, status: 1 });
+projectSchema.index({ artist: 1, status: 1 });
+
 module.exports = mongoose.model('Project', projectSchema);

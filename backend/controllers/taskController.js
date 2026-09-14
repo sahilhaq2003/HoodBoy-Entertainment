@@ -3,6 +3,7 @@ const User = require('../models/User');
 const { createNotification } = require('../services/notificationService');
 
 const TASK_FIELDS = ['title', 'description', 'assignedTo', 'relatedProject', 'relatedArtist', 'deadline', 'status', 'priority', 'category', 'deliverable', 'tags', 'notes'];
+const TASK_SUMMARY_FIELDS = 'title description assignedTo deadline status priority category deliverable completedAt createdAt updatedAt';
 const pick = (obj, keys) => keys.reduce((o, k) => { if (obj[k] !== undefined) o[k] = obj[k]; return o; }, {});
 const canManageTasks = (user) => ['admin', 'manager'].includes(user?.role);
 const taskScope = (req) => canManageTasks(req.user) ? {} : { assignedTo: req.user._id };
@@ -16,7 +17,68 @@ const populateTask = (query) => query
   .populate('relatedProject', 'name')
   .populate('relatedArtist', 'name stageName artistName image')
   .populate('comments.author', 'name email role avatar')
-  .populate('activity.actor', 'name role avatar');
+  .populate('activity.actor', 'name role avatar')
+  .lean();
+
+const emptyKanban = () => ({
+  not_started: [], in_progress: [], waiting_approval: [],
+  blocked: [], delayed: [], completed: [],
+});
+
+const summarizeTasks = (tasks, now = new Date()) => {
+  const kanban = emptyKanban();
+  const byStatus = {};
+  const byPriority = {};
+  let overdue = 0;
+  let dueThisWeek = 0;
+  const weekEnd = new Date(now.getTime() + 7 * 86400000);
+
+  for (const task of tasks) {
+    (kanban[task.status] || kanban.not_started).push(task);
+    byStatus[task.status] = (byStatus[task.status] || 0) + 1;
+    byPriority[task.priority] = (byPriority[task.priority] || 0) + 1;
+    if (task.status !== 'completed' && task.deadline) {
+      const deadline = new Date(task.deadline);
+      if (deadline < now) overdue += 1;
+      else if (deadline <= weekEnd) dueThisWeek += 1;
+    }
+  }
+
+  return {
+    kanban,
+    stats: { total: tasks.length, byStatus, byPriority, overdue, dueThisWeek },
+  };
+};
+
+const summarizeTeam = (tasks) => {
+  const members = new Map();
+  for (const task of tasks) {
+    const assignee = task.assignedTo;
+    if (!assignee?._id) continue;
+    const id = assignee._id.toString();
+    const member = members.get(id) || {
+      _id: id, name: assignee.name, role: assignee.role,
+      total: 0, completed: 0, delayed: 0, inProgress: 0, critical: 0, onTime: 0,
+    };
+    member.total += 1;
+    if (task.status === 'completed') {
+      member.completed += 1;
+      if (task.completedAt && task.deadline && new Date(task.completedAt) <= new Date(task.deadline)) member.onTime += 1;
+    }
+    if (task.status === 'delayed') member.delayed += 1;
+    if (task.status === 'in_progress') member.inProgress += 1;
+    if (task.priority === 'critical') member.critical += 1;
+    members.set(id, member);
+  }
+
+  return [...members.values()]
+    .map(member => ({
+      ...member,
+      completionRate: member.total ? Math.round((member.completed / member.total) * 100) : 0,
+      onTimeRate: member.completed ? Math.round((member.onTime / member.completed) * 100) : 0,
+    }))
+    .sort((a, b) => b.total - a.total);
+};
 
 const notifySafely = async (payload) => {
   try { await createNotification(payload); } catch (_error) { /* Task changes must not fail if notification storage is unavailable. */ }
@@ -31,11 +93,43 @@ const getTasks = async (req, res) => {
     if (assignedTo) query.assignedTo = assignedTo;
     if (category) query.category = category;
     if (search) query.title = { $regex: search, $options: 'i' };
-    const tasks = await populateTask(Task.find(query))
+    const pageNumber = Math.max(1, Number.parseInt(page, 10) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number.parseInt(limit, 10) || 50));
+    const [tasks, total] = await Promise.all([
+      populateTask(Task.find(query))
       .sort('deadline')
-      .limit(limit * 1).skip((page - 1) * limit);
-    const total = await Task.countDocuments(query);
+      .limit(pageSize).skip((pageNumber - 1) * pageSize),
+      Task.countDocuments(query),
+    ]);
     res.json({ success: true, data: tasks, total });
+  } catch (error) { res.status(500).json({ success: false, message: error.message }); }
+};
+
+// The tasks screen previously loaded the same records through several endpoints.
+// This compact payload performs one task read and derives the board, statistics,
+// and team figures in memory, saving repeated database queries and round trips.
+const getOverview = async (req, res) => {
+  try {
+    const manager = canManageTasks(req.user);
+    const tasksQuery = Task.find(taskScope(req))
+      .select(TASK_SUMMARY_FIELDS)
+      .populate('assignedTo', 'name email role isActive')
+      .sort({ deadline: 1 })
+      .lean();
+    const usersQuery = manager
+      ? User.find({ isActive: true }).select('name email role isActive').sort({ name: 1 }).lean()
+      : Promise.resolve([]);
+    const [tasks, users] = await Promise.all([tasksQuery, usersQuery]);
+    const { kanban, stats } = summarizeTasks(tasks);
+    res.json({
+      success: true,
+      data: {
+        kanban,
+        stats,
+        team: manager ? summarizeTeam(tasks) : [],
+        users,
+      },
+    });
   } catch (error) { res.status(500).json({ success: false, message: error.message }); }
 };
 
@@ -203,7 +297,8 @@ const getAssignableUsers = async (req, res) => {
   try {
     const users = await User.find({ isActive: true })
       .select('name email role isActive')
-      .sort('name');
+      .sort('name')
+      .lean();
     res.json({ success: true, data: users });
   } catch (error) { res.status(500).json({ success: false, message: error.message }); }
 };
@@ -235,4 +330,4 @@ const getStats = async (req, res) => {
   } catch (error) { res.status(500).json({ success: false, message: error.message }); }
 };
 
-module.exports = { getTasks, getTask, createTask, updateTask, deleteTask, addComment, getKanban, getTeamPerformance, getStats, getAssignableUsers };
+module.exports = { getTasks, getOverview, getTask, createTask, updateTask, deleteTask, addComment, getKanban, getTeamPerformance, getStats, getAssignableUsers };

@@ -7,7 +7,11 @@ const protect = async (req, res, next) => {
     try {
       token = req.headers.authorization.split(' ')[1];
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      req.user = await User.findById(decoded.id).select('-password');
+      // Authorization only needs this small identity projection. In particular,
+      // do not hydrate avatar data URIs and profile settings on every API call.
+      req.user = await User.findById(decoded.id)
+        .select('_id name email role isActive')
+        .lean();
       if (!req.user || req.user.isActive === false) {
         return res.status(401).json({ success: false, message: 'Account is deactivated' });
       }

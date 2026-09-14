@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { getTasks, getTask, createTask, updateTask, deleteTask, addComment, getKanban, getTeamPerformance, getStats, getAssignableUsers } = require('../controllers/taskController');
+const { getTasks, getOverview, getTask, createTask, updateTask, deleteTask, addComment, getKanban, getTeamPerformance, getStats, getAssignableUsers } = require('../controllers/taskController');
 const { protect, checkPermission } = require('../middleware/auth');
 const { validate, commonValidations } = require('../middleware/validate');
 
 router.use(protect);
+router.get('/overview', checkPermission('tasks', 'read'), getOverview);
 router.get('/kanban', checkPermission('tasks', 'read'), getKanban);
 router.get('/team', checkPermission('tasks', 'write'), getTeamPerformance);
 router.get('/stats', checkPermission('tasks', 'read'), getStats);

@@ -75,9 +75,7 @@ const Login: React.FC = () => {
       hasRedirected.current = true;
       setRedirecting(true);
       setLoading(false);
-      setTimeout(() => {
-        navigate(getDashboardPath(user.role), { replace: true });
-      }, 1200);
+      navigate(getDashboardPath(user.role), { replace: true });
     }
   }, [user, navigate]);
 

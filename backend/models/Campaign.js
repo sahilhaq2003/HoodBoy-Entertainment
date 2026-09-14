@@ -96,6 +96,8 @@ campaignSchema.index({ status: 1 });
 campaignSchema.index({ artist: 1, status: 1 });
 campaignSchema.index({ type: 1 });
 campaignSchema.index({ startDate: 1, endDate: 1 });
+campaignSchema.index({ status: 1, endDate: 1 });
+campaignSchema.index({ assignedTo: 1, status: 1 });
 
 campaignSchema.pre('validate', function validateCampaign() {
   if (this.startDate && this.endDate && this.endDate < this.startDate) throw new Error('Campaign end date must be on or after its start date');
