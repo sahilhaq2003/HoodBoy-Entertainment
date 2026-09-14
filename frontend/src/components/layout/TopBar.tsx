@@ -176,22 +176,23 @@ const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
         )}
       </div>
 
-      <div className="ml-auto hidden xl:flex items-center gap-2.5 rounded-xl border border-(--hbe-line) bg-(--hbe-fill-soft) px-3.5 py-2 text-[11px] font-semibold text-[var(--hbe-muted)]">
-        <CalendarDays size={14} style={{ color: '#7C3AED' }} />
-        {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
-      </div>
+      <div className="ml-auto flex flex-shrink-0 items-center gap-3">
+        <div className="hidden xl:flex items-center gap-2.5 rounded-xl border border-(--hbe-line) bg-(--hbe-fill-soft) px-3.5 py-2 text-[11px] font-semibold text-[var(--hbe-muted)]">
+          <CalendarDays size={14} style={{ color: '#7C3AED' }} />
+          {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+        </div>
 
-      <NotificationBell />
+        <NotificationBell />
 
-      <button
-        onClick={toggleTheme}
-        className="header-icon-button"
-        title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
-      >
-        {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
-      </button>
+        <button
+          onClick={toggleTheme}
+          className="header-icon-button"
+          title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+        >
+          {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+        </button>
 
-      <div className="relative" ref={userMenuRef}>
+        <div className="relative" ref={userMenuRef}>
         <button
           onClick={() => setUserMenuOpen(!userMenuOpen)}
           className="flex items-center gap-2.5 rounded-xl border border-transparent p-1.5 pr-2.5 hover:border-(--hbe-line) hover:bg-(--hbe-fill) transition-colors"
@@ -255,6 +256,7 @@ const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
             </div>
           </div>
         )}
+        </div>
       </div>
     </header>
   );

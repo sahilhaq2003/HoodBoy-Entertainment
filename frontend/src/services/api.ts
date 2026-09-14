@@ -1,5 +1,10 @@
 import axios from 'axios';
 
+const GET_CACHE_TTL = 30_000;
+const getCache = new Map<string, { expiresAt: number; response: any }>();
+
+export const clearApiCache = () => getCache.clear();
+
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api',
   headers: { 'Content-Type': 'application/json' },
@@ -9,12 +14,31 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('hbe_token') || sessionStorage.getItem('hbe_token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
+
+  if (config.method?.toLowerCase() === 'get') {
+    const cacheKey = `${token || 'guest'}:${config.url}:${JSON.stringify(config.params || {})}`;
+    const cached = getCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      config.adapter = async () => cached.response;
+    } else {
+      getCache.delete(cacheKey);
+      (config as any).__hbeCacheKey = cacheKey;
+    }
+  } else {
+    // A successful write may affect several screens, so never serve old data
+    // after creates, updates, or deletes.
+    clearApiCache();
+  }
   return config;
 });
 
 // Handle auth errors
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const cacheKey = (response.config as any).__hbeCacheKey;
+    if (cacheKey) getCache.set(cacheKey, { expiresAt: Date.now() + GET_CACHE_TTL, response });
+    return response;
+  },
   (error) => {
     // A 403 is a permission decision and must never destroy a valid session.
     // Credential-validation endpoints also use 401 for expected input errors;

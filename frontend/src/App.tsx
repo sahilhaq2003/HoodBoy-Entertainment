@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth, getDashboardPath } from './contexts/AuthContext';
@@ -6,44 +6,60 @@ import Layout from './components/layout/Layout';
 import ErrorBoundary from './components/ui/ErrorBoundary';
 import { applyAppearance, getAppearance } from './utils/appearance';
 
-// Pages
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import AdminDashboard from './pages/AdminDashboard';
-import ManagerDashboard from './pages/ManagerDashboard';
-import ArtistDashboard from './pages/ArtistDashboard';
-import FinanceDashboard from './pages/FinanceDashboard';
-import MarketingDashboard from './pages/MarketingDashboard';
-import Artists from './pages/Artists';
-import ArtistProfile from './pages/ArtistProfile';
-import MyProfile from './pages/MyProfile';
-import MyMusic from './pages/MyMusic';
-import MyReleases from './pages/MyReleases';
-import MyRoyalties from './pages/MyRoyalties';
-import ArtistOnboarding from './pages/ArtistOnboarding';
-import Songs from './pages/Songs';
-import Releases from './pages/Releases';
-import Contracts from './pages/Contracts';
-import Finance from './pages/Finance';
-import Royalties from './pages/Royalties';
-import Analytics from './pages/Analytics';
-import ContractTemplates from './pages/ContractTemplates';
-import TaxCalendar from './pages/TaxCalendar';
-import ArtistBalances from './pages/ArtistBalances';
-import PerSongAnalytics from './pages/PerSongAnalytics';
-import Contacts from './pages/Contacts';
-import Tasks from './pages/Tasks';
-import Settings from './pages/Settings';
-import Projects from './pages/Projects';
-import Development from './pages/Development';
-import ArtistScorecard from './pages/ArtistScorecard';
-import FileManager from './pages/FileManager';
-import OwnershipTracker from './pages/OwnershipTracker';
-import WeeklyReport from './pages/WeeklyReport';
-import CampaignManager from './pages/CampaignManager';
-import MetadataManager from './pages/MetadataManager';
-import LnkUp from './pages/LnkUp';
-import TeamManagement from './pages/TeamManagement';
+// Load only the page needed for the current route. This keeps the initial bundle
+// small and avoids downloading every dashboard and management screen up front.
+const Login = lazy(() => import('./pages/Login'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const ManagerDashboard = lazy(() => import('./pages/ManagerDashboard'));
+const ArtistDashboard = lazy(() => import('./pages/ArtistDashboard'));
+const FinanceDashboard = lazy(() => import('./pages/FinanceDashboard'));
+const MarketingDashboard = lazy(() => import('./pages/MarketingDashboard'));
+const Artists = lazy(() => import('./pages/Artists'));
+const ArtistProfile = lazy(() => import('./pages/ArtistProfile'));
+const MyProfile = lazy(() => import('./pages/MyProfile'));
+const MyMusic = lazy(() => import('./pages/MyMusic'));
+const MyReleases = lazy(() => import('./pages/MyReleases'));
+const MyRoyalties = lazy(() => import('./pages/MyRoyalties'));
+const ArtistOnboarding = lazy(() => import('./pages/ArtistOnboarding'));
+const Songs = lazy(() => import('./pages/Songs'));
+const Releases = lazy(() => import('./pages/Releases'));
+const Contracts = lazy(() => import('./pages/Contracts'));
+const Finance = lazy(() => import('./pages/Finance'));
+const Royalties = lazy(() => import('./pages/Royalties'));
+const Analytics = lazy(() => import('./pages/Analytics'));
+const ContractTemplates = lazy(() => import('./pages/ContractTemplates'));
+const TaxCalendar = lazy(() => import('./pages/TaxCalendar'));
+const ArtistBalances = lazy(() => import('./pages/ArtistBalances'));
+const PerSongAnalytics = lazy(() => import('./pages/PerSongAnalytics'));
+const Contacts = lazy(() => import('./pages/Contacts'));
+const Tasks = lazy(() => import('./pages/Tasks'));
+const Settings = lazy(() => import('./pages/Settings'));
+const Projects = lazy(() => import('./pages/Projects'));
+const Development = lazy(() => import('./pages/Development'));
+const ArtistScorecard = lazy(() => import('./pages/ArtistScorecard'));
+const FileManager = lazy(() => import('./pages/FileManager'));
+const OwnershipTracker = lazy(() => import('./pages/OwnershipTracker'));
+const WeeklyReport = lazy(() => import('./pages/WeeklyReport'));
+const CampaignManager = lazy(() => import('./pages/CampaignManager'));
+const MetadataManager = lazy(() => import('./pages/MetadataManager'));
+const LnkUp = lazy(() => import('./pages/LnkUp'));
+const TeamManagement = lazy(() => import('./pages/TeamManagement'));
+
+const preloadPages = () => Promise.allSettled([
+  import('./pages/Dashboard'), import('./pages/AdminDashboard'), import('./pages/ManagerDashboard'),
+  import('./pages/ArtistDashboard'), import('./pages/FinanceDashboard'), import('./pages/MarketingDashboard'),
+  import('./pages/Artists'), import('./pages/ArtistProfile'), import('./pages/ArtistOnboarding'),
+  import('./pages/Songs'), import('./pages/Releases'), import('./pages/Contracts'), import('./pages/Finance'),
+  import('./pages/Royalties'), import('./pages/Analytics'), import('./pages/Projects'), import('./pages/Tasks'),
+  import('./pages/Settings'), import('./pages/FileManager'), import('./pages/CampaignManager'),
+]);
+
+const PageLoader = () => (
+  <div className="flex min-h-64 items-center justify-center" role="status" aria-label="Loading page">
+    <div className="h-9 w-9 animate-spin rounded-full border-2 border-purple-200 border-t-purple-600" />
+  </div>
+);
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isLoading } = useAuth();
@@ -91,6 +107,7 @@ const AppRoutes: React.FC = () => {
   const dashPath = getDashboardPath(user?.role || '');
 
   return (
+    <Suspense fallback={<PageLoader />}>
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
@@ -154,6 +171,7 @@ const AppRoutes: React.FC = () => {
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
   );
 };
 
@@ -165,6 +183,19 @@ const ThemeInit: React.FC = () => {
 };
 
 const App: React.FC = () => {
+  useEffect(() => {
+    // Preserve a fast initial render, then warm the most-used route chunks so
+    // subsequent navigation is immediate and does not show a loading screen.
+    const startPreload = () => { void preloadPages(); };
+    const idleWindow = window as Window & { requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number; cancelIdleCallback?: (id: number) => void };
+    if (idleWindow.requestIdleCallback) {
+      const id = idleWindow.requestIdleCallback(startPreload, { timeout: 2500 });
+      return () => idleWindow.cancelIdleCallback?.(id);
+    }
+    const id = window.setTimeout(startPreload, 1200);
+    return () => window.clearTimeout(id);
+  }, []);
+
   return (
     <BrowserRouter>
       <ErrorBoundary>

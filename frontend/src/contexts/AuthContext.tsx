@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { authApi } from '../services/api';
+import { authApi, clearApiCache } from '../services/api';
 import { authStore } from '../store';
 import type { User } from '../types';
 import { applyAppearance } from '../utils/appearance';
@@ -73,6 +73,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const storeAuthResponse = (data: any, remember = false) => {
+    clearApiCache();
     const storage = remember ? localStorage : sessionStorage;
     const otherStorage = remember ? sessionStorage : localStorage;
     ['hbe_token', 'hbe_user', 'hbe_role_description', 'hbe_dashboard_path', 'hbe_nav', 'hbe_access'].forEach(key => otherStorage.removeItem(key));
@@ -117,6 +118,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const logout = () => {
+    clearApiCache();
     localStorage.removeItem('hbe_token');
     localStorage.removeItem('hbe_user');
     localStorage.removeItem('hbe_role_description');
