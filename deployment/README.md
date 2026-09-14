@@ -1,23 +1,30 @@
 # HBE production deployment
 
-The production topology is Nginx serving `frontend/dist`, proxying `/api` and
-legacy `/uploads` requests to the PM2-managed backend on `127.0.0.1:5000`.
-MongoDB remains on Atlas. User uploads persist in `/var/www/hbe-storage/uploads`
-and are linked to `backend/uploads`.
+Production uses two CloudPanel Node.js sites on one VPS:
 
-## First-time order
+- `hbe.lol` runs the built Vite frontend on port `3000` as site user `hbe`.
+- `api.hbe.lol` runs the Express API on port `5000` as site user `hbe-api`.
+- MongoDB remains on Atlas.
+- Backend uploads persist in `/home/hbe-api/storage/uploads`.
 
-1. Point `hbe.lol` and `www.hbe.lol` to the VPS.
-2. Generate a dedicated GitHub Actions SSH key on the administrator's Windows PC.
-3. Log in to the VPS as root, clone the repository, and run
-   `bash /var/www/hbe/deployment/setup-server.sh`.
-4. Add the deployment public key to `/home/deploy/.ssh/authorized_keys`.
-5. As `deploy`, create `/var/www/hbe/backend/.env` from `.env.example` and enter
-   production values locally on the server.
-6. As `deploy`, run `bash /var/www/hbe/deployment/deploy.sh`.
-7. As root, request the certificate with
-   `certbot --nginx -d hbe.lol -d www.hbe.lol --redirect` and test renewal with
-   `certbot renew --dry-run`.
-8. Add `VPS_HOST`, `VPS_USER`, and `VPS_SSH_KEY` as GitHub Actions secrets.
+## First-time setup
+
+1. Point `hbe.lol`, `www.hbe.lol`, and `api.hbe.lol` to the VPS.
+2. Create the two CloudPanel Node.js sites with the users and ports above.
+3. Add the GitHub Actions public key to each CloudPanel site user.
+4. Clone the repository into each site's CloudPanel document root.
+5. Create `backend/.env` only in the backend checkout.
+6. Run `deployment/deploy-frontend.sh` as `hbe` and
+   `deployment/deploy-backend.sh` as `hbe-api`.
+7. Issue CloudPanel Let's Encrypt certificates for both sites.
+8. Add `VPS_HOST`, `FRONTEND_VPS_USER`, `FRONTEND_SSH_KEY`,
+   `BACKEND_VPS_USER`, and `BACKEND_SSH_KEY` as GitHub Actions secrets.
+
+The frontend deployment embeds `https://api.hbe.lol/api` as its public API URL.
+The backend environment should allow `https://hbe.lol` and
+`https://www.hbe.lol` through CORS.
+
+`deployment/setup-server.sh` is for a plain VPS. Do not run it on CloudPanel,
+because CloudPanel manages Nginx and system configuration.
 
 Never commit `backend/.env` or any SSH private key.

@@ -3,32 +3,57 @@ name: Deploy production
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: hbe-production
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  deploy-frontend:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Configure SSH
+      - name: Configure frontend SSH
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          SSH_KEY: ${{ secrets.FRONTEND_SSH_KEY }}
         run: |
           set -euo pipefail
           install -m 700 -d ~/.ssh
-          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/hbe_deploy
-          chmod 600 ~/.ssh/hbe_deploy
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/hbe_frontend
+          chmod 600 ~/.ssh/hbe_frontend
           ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts
 
-      - name: Deploy on VPS
+      - name: Deploy frontend
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_USER: ${{ secrets.FRONTEND_VPS_USER }}
         run: |
           set -euo pipefail
-          ssh -i ~/.ssh/hbe_deploy -o BatchMode=yes "$VPS_USER@$VPS_HOST" \
-            'cd /var/www/hbe && git fetch origin main && git reset --hard origin/main && bash deployment/deploy.sh'
+          ssh -i ~/.ssh/hbe_frontend -o BatchMode=yes "$VPS_USER@$VPS_HOST" \
+            'cd "$HOME/htdocs/hbe.lol" && bash deployment/deploy-frontend.sh'
+
+  deploy-backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Configure backend SSH
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          SSH_KEY: ${{ secrets.BACKEND_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/hbe_backend
+          chmod 600 ~/.ssh/hbe_backend
+          ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts
+
+      - name: Deploy backend
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.BACKEND_VPS_USER }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/hbe_backend -o BatchMode=yes "$VPS_USER@$VPS_HOST" \
+            'cd "$HOME/htdocs/api.hbe.lol" && bash deployment/deploy-backend.sh'
