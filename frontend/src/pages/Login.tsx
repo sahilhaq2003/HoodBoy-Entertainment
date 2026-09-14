@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, AlertCircle, ArrowRight, CheckCircle2, KeyRound } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Mail, Lock, Eye, EyeOff, AlertCircle, ArrowLeft, ArrowRight, CheckCircle2, KeyRound } from 'lucide-react';
 import { useAuth, getDashboardPath } from '../contexts/AuthContext';
 import { authApi } from '../services/api';
 
@@ -81,6 +81,15 @@ const Login: React.FC = () => {
 
   return (
     <div className="login-shell min-h-screen flex items-center justify-center p-4 md:p-8">
+      <Link
+        to="/"
+        className="absolute top-4 left-4 md:top-8 md:left-8 z-20 inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/90 px-4 py-2.5 text-xs font-semibold text-purple-800 shadow-lg shadow-purple-950/10 backdrop-blur-md transition-all hover:-translate-y-0.5 hover:bg-white hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-white/30 dark:border-white/15 dark:bg-gray-900/80 dark:text-purple-200"
+        aria-label="Back to home page"
+      >
+        <ArrowLeft size={15} />
+        Home
+      </Link>
+
       {/* Background effects */}
       <div className="login-orb anim-float -top-32 -left-28 w-96 h-96 bg-sky-400/20 blur-3xl" />
       <div className="login-orb anim-float -bottom-40 -right-24 w-[34rem] h-[34rem] bg-[#4C1D95]/50 blur-3xl" style={{ animationDelay: '2.2s' }} />

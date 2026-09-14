@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth, getDashboardPath } from './contexts/AuthContext';
 import ErrorBoundary from './components/ui/ErrorBoundary';
@@ -8,6 +8,7 @@ import { applyAppearance, getAppearance } from './utils/appearance';
 // Load only the page needed for the current route. This keeps the initial bundle
 // small and avoids downloading every dashboard and management screen up front.
 const Layout = lazy(() => import('./components/layout/Layout'));
+const Landing = lazy(() => import('./pages/Landing'));
 const Login = lazy(() => import('./pages/Login'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
@@ -54,6 +55,7 @@ const PageLoader = () => (
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isLoading } = useAuth();
+  const location = useLocation();
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-gray-950">
@@ -68,7 +70,10 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
       </div>
     );
   }
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) {
+    if (location.pathname === '/') return <Landing />;
+    return <Navigate to="/login" replace />;
+  }
   return <>{children}</>;
 };
 
