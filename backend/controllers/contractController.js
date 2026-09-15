@@ -1,4 +1,5 @@
 const Contract = require('../models/Contract');
+const { uploadDocument } = require('../services/cloudinaryArtistImages');
 
 const parseJsonFields = (body = {}) => {
   const data = { ...body };
@@ -13,10 +14,10 @@ const parseJsonFields = (body = {}) => {
   return data;
 };
 
-const contractPayload = (req) => {
+const contractPayload = async (req) => {
   const data = parseJsonFields(req.body);
   if (req.file) {
-    data.fileUrl = `/uploads/documents/${req.file.filename}`;
+    data.fileUrl = await uploadDocument(req.file);
     data.fileName = req.file.originalname;
   }
   return data;
@@ -66,7 +67,7 @@ exports.getById = async (req, res) => {
 
 exports.create = async (req, res) => {
   try {
-    const payload = contractPayload(req);
+    const payload = await contractPayload(req);
     if (!payload.managedBy) payload.managedBy = req.user._id;
     const contract = await Contract.create(payload);
     res.status(201).json({ success: true, data: contract });
@@ -79,7 +80,7 @@ exports.update = async (req, res) => {
   try {
     const contract = await Contract.findById(req.params.id);
     if (!contract) return res.status(404).json({ success: false, message: 'Contract not found' });
-    Object.assign(contract, contractPayload(req));
+    Object.assign(contract, await contractPayload(req));
     await contract.save();
     res.json({ success: true, data: contract });
   } catch (error) {

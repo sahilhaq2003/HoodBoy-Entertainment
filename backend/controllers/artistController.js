@@ -2,7 +2,7 @@ const Artist = require('../models/Artist');
 const User = require('../models/User');
 const crypto = require('crypto');
 const { removePreviousArtistImage } = require('../services/legacyUploadCleanup');
-const { uploadArtistImage } = require('../services/cloudinaryArtistImages');
+const { uploadArtistImage, uploadDocument: uploadDocumentToCloudinary, removeCloudinaryDocument } = require('../services/cloudinaryArtistImages');
 
 const REQUIRED_ONBOARDING_DOCUMENTS = [
   'artist_agreement',
@@ -286,7 +286,7 @@ const uploadDocument = async (req, res) => {
     const document = {
       name: req.body.name || req.file.originalname,
       type: req.body.type || 'existing_contract',
-      fileUrl: `/uploads/documents/${req.file.filename}`,
+      fileUrl: await uploadDocumentToCloudinary(req.file),
       fileName: req.file.originalname,
       fileSize: req.file.size,
     };
@@ -352,10 +352,12 @@ const removeDocument = async (req, res) => {
     const artist = await Artist.findById(req.params.id);
     if (!artist) return res.status(404).json({ success: false, message: 'Artist not found' });
 
-    artist.documents = artist.documents.filter(
-      (doc) => doc._id.toString() !== req.params.docId
-    );
+    const document = artist.documents.id(req.params.docId);
+    if (!document) return res.status(404).json({ success: false, message: 'Document not found' });
+    const previousUrl = document.fileUrl;
+    document.deleteOne();
     await artist.save();
+    await removeCloudinaryDocument(previousUrl);
 
     res.json({ success: true, data: artist });
   } catch (error) {

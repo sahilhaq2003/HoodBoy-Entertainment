@@ -1,14 +1,15 @@
 const Finance = require('../models/Finance');
+const { uploadDocument } = require('../services/cloudinaryArtistImages');
 
-const financePayload = (req) => {
+const financePayload = async (req) => {
   const payload = { ...req.body };
   ['taxDeductible', 'isRecurring'].forEach(field => {
     if (typeof payload[field] === 'string') payload[field] = payload[field] === 'true';
   });
   const receipt = req.files?.receipt?.[0];
   const invoice = req.files?.invoice?.[0];
-  if (receipt) { payload.receiptUrl = `/uploads/documents/${receipt.filename}`; payload.receiptFileName = receipt.originalname; }
-  if (invoice) { payload.invoiceUrl = `/uploads/documents/${invoice.filename}`; payload.invoiceFileName = invoice.originalname; }
+  if (receipt) { payload.receiptUrl = await uploadDocument(receipt); payload.receiptFileName = receipt.originalname; }
+  if (invoice) { payload.invoiceUrl = await uploadDocument(invoice); payload.invoiceFileName = invoice.originalname; }
   return payload;
 };
 
@@ -48,7 +49,7 @@ const getFinances = async (req, res) => {
 
 const createFinance = async (req, res) => {
   try {
-    const finance = await Finance.create({ ...financePayload(req), processedBy: req.user._id });
+    const finance = await Finance.create({ ...await financePayload(req), processedBy: req.user._id });
     res.status(201).json({ success: true, data: finance });
   } catch (error) { res.status(400).json({ success: false, message: error.message }); }
 };
@@ -57,7 +58,7 @@ const updateFinance = async (req, res) => {
   try {
     const finance = await Finance.findById(req.params.id);
     if (!finance) return res.status(404).json({ success: false, message: 'Finance record not found' });
-    Object.assign(finance, financePayload(req));
+    Object.assign(finance, await financePayload(req));
     await finance.save();
     res.json({ success: true, data: finance });
   } catch (error) { res.status(400).json({ success: false, message: error.message }); }

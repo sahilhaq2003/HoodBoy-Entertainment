@@ -56,4 +56,36 @@ const removeCloudinaryArtistImage = async (imageUrl) => {
   return true;
 };
 
-module.exports = { uploadArtistImage, removeCloudinaryArtistImage };
+const uploadDocument = async (file) => {
+  if (!cloudinaryEnabled) return `/uploads/documents/${file.filename}`;
+  try {
+    const result = await cloudinary.uploader.upload(file.path, {
+      folder: 'hbe/documents',
+      resource_type: 'raw',
+      use_filename: true,
+      unique_filename: true,
+    });
+    return result.secure_url;
+  } finally {
+    await removeLocalTempFile(file.path);
+  }
+};
+
+const removeCloudinaryDocument = async (documentUrl) => {
+  if (!cloudinaryEnabled || typeof documentUrl !== 'string' || !documentUrl.includes('res.cloudinary.com')) return false;
+  try {
+    const segments = new URL(documentUrl).pathname.split('/').filter(Boolean);
+    const uploadIndex = segments.indexOf('upload');
+    if (uploadIndex === -1) return false;
+    const pathParts = segments.slice(uploadIndex + 1);
+    if (/^v\d+$/.test(pathParts[0])) pathParts.shift();
+    const publicId = pathParts.join('/').replace(/\.[^.]+$/, '');
+    if (!publicId.startsWith('hbe/documents/')) return false;
+    await cloudinary.uploader.destroy(publicId, { resource_type: 'raw', invalidate: true });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+module.exports = { uploadArtistImage, removeCloudinaryArtistImage, uploadDocument, removeCloudinaryDocument };
