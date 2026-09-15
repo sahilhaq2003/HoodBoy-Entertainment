@@ -1,61 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  ArrowLeft,
-  ArrowRight,
-  ArrowUpRight,
-  BarChart3,
-  Disc3,
-  FileCheck2,
-  UsersRound,
-} from 'lucide-react';
+import { ArrowLeft, ArrowRight, ArrowUpRight, BarChart3, Disc3, FileCheck2, Play, UsersRound } from 'lucide-react';
 import './Landing.css';
 
-const experiences = [
-  {
-    kicker: 'One connected label workspace',
-    title: <>Your label,<br />in sync.</>,
-    summary: 'Bring artists, catalog, releases, campaigns, contracts, finances, and files into one secure operating system.',
-    cardKicker: 'Label operations',
-    cardTitle: 'One workspace',
-    icon: Disc3,
-    position: 'center center',
-  },
-  {
-    kicker: 'Music, metadata & ownership',
-    title: <>From sound<br />to release.</>,
-    summary: 'Move every record from song and metadata to ownership approval, distribution, marketing, and post-release reporting.',
-    cardKicker: 'Catalog & rights',
-    cardTitle: 'Release ready',
-    icon: FileCheck2,
-    position: '38% center',
-  },
-  {
-    kicker: 'Finance & performance',
-    title: <>Know every<br />number.</>,
-    summary: 'Track income, expenses, budgets, artist balances, royalty statements, tax dates, and performance in one clear view.',
-    cardKicker: 'Finance & royalties',
-    cardTitle: 'Clear numbers',
-    icon: BarChart3,
-    position: '62% center',
-  },
-  {
-    kicker: 'Artist development',
-    title: <>Build careers,<br />not admin.</>,
-    summary: 'Give your team the plans, scorecards, tasks, campaigns, contacts, and shared files they need to move artists forward.',
-    cardKicker: 'People & progress',
-    cardTitle: 'Built to grow',
-    icon: UsersRound,
-    position: 'right center',
-  },
+const stories = [
+  { eyebrow: 'The operating system for independent labels', title: 'LNKUP', summary: 'One connected workspace for your artists, music, releases, campaigns, contracts, finances, and files.', label: 'Label operations', detail: 'Your whole label. Finally in sync.', icon: Disc3, position: 'center center' },
+  { eyebrow: 'Music, metadata and ownership', title: 'RELEASE', summary: 'Move every record from first session to validated rights, distribution, marketing, and post-release reporting.', label: 'Catalog & rights', detail: 'Built for release-ready music.', icon: FileCheck2, position: '42% center' },
+  { eyebrow: 'Finance and performance', title: 'ROYALTY', summary: 'Follow income, expenses, budgets, balances, royalty statements, tax dates, and performance with clarity.', label: 'Clear numbers', detail: 'Every dollar has a story.', icon: BarChart3, position: '64% center' },
+  { eyebrow: 'Artist development', title: 'GROWTH', summary: 'Turn goals into progress with development plans, scorecards, tasks, campaigns, contacts, and shared files.', label: 'People & progress', detail: 'Build careers, not admin.', icon: UsersRound, position: 'right center' },
 ];
 
 const Landing: React.FC = () => {
   const [active, setActive] = useState(0);
-
-  const move = (direction: number) => {
-    setActive((current) => (current + direction + experiences.length) % experiences.length);
-  };
+  const move = (direction: number) => setActive((current) => (current + direction + stories.length) % stories.length);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -66,86 +23,59 @@ const Landing: React.FC = () => {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  const selected = experiences[active];
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const timer = window.setTimeout(() => move(1), 5000);
+    return () => window.clearTimeout(timer);
+  }, [active]);
+
+  const story = stories[active];
+  const StoryIcon = story.icon;
 
   return (
-    <main className="landing-shell">
-      <section
-        className="landing-stage"
-        aria-label="Lnkup label management platform"
-        style={{ '--landing-bg-position': selected.position } as React.CSSProperties}
-      >
-        <div className="landing-photo" aria-hidden="true" />
-        <div className="landing-noise" aria-hidden="true" />
+    <main className="grow-landing">
+      <section className="grow-stage" aria-label="HoodBoy Entertainment Lnkup platform" style={{ '--hero-position': story.position } as React.CSSProperties}>
+        <div className="grow-stage-photo" aria-hidden="true" />
+        <div className="grow-grain" aria-hidden="true" />
 
-        <header className="landing-nav">
-          <Link className="landing-brand" to="/" aria-label="HoodBoy Entertainment home">
+        <header className="grow-nav">
+          <Link className="grow-brand" to="/" aria-label="HoodBoy Entertainment home">
             <img src="/logo.png" alt="" />
-            <span>
-              <strong>HoodBoy Entertainment</strong>
-              <small>Lnkup Platform</small>
-            </span>
+            <span><strong>HoodBoy Entertainment</strong><small>Lnkup platform</small></span>
           </Link>
-
-          <div className="landing-nav-actions">
-            <Link className="landing-signin" to="/login">Sign in <ArrowUpRight size={14} /></Link>
-          </div>
+          <Link className="grow-login" to="/login">Sign in <ArrowUpRight size={14} /></Link>
         </header>
 
-        <div className="landing-content" id="platform">
-          <div className="landing-intro" aria-live="polite">
-            <p className="landing-kicker"><span />{selected.kicker}</p>
-            <h1 key={`title-${active}`}>{selected.title}</h1>
-            <p className="landing-summary" key={`summary-${active}`}>{selected.summary}</p>
-            <Link className="landing-primary-action" to="/login">
-              <span>Enter the platform</span>
-              <ArrowUpRight size={17} />
-            </Link>
-          </div>
+        <button className="grow-side-arrow grow-side-arrow-left" type="button" onClick={() => move(-1)} aria-label="Previous story"><ArrowLeft size={18} /></button>
+        <button className="grow-side-arrow grow-side-arrow-right" type="button" onClick={() => move(1)} aria-label="Next story"><ArrowRight size={18} /></button>
 
-          <div className="landing-carousel" id="capabilities">
-            <div className="landing-cards" role="tablist" aria-label="Platform capabilities">
-              {experiences.map((experience, index) => {
-                const Icon = experience.icon;
-                return (
-                  <button
-                    key={experience.cardTitle}
-                    type="button"
-                    role="tab"
-                    aria-selected={active === index}
-                    className={active === index ? 'landing-card is-active' : 'landing-card'}
-                    onClick={() => setActive(index)}
-                  >
-                    <span className="landing-card-image" style={{ backgroundPosition: experience.position }} aria-hidden="true" />
-                    <span className="landing-card-shade" aria-hidden="true" />
-                    <span className="landing-card-icon"><Icon size={17} /></span>
-                    <span className="landing-card-copy">
-                      <small>{experience.cardKicker}</small>
-                      <strong>{experience.cardTitle}</strong>
-                    </span>
-                    <span className="landing-card-index">0{index + 1}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="landing-controls" id="workflow">
-              <div className="landing-arrow-group">
-                <button type="button" onClick={() => move(-1)} aria-label="Previous capability"><ArrowLeft size={18} /></button>
-                <button type="button" onClick={() => move(1)} aria-label="Next capability"><ArrowRight size={18} /></button>
-              </div>
-              <div className="landing-progress" aria-hidden="true">
-                {experiences.map((_, index) => <span key={index} className={active === index ? 'is-active' : ''} />)}
-              </div>
-              <div className="landing-count"><strong>0{active + 1}</strong><span>/ 0{experiences.length}</span></div>
-            </div>
+        <div className="grow-copy" aria-live="polite">
+          <p className="grow-eyebrow" key={`eyebrow-${active}`}>{story.eyebrow}</p>
+          <div className="grow-title-wrap">
+            <h1 key={`title-${active}`}>{story.title}</h1>
           </div>
+          <p className="grow-summary" key={`summary-${active}`}>{story.summary}</p>
+          <Link className="grow-cta" to="/login">Enter the platform <ArrowUpRight size={16} /></Link>
         </div>
 
-        <footer className="landing-footer" id="about">
-          <span>Artist → Song → Release → Revenue → Royalty</span>
-          <span>© 2026 HoodBoy Entertainment</span>
-        </footer>
+        <div className="grow-preview" aria-label={`${story.label}: ${story.detail}`}>
+          <span className="grow-preview-photo" style={{ backgroundPosition: story.position }} aria-hidden="true" />
+          <span className="grow-preview-shade" aria-hidden="true" />
+          <span className="grow-preview-copy"><small>{story.label}</small><strong>{story.detail}</strong></span>
+          <span className="grow-preview-icon" aria-hidden="true"><StoryIcon size={14} /></span>
+          <button type="button" className="grow-play" onClick={() => move(1)} aria-label="Show next platform story"><Play size={14} fill="currentColor" /></button>
+        </div>
+
+        <div className="grow-bottom">
+          <div className="grow-topics" aria-label="Platform coverage"><span>Artists</span><i /><span>Catalog</span><i /><span>Rights</span><i /><span>Royalties</span></div>
+          <div className="grow-pagination">
+            <span className="grow-current">0{active + 1}</span>
+            <div className="grow-dots" role="tablist" aria-label="Platform stories">
+              {stories.map((item, index) => <button key={item.title} type="button" role="tab" aria-label={`Show ${item.title}`} aria-selected={active === index} className={active === index ? 'is-active' : ''} onClick={() => setActive(index)} />)}
+            </div>
+            <span>/ 0{stories.length}</span>
+          </div>
+        </div>
       </section>
     </main>
   );
