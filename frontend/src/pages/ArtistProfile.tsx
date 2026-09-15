@@ -107,19 +107,6 @@ const ArtistProfile: React.FC = () => {
     setUploadingImage(null);
   };
 
-  const handleRemoveImage = async (field: 'image' | 'coverPhoto') => {
-    if (!artist || !window.confirm(`Remove this ${field === 'image' ? 'profile' : 'cover'} photo?`)) return;
-    setUploadingImage(field);
-    try {
-      const res = await artistsApi.removeImage(artist._id, field);
-      setArtist(res.data.data);
-      toast.success(`${field === 'image' ? 'Profile' : 'Cover'} photo removed`);
-    } catch (e: any) {
-      toast.error(e.response?.data?.message || 'Failed to remove image');
-    }
-    setUploadingImage(null);
-  };
-
   if (loading) {
     return (
       <div className="flex justify-center py-16">
@@ -179,12 +166,6 @@ const ArtistProfile: React.FC = () => {
           >
             <Camera size={16} />
           </button>
-          {artist.coverPhoto && (
-            <button onClick={() => handleRemoveImage('coverPhoto')} disabled={uploadingImage === 'coverPhoto'} className="absolute top-3 right-12 p-2 rounded-lg text-red-500 hover:text-red-700 hover:bg-white/80 transition-colors shadow-sm" title="Remove cover photo">
-              <Trash2 size={16} />
-            </button>
-          )}
-
           {/* Back button */}
           <button
             onClick={() => navigate('/artists')}
@@ -230,11 +211,6 @@ const ArtistProfile: React.FC = () => {
                 <div className="absolute inset-0 rounded-2xl bg-white/60 flex items-center justify-center">
                   <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
                 </div>
-              )}
-              {artist.image && (
-                <button onClick={() => handleRemoveImage('image')} disabled={uploadingImage === 'image'} className="absolute -right-2 -bottom-1 p-1.5 rounded-full bg-white text-red-500 hover:text-red-700 shadow border border-gray-200 dark:bg-gray-800 dark:border-gray-600" title="Remove profile photo">
-                  <Trash2 size={12} />
-                </button>
               )}
             </div>
 
