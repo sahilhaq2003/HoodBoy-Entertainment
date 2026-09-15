@@ -9,6 +9,7 @@ const Campaign = require('../models/Campaign');
 const Contact = require('../models/Contact');
 const Activity = require('../models/Activity');
 const RoyaltyLedger = require('../models/RoyaltyLedger');
+const { removePreviousArtistImage } = require('../services/legacyUploadCleanup');
 
 // @desc    Get executive dashboard stats
 // @route   GET /api/dashboard/stats
@@ -626,12 +627,17 @@ const uploadMyImage = async (req, res) => {
       return res.status(404).json({ success: false, message: 'No artist profile linked to your account yet' });
     }
     const imageUrl = `/uploads/images/${req.file.filename}`;
+    const imageField = req.body.field === 'coverPhoto' ? 'coverPhoto' : 'image';
+    const previousImageUrl = artist[imageField];
     if (req.body.field === 'coverPhoto') {
       artist.coverPhoto = imageUrl;
     } else {
       artist.image = imageUrl;
     }
     await artist.save();
+    if (previousImageUrl && previousImageUrl !== imageUrl) {
+      await removePreviousArtistImage(previousImageUrl);
+    }
     res.json({ success: true, data: artist });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });

@@ -1,6 +1,7 @@
 const Artist = require('../models/Artist');
 const User = require('../models/User');
 const crypto = require('crypto');
+const { removePreviousArtistImage } = require('../services/legacyUploadCleanup');
 
 const REQUIRED_ONBOARDING_DOCUMENTS = [
   'artist_agreement',
@@ -311,6 +312,7 @@ const uploadImage = async (req, res) => {
 
     const imageUrl = `/uploads/images/${req.file.filename}`;
     const fieldType = req.body.field || 'image';
+    const previousImageUrl = fieldType === 'coverPhoto' ? artist.coverPhoto : artist.image;
 
     if (fieldType === 'coverPhoto') {
       artist.coverPhoto = imageUrl;
@@ -319,6 +321,9 @@ const uploadImage = async (req, res) => {
     }
 
     await artist.save();
+    if (previousImageUrl && previousImageUrl !== imageUrl) {
+      await removePreviousArtistImage(previousImageUrl);
+    }
     res.json({ success: true, data: artist });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
