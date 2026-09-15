@@ -1,15 +1,15 @@
 const Finance = require('../models/Finance');
-const { uploadDocument, removeCloudinaryDocument } = require('../services/cloudinaryArtistImages');
+const { removePreviousDocument } = require('../services/legacyUploadCleanup');
 
-const financePayload = async (req) => {
+const financePayload = (req) => {
   const payload = { ...req.body };
   ['taxDeductible', 'isRecurring'].forEach(field => {
     if (typeof payload[field] === 'string') payload[field] = payload[field] === 'true';
   });
   const receipt = req.files?.receipt?.[0];
   const invoice = req.files?.invoice?.[0];
-  if (receipt) { payload.receiptUrl = await uploadDocument(receipt); payload.receiptFileName = receipt.originalname; }
-  if (invoice) { payload.invoiceUrl = await uploadDocument(invoice); payload.invoiceFileName = invoice.originalname; }
+  if (receipt) { payload.receiptUrl = `/uploads/documents/${receipt.filename}`; payload.receiptFileName = receipt.originalname; }
+  if (invoice) { payload.invoiceUrl = `/uploads/documents/${invoice.filename}`; payload.invoiceFileName = invoice.originalname; }
   return payload;
 };
 
@@ -49,7 +49,7 @@ const getFinances = async (req, res) => {
 
 const createFinance = async (req, res) => {
   try {
-    const finance = await Finance.create({ ...await financePayload(req), processedBy: req.user._id });
+    const finance = await Finance.create({ ...financePayload(req), processedBy: req.user._id });
     res.status(201).json({ success: true, data: finance });
   } catch (error) { res.status(400).json({ success: false, message: error.message }); }
 };
@@ -60,11 +60,11 @@ const updateFinance = async (req, res) => {
     if (!finance) return res.status(404).json({ success: false, message: 'Finance record not found' });
     const previousReceiptUrl = finance.receiptUrl;
     const previousInvoiceUrl = finance.invoiceUrl;
-    const payload = await financePayload(req);
+    const payload = financePayload(req);
     Object.assign(finance, payload);
     await finance.save();
-    if (payload.receiptUrl && payload.receiptUrl !== previousReceiptUrl) await removeCloudinaryDocument(previousReceiptUrl);
-    if (payload.invoiceUrl && payload.invoiceUrl !== previousInvoiceUrl) await removeCloudinaryDocument(previousInvoiceUrl);
+    if (payload.receiptUrl && payload.receiptUrl !== previousReceiptUrl) await removePreviousDocument(previousReceiptUrl);
+    if (payload.invoiceUrl && payload.invoiceUrl !== previousInvoiceUrl) await removePreviousDocument(previousInvoiceUrl);
     res.json({ success: true, data: finance });
   } catch (error) { res.status(400).json({ success: false, message: error.message }); }
 };
@@ -73,8 +73,8 @@ const deleteFinance = async (req, res) => {
   try {
     const finance = await Finance.findByIdAndDelete(req.params.id);
     if (!finance) return res.status(404).json({ success: false, message: 'Finance record not found' });
-    await removeCloudinaryDocument(finance.receiptUrl);
-    await removeCloudinaryDocument(finance.invoiceUrl);
+    await removePreviousDocument(finance.receiptUrl);
+    await removePreviousDocument(finance.invoiceUrl);
     res.json({ success: true, message: 'Finance record deleted' });
   } catch (error) { res.status(500).json({ success: false, message: error.message }); }
 };

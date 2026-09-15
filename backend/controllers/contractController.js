@@ -1,5 +1,5 @@
 const Contract = require('../models/Contract');
-const { uploadDocument, removeCloudinaryDocument } = require('../services/cloudinaryArtistImages');
+const { removePreviousDocument } = require('../services/legacyUploadCleanup');
 
 const parseJsonFields = (body = {}) => {
   const data = { ...body };
@@ -14,10 +14,10 @@ const parseJsonFields = (body = {}) => {
   return data;
 };
 
-const contractPayload = async (req) => {
+const contractPayload = (req) => {
   const data = parseJsonFields(req.body);
   if (req.file) {
-    data.fileUrl = await uploadDocument(req.file);
+    data.fileUrl = `/uploads/documents/${req.file.filename}`;
     data.fileName = req.file.originalname;
   }
   return data;
@@ -67,7 +67,7 @@ exports.getById = async (req, res) => {
 
 exports.create = async (req, res) => {
   try {
-    const payload = await contractPayload(req);
+    const payload = contractPayload(req);
     if (!payload.managedBy) payload.managedBy = req.user._id;
     const contract = await Contract.create(payload);
     res.status(201).json({ success: true, data: contract });
@@ -81,10 +81,10 @@ exports.update = async (req, res) => {
     const contract = await Contract.findById(req.params.id);
     if (!contract) return res.status(404).json({ success: false, message: 'Contract not found' });
     const previousFileUrl = contract.fileUrl;
-    const payload = await contractPayload(req);
+    const payload = contractPayload(req);
     Object.assign(contract, payload);
     await contract.save();
-    if (payload.fileUrl && payload.fileUrl !== previousFileUrl) await removeCloudinaryDocument(previousFileUrl);
+    if (payload.fileUrl && payload.fileUrl !== previousFileUrl) await removePreviousDocument(previousFileUrl);
     res.json({ success: true, data: contract });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -95,7 +95,7 @@ exports.delete = async (req, res) => {
   try {
     const contract = await Contract.findByIdAndDelete(req.params.id);
     if (!contract) return res.status(404).json({ success: false, message: 'Contract not found' });
-    await removeCloudinaryDocument(contract.fileUrl);
+    await removePreviousDocument(contract.fileUrl);
     res.json({ success: true, message: 'Contract deleted' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

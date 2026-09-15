@@ -10,7 +10,6 @@ const Contact = require('../models/Contact');
 const Activity = require('../models/Activity');
 const RoyaltyLedger = require('../models/RoyaltyLedger');
 const { removePreviousArtistImage } = require('../services/legacyUploadCleanup');
-const { uploadArtistImage } = require('../services/cloudinaryArtistImages');
 
 // @desc    Get executive dashboard stats
 // @route   GET /api/dashboard/stats
@@ -627,7 +626,7 @@ const uploadMyImage = async (req, res) => {
     if (!artist) {
       return res.status(404).json({ success: false, message: 'No artist profile linked to your account yet' });
     }
-    const imageUrl = await uploadArtistImage(req.file);
+    const imageUrl = `/uploads/images/${req.file.filename}`;
     const imageField = req.body.field === 'coverPhoto' ? 'coverPhoto' : 'image';
     const previousImageUrl = artist[imageField];
     if (req.body.field === 'coverPhoto') {

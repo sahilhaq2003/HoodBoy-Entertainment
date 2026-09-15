@@ -1,8 +1,7 @@
 const Artist = require('../models/Artist');
 const User = require('../models/User');
 const crypto = require('crypto');
-const { removePreviousArtistImage } = require('../services/legacyUploadCleanup');
-const { uploadArtistImage, uploadDocument: uploadDocumentToCloudinary, removeCloudinaryDocument } = require('../services/cloudinaryArtistImages');
+const { removePreviousArtistImage, removePreviousDocument } = require('../services/legacyUploadCleanup');
 
 const REQUIRED_ONBOARDING_DOCUMENTS = [
   'artist_agreement',
@@ -286,7 +285,7 @@ const uploadDocument = async (req, res) => {
     const document = {
       name: req.body.name || req.file.originalname,
       type: req.body.type || 'existing_contract',
-      fileUrl: await uploadDocumentToCloudinary(req.file),
+      fileUrl: `/uploads/documents/${req.file.filename}`,
       fileName: req.file.originalname,
       fileSize: req.file.size,
     };
@@ -311,7 +310,7 @@ const uploadImage = async (req, res) => {
 
     if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
 
-    const imageUrl = await uploadArtistImage(req.file);
+    const imageUrl = `/uploads/images/${req.file.filename}`;
     const fieldType = req.body.field || 'image';
     const previousImageUrl = fieldType === 'coverPhoto' ? artist.coverPhoto : artist.image;
 
@@ -357,7 +356,7 @@ const removeDocument = async (req, res) => {
     const previousUrl = document.fileUrl;
     document.deleteOne();
     await artist.save();
-    await removeCloudinaryDocument(previousUrl);
+    await removePreviousDocument(previousUrl);
 
     res.json({ success: true, data: artist });
   } catch (error) {
