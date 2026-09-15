@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HoodBoy Entertainment - Administrator Dashboard Quick Guide</title>
+<style>
+  @page { size:A4; margin:14mm 14mm 15mm; }
+  @page:first { margin:0; }
+  :root { --ink:#151827; --muted:#626979; --purple:#6d28d9; --purple2:#8b5cf6; --gold:#f4bd45; --line:#dfe2e8; --soft:#f6f3ff; --green:#16834a; --red:#c52b32; --blue:#1477b8; --amber:#b76a09; }
+  * { box-sizing:border-box; }
+  body { margin:0; color:var(--ink); background:#fff; font:9.5pt/1.43 "Segoe UI",Arial,sans-serif; }
+  h1,h2,h3,h4,p { margin-top:0; }
+  h1 { font-size:24pt; line-height:1.08; letter-spacing:-.5px; margin-bottom:8px; }
+  h2 { font-size:17pt; line-height:1.15; letter-spacing:-.25px; margin-bottom:8px; }
+  h3 { color:#4c1d95; font-size:11.5pt; margin:10px 0 5px; }
+  h4 { font-size:10pt; margin:0 0 3px; }
+  p { margin-bottom:7px; }
+  ul,ol { margin:4px 0 7px 17px; padding:0; }
+  li { margin:2px 0; }
+  table { width:100%; border-collapse:collapse; margin:6px 0 10px; font-size:8.35pt; }
+  th,td { border:1px solid var(--line); padding:5px 6px; vertical-align:top; }
+  th { color:#44206e; background:#eee9ff; text-align:left; }
+  .page { page-break-before:always; }
+  .cover { height:297mm; padding:22mm 20mm; overflow:hidden; position:relative; display:flex; flex-direction:column; color:#fff; background:linear-gradient(145deg,#130b20 0%,#31125d 43%,#6d28d9 76%,#a855f7 100%); }
+  .cover:before { content:""; position:absolute; width:175mm; height:175mm; border:1px solid rgba(255,255,255,.13); border-radius:50%; right:-70mm; top:-70mm; }
+  .cover:after { content:""; position:absolute; width:105mm; height:105mm; border:1px solid rgba(255,255,255,.12); border-radius:50%; left:-50mm; bottom:-38mm; }
+  .brand { display:flex; align-items:center; gap:11px; position:relative; z-index:1; }
+  .brand img { width:29mm; height:29mm; object-fit:contain; filter:drop-shadow(0 7px 14px rgba(0,0,0,.3)); }
+  .brand strong { display:block; font-size:18pt; letter-spacing:-.3px; }
+  .brand span { color:#e9d5ff; font-size:8.5pt; letter-spacing:1.4px; text-transform:uppercase; }
+  .cover-main { position:relative; z-index:1; margin:auto 0; max-width:158mm; }
+  .eyebrow { display:inline-block; margin-bottom:13px; padding:5px 10px; border:1px solid rgba(255,255,255,.28); border-radius:99px; background:rgba(255,255,255,.1); font-size:8pt; font-weight:700; letter-spacing:1.3px; text-transform:uppercase; }
+  .cover h1 { color:#fff; font-size:39pt; line-height:1.02; margin-bottom:15px; }
+  .cover-lead { max-width:137mm; color:#f2e9ff; font-size:14pt; line-height:1.45; }
+  .cover-flow { display:flex; align-items:center; gap:6px; margin-top:18px; font-size:8pt; font-weight:700; letter-spacing:.5px; text-transform:uppercase; }
+  .cover-flow b { color:var(--gold); font-size:12pt; }
+  .cover-meta { position:relative; z-index:1; display:flex; justify-content:space-between; padding-top:10px; border-top:1px solid rgba(255,255,255,.22); color:#eadcff; font-size:8.5pt; }
+  .page-head { display:flex; align-items:center; gap:9px; padding-bottom:8px; margin-bottom:9px; border-bottom:2px solid #eee9ff; }
+  .num { width:30px; height:30px; display:grid; place-items:center; flex:0 0 auto; border-radius:9px; color:#fff; background:linear-gradient(135deg,#6d28d9,#a855f7); font-weight:800; }
+  .page-head h1 { margin:0; }
+  .lead { color:var(--muted); font-size:10.5pt; }
+  .flow { display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin:8px 0 11px; page-break-inside:avoid; }
+  .flow span { padding:5px 8px; border:1px solid #ddd6fe; border-radius:7px; color:#4c1d95; background:var(--soft); font-size:8.2pt; font-weight:700; }
+  .flow b { color:#a78bfa; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+  .grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .card { padding:9px 10px; border:1px solid var(--line); border-radius:9px; page-break-inside:avoid; }
+  .card h3 { margin-top:0; }
+  .module { position:relative; padding:9px 10px 9px 38px; border:1px solid var(--line); border-radius:9px; page-break-inside:avoid; }
+  .module + .module { margin-top:7px; }
+  .module-id { position:absolute; left:9px; top:9px; width:21px; height:21px; display:grid; place-items:center; border-radius:6px; color:#fff; background:#6d28d9; font-size:7.5pt; font-weight:800; }
+  .module p { margin:2px 0 4px; color:var(--muted); font-size:8.4pt; }
+  .module ol { margin-bottom:3px; font-size:8.4pt; }
+  .handoff { color:#4c1d95 !important; font-weight:650; }
+  .callout { padding:8px 10px; margin:8px 0 10px; border-left:4px solid var(--purple); border-radius:0 8px 8px 0; background:var(--soft); page-break-inside:avoid; }
+  .callout strong { display:block; margin-bottom:2px; }
+  .callout.warn { border-color:#d97706; background:#fffbeb; }
+  .callout.danger { border-color:#dc2626; background:#fef2f2; }
+  .callout.info { border-color:#0284c7; background:#f0f9ff; }
+  .steps { counter-reset:step; list-style:none; margin-left:0; }
+  .steps li { counter-increment:step; position:relative; min-height:23px; padding:4px 0 5px 28px; }
+  .steps li:before { content:counter(step); position:absolute; left:0; top:2px; width:20px; height:20px; display:grid; place-items:center; border-radius:6px; color:#5b21b6; background:#ede9fe; font-size:8pt; font-weight:800; }
+  .dashboard-map { display:grid; grid-template-columns:repeat(2,1fr); gap:7px; }
+  .dash-item { padding:8px 9px; border:1px solid var(--line); border-radius:8px; }
+  .dash-item strong { display:block; color:#4c1d95; }
+  .dash-item span { color:var(--muted); font-size:8.3pt; }
+  .routine { display:grid; grid-template-columns:31mm 1fr; border:1px solid var(--line); border-radius:8px; overflow:hidden; margin-bottom:7px; }
+  .routine strong { padding:8px; color:#4c1d95; background:#f4f0ff; }
+  .routine div { padding:8px 10px; }
+  .tag { display:inline-block; padding:2px 6px; margin:1px; border-radius:99px; color:#4b5563; background:#f1f2f5; font-size:7.4pt; font-weight:700; }
+  .check { list-style:none; margin-left:0; }
+  .check li:before { content:"\2610"; color:#7c3aed; margin-right:6px; }
+  .small { color:var(--muted); font-size:8pt; }
+  .footer { margin-top:10px; padding-top:6px; border-top:1px solid #e5e7eb; color:#777e8b; font-size:7.5pt; }
+  @media print { a { color:inherit; text-decoration:none; } }
+</style>
+</head>
+<body>
+
+<section class="cover">
+  <div class="brand"><img src="../frontend/public/logo.png" alt="HoodBoy Entertainment logo"><div><strong>HoodBoy Entertainment</strong><span>Lnkup Label Management Platform</span></div></div>
+  <div class="cover-main">
+    <div class="eyebrow">Administrator Quick Guide</div>
+    <h1>Know What You’re<br>Looking At.</h1>
+    <p class="cover-lead">A concise, page-by-page guide to running the admin dashboard, following the right workflow, and knowing where each action goes next.</p>
+    <div class="cover-flow"><span>Review</span><b>→</b><span>Open source page</span><b>→</b><span>Update</span><b>→</b><span>Verify</span><b>→</b><span>Follow through</span></div>
+  </div>
+  <div class="cover-meta"><span>Version 1.0</span><span>15 September 2026</span><span>Administrator Role</span></div>
+</section>
+
+<section class="page">
+  <div class="page-head"><span class="num">1</span><h1>The admin operating model</h1></div>
+  <p class="lead">The Dashboard is a summary and decision screen. The other pages are source screens where records are created, corrected, approved, and completed.</p>
+  <div class="flow"><span>Dashboard shows a signal</span><b>→</b><span>Open the source page</span><b>→</b><span>Review evidence</span><b>→</b><span>Make the change</span><b>→</b><span>Return and verify</span></div>
+  <div class="grid2">
+    <div class="card"><h3>What the administrator owns</h3><ul><li>Full platform access and team permissions.</li><li>Final review of artist, rights, financial, and operational records.</li><li>Approvals, exceptions, security, and data quality.</li><li>Ensuring work has an owner, deadline, and evidence.</li></ul></div>
+    <div class="card"><h3>What the dashboard does not do</h3><ul><li>It does not replace the source record.</li><li>A healthy chart does not prove every file is correct.</li><li>An alert disappears only when its underlying record changes.</li><li>Approval should follow review, not simply clear a queue.</li></ul></div>
+  </div>
+  <h3>Start every session in this order</h3>
+  <ol class="steps"><li>Read critical and high-priority notifications.</li><li>Check pending approvals and items marked Needs Attention.</li><li>Review overdue tasks, release dates, contract alerts, and campaign pacing.</li><li>Open the matching source page and resolve or assign the issue.</li><li>Refresh the Dashboard and confirm the summary changed.</li></ol>
+  <div class="callout warn"><strong>Administrator principle</strong>Do not approve from a summary alone. Open the record, check the supporting data or file, then approve and leave notes when an exception is made.</div>
+  <h3>Global controls</h3>
+  <p><span class="tag">Sidebar</span> opens each module. <span class="tag">Workspace search</span> finds accessible records. <span class="tag">Notification bell</span> opens alerts. <span class="tag">Theme</span> changes appearance. <span class="tag">User menu</span> opens Profile, Settings, and Sign out.</p>
+</section>
+
+<section class="page">
+  <div class="page-head"><span class="num">2</span><h1>Dashboard — how to read it</h1></div>
+  <p class="lead">Read from risk to detail. Use each panel as a link in a decision, then work in the relevant module.</p>
+  <div class="dashboard-map">
+    <div class="dash-item"><strong>Critical / approvals badges</strong><span>Immediate workload. Open approval and attention records first.</span></div>
+    <div class="dash-item"><strong>Revenue, profit, artists, releases</strong><span>Executive KPIs. Investigate unusual values in Finance, Artists, or Releases.</span></div>
+    <div class="dash-item"><strong>Performance rings</strong><span>Task, approval, roster, and contract health. Low percentages identify the operating area to inspect.</span></div>
+    <div class="dash-item"><strong>Financial breakdown</strong><span>Revenue versus expenses. Reconcile source transactions before interpreting profit.</span></div>
+    <div class="dash-item"><strong>Task distribution</strong><span>Overdue, due this week, and on-track work. Reassign or update in Tasks.</span></div>
+    <div class="dash-item"><strong>Artist roster</strong><span>Active versus inactive artists. Correct lifecycle status in Artists.</span></div>
+    <div class="dash-item"><strong>Approval queue</strong><span>Tasks, songs, and other records waiting for review. Open the original record before approving.</span></div>
+    <div class="dash-item"><strong>Project momentum</strong><span>Progress, owner, and next deadline. Update Projects and its linked Tasks.</span></div>
+    <div class="dash-item"><strong>Needs attention</strong><span>Concentrated operational risk. Resolve the source issue or assign a responsible owner.</span></div>
+    <div class="dash-item"><strong>Release schedule</strong><span>Upcoming dates and runway. Check readiness gates in Releases, Metadata, and Ownership.</span></div>
+    <div class="dash-item"><strong>Campaign status</strong><span>Budget and execution pacing. Update activity and results in Campaigns.</span></div>
+    <div class="dash-item"><strong>Contracts / activity / top artists</strong><span>Renewal risk, recent system changes, and portfolio performance context.</span></div>
+  </div>
+  <h3>Dashboard response loop</h3>
+  <ol class="steps"><li>Name the problem: overdue, missing approval, financial variance, readiness gap, or access issue.</li><li>Identify the source page using the mappings above.</li><li>Open the record and confirm the data is current.</li><li>Correct, approve, assign, or document the next action.</li><li>Refresh and verify; if unresolved, create a Task with owner and due date.</li></ol>
+  <div class="callout info"><strong>Example</strong>Upcoming release + missing readiness → open Releases → identify failed flag → correct Metadata or Ownership → return to Releases → complete the phase checklist → verify the Dashboard schedule.</div>
+</section>
+
+<section class="page">
+  <div class="page-head"><span class="num">3</span><h1>Core workflows</h1></div>
+  <h2>Artist onboarding</h2>
+  <div class="flow"><span>Artists</span><b>→</b><span>Add Artist</span><b>→</b><span>Identity + business</span><b>→</b><span>Documents</span><b>→</b><span>Submit</span><b>→</b><span>Approve / reject</span></div>
+  <ol class="steps"><li>Create the artist and complete required identity/contact fields.</li><li>Add profile, music, business, tax, payment, contract, and social details.</li><li>Upload required documents and confirm delivery of the onboarding package.</li><li>Submit for approval. Review every section and document from the artist profile.</li><li>Approve to generate the artist login, or reject with a clear correction reason.</li></ol>
+  <h2>Song to release</h2>
+  <div class="flow"><span>Music Catalog</span><b>→</b><span>Production</span><b>→</b><span>Metadata</span><b>→</b><span>Ownership</span><b>→</b><span>Releases</span><b>→</b><span>Campaign</span></div>
+  <ol class="steps"><li>Create the song, credits, beat/license details, priority, and owner.</li><li>Complete the production steps and upload the required versions.</li><li>Create and validate Metadata; fix every validation error.</li><li>Enter ownership splits, licenses, samples, and signatures; validate and approve.</li><li>Create the Release, verify readiness flags, and progress each checklist phase.</li><li>Coordinate promotion in Campaigns and review results in Analytics.</li></ol>
+  <h2>Revenue to royalty</h2>
+  <div class="flow"><span>Finance</span><b>→</b><span>Royalty period</span><b>→</b><span>Calculate</span><b>→</b><span>Approve</span><b>→</b><span>Pay</span><b>→</b><span>Artist Balance</span></div>
+  <ol class="steps"><li>Record and classify income/expense with evidence and links.</li><li>Create the artist royalty period and enter source income, fees, deductions, and splits.</li><li>Calculate; check contracts, ownership, source totals, and recoupment.</li><li>Approve, generate the statement, issue payment, and record its reference.</li><li>Update, reconcile, and approve the corresponding Artist Balance.</li></ol>
+  <div class="callout danger"><strong>Never bypass a gate without a record</strong>Forced release advances, financial adjustments, ownership approval, and deletion require a documented reason and supporting evidence.</div>
+</section>
+
+<section class="page">
+  <div class="page-head"><span class="num">4</span><h1>Catalog pages</h1></div>
+  <div class="module"><span class="module-id">01</span><h4>Artists</h4><p><b>Purpose:</b> Roster, profiles, onboarding, documents, business information, approval, and artist lifecycle.</p><ol><li>Search/filter → open profile or Add Artist.</li><li>Complete or review onboarding and attachments.</li><li>Approve/reject; keep status and assigned manager current.</li></ol><p class="handoff">Next: Music Catalog, Development, Projects, Contracts, Files.</p></div>
+  <div class="module"><span class="module-id">02</span><h4>Music Catalog</h4><p><b>Purpose:</b> Song master record, production workflow, credits, beat information, and audio versions.</p><ol><li>Create song → add artist, credits, status, priority, and ownership details.</li><li>Update the 12 production steps and notes.</li><li>Upload masters/alternate versions; confirm credits and backups.</li></ol><p class="handoff">Next: Metadata and Ownership, then Releases.</p></div>
+  <div class="module"><span class="module-id">03</span><h4>Metadata</h4><p><b>Purpose:</b> Delivery-ready descriptive, identifier, rights, credit, platform, and technical data for each song.</p><ol><li>Create/open the song metadata record.</li><li>Complete required fields, writers, publishers, IDs, dates, and technical details.</li><li>Validate or bulk validate → correct every error → export if needed.</li></ol><p class="handoff">Next: Ownership validation and Release readiness.</p></div>
+  <div class="module"><span class="module-id">04</span><h4>Ownership</h4><p><b>Purpose:</b> Master/composition splits, publishers, producer, featured artists, beat license, samples, signatures, and registration.</p><ol><li>Add every rights participant and document link.</li><li>Validate 100% totals, signatures, samples, license, and registration.</li><li>Approve only when release-ready.</li></ol><p class="handoff">Next: Releases; evidence belongs in Files.</p></div>
+  <div class="callout warn"><strong>Catalog rule</strong>A green Release flag must be supported by the underlying Music Catalog, Metadata, Ownership, and Files records.</div>
+</section>
+
+<section class="page">
+  <div class="page-head"><span class="num">5</span><h1>Release and file pages</h1></div>
+  <div class="module"><span class="module-id">05</span><h4>Releases</h4><p><b>Purpose:</b> Package songs into a single/EP/album/mixtape/compilation and operate its delivery lifecycle.</p><ol><li>Create release → select artist, songs, date, type, owner, and priority.</li><li>Verify ownership, master, artwork, and metadata readiness.</li><li>Complete current-phase checklist: Preparation → Distribution → Marketing → Post-Release → Completed.</li><li>Track each platform as pending, submitted, live, or rejected.</li></ol><p class="handoff">Next: Campaigns, Analytics, Finance, and Royalties.</p></div>
+  <div class="module"><span class="module-id">06</span><h4>Files</h4><p><b>Purpose:</b> Protected working library for artist, song, legal, publishing, accounting, release, and campaign assets.</p><ol><li>Initialize storage if required; create artist/song folder structures.</li><li>Open the exact destination → upload supported files → add category, tags, and record links.</li><li>Preview/download to verify; star, move, or rename when needed.</li><li>Confirm primary/cloud/external backup indicators after changes.</li></ol><p class="handoff">Supports every page; link evidence from the source record.</p></div>
+  <h3>Release readiness check</h3>
+  <table><tr><th>Question</th><th>Where to verify</th><th>Ready when</th></tr>
+    <tr><td>Is the audio final?</td><td>Music Catalog + Files</td><td>Masters/versions complete and backed up.</td></tr>
+    <tr><td>Is metadata valid?</td><td>Metadata</td><td>Validation returns no blocking errors.</td></tr>
+    <tr><td>Are rights cleared?</td><td>Ownership + Contracts + Files</td><td>100%, signatures, licenses, and samples confirmed.</td></tr>
+    <tr><td>Is delivery planned?</td><td>Releases</td><td>Date, platforms, owner, flags, and phase checklist are current.</td></tr>
+    <tr><td>Is promotion owned?</td><td>Campaigns + Tasks</td><td>Budget, audience, content, owner, and deadlines are assigned.</td></tr>
+  </table>
+  <div class="callout danger"><strong>Delete carefully</strong>Check linked records before deleting an artist, song, release, folder, or file. Prefer correcting status or archiving where the business must retain history.</div>
+</section>
+
+<section class="page">
+  <div class="page-head"><span class="num">6</span><h1>Planning and execution pages</h1></div>
+  <div class="module"><span class="module-id">07</span><h4>Projects</h4><p><b>Purpose:</b> Group songs and work around a release or business initiative.</p><ol><li>Create project → artist, type, dates, priority, budget, manager, and team.</li><li>Add songs and milestones; update progress and next action.</li><li>Use linked Tasks for accountable work; close only when deliverables are complete.</li></ol><p class="handoff">Feeds Dashboard momentum and connects Songs, Tasks, Releases, and Finance.</p></div>
+  <div class="module"><span class="module-id">08</span><h4>Tasks</h4><p><b>Purpose:</b> Assign and track individual responsibilities on a Kanban board.</p><ol><li>Create task → title, status, priority, assignee, dates, and linked records.</li><li>Move status as work changes; record blockers and comments.</li><li>Confirm completion evidence before marking completed.</li></ol><p class="handoff">Feeds Dashboard task health and Weekly Report follow-through.</p></div>
+  <div class="module"><span class="module-id">09</span><h4>Weekly Report</h4><p><b>Purpose:</b> Capture structured weekly progress, blockers, priorities, decisions, and next actions.</p><ol><li>Open Current Week → answer all reporting prompts.</li><li>Use source records and task status, not memory alone.</li><li>Save/submit → review History for unresolved commitments.</li></ol><p class="handoff">Turn every unresolved item into a Task, Project update, or owner decision.</p></div>
+  <div class="module"><span class="module-id">10</span><h4>Development</h4><p><b>Purpose:</b> Artist development plans, goals, milestones, progress, and scorecards.</p><ol><li>Create an artist plan with focus areas and measurable goals.</li><li>Add target dates/milestones and update progress regularly.</li><li>Open the artist scorecard, record metrics, and adjust priorities.</li></ol><p class="handoff">Connects artist strategy to Projects, Tasks, Campaigns, and Analytics.</p></div>
+  <div class="callout info"><strong>One owner, one next action</strong>Projects describe the larger outcome. Tasks describe who does the next piece of work and by when. Weekly Report confirms whether it moved.</div>
+</section>
+
+<section class="page">
+  <div class="page-head"><span class="num">7</span><h1>Content and relationship pages</h1></div>
+  <div class="module"><span class="module-id">11</span><h4>The Lnk Up</h4><p><b>Purpose:</b> Plan and track live-series episodes from concept through air date.</p><ol><li>Create episode → title, guest/artist, format, owner, dates, and production state.</li><li>Progress planned → casting → recorded → editing → scheduled → aired.</li><li>Keep assets, notes, links, and results attached to the episode.</li></ol><p class="handoff">Coordinate Tasks, Contacts, Files, and Campaigns.</p></div>
+  <div class="module"><span class="module-id">12</span><h4>Campaigns</h4><p><b>Purpose:</b> Plan audience, channels, budget, content, advertising tests, dates, and results.</p><ol><li>Create campaign → artist/release, goal, audience, budget, owner, and schedule.</li><li>Add content calendar items and ad tests; update spend and execution status.</li><li>Record reach, clicks, conversions, engagement, and attributed revenue.</li><li>Compare outcome to goal/budget; document lessons at completion.</li></ol><p class="handoff">Feeds Dashboard campaign status, Analytics, and Finance.</p></div>
+  <div class="module"><span class="module-id">13</span><h4>Contacts</h4><p><b>Purpose:</b> Maintain press, playlist, venue, distributor, partner, vendor, and other professional relationships.</p><ol><li>Search before creating to prevent duplicates.</li><li>Add identity, organization, category, channels, tags, and owner.</li><li>Record interactions, follow-up date, notes, and linked artist/campaign.</li></ol><p class="handoff">Use Tasks for promised follow-ups and Campaigns for outreach results.</p></div>
+  <h3>Campaign operating loop</h3>
+  <div class="flow"><span>Release goal</span><b>→</b><span>Campaign plan</span><b>→</b><span>Contacts + content</span><b>→</b><span>Spend</span><b>→</b><span>Results</span><b>→</b><span>Analytics review</span></div>
+  <div class="callout warn"><strong>Do not confuse activity with outcome</strong>Publishing content is an action. Reach, engagement, conversions, revenue, and learning determine whether the campaign worked.</div>
+</section>
+
+<section class="page">
+  <div class="page-head"><span class="num">8</span><h1>Legal pages</h1></div>
+  <div class="module"><span class="module-id">14</span><h4>Contracts</h4><p><b>Purpose:</b> Store parties, terms, files, value, dates, renewal/option details, and contract lifecycle.</p><ol><li>Create contract → type, title, parties, artist/project, value, dates, owner, and terms.</li><li>Attach or link the correct document and version.</li><li>Progress draft → pending signature → active; record signed date and renewal/option details.</li><li>Review expiring, expired, and renewal-due alerts; assign next action.</li></ol><p class="handoff">Supports Ownership, Releases, Royalties, Artist records, and Finance.</p></div>
+  <div class="module"><span class="module-id">15</span><h4>Templates</h4><p><b>Purpose:</b> Maintain reusable contract starting points and required-field definitions.</p><ol><li>Create/edit template → name, category, content, placeholders, active status, and notes.</li><li>Review current legal language and variable requirements.</li><li>Use as a starting point, then create/review the actual contract.</li></ol><p class="handoff">Produces draft material for Contracts; it is not an executed agreement.</p></div>
+  <h3>Before changing a contract to Active</h3>
+  <ul class="check"><li>Correct parties and legal names.</li><li>Correct contract version and complete signatures.</li><li>Effective, end, renewal, notice, and option dates verified.</li><li>Rates, ownership, recoupment, territory, and term match the deal.</li><li>Executed file stored and linked.</li><li>Responsible owner and next renewal action assigned.</li></ul>
+  <div class="callout danger"><strong>Legal review required</strong>The platform stores operational contract information. Templates and data-entry screens do not replace qualified legal review or authorized signatures.</div>
+</section>
+
+<section class="page">
+  <div class="page-head"><span class="num">9</span><h1>Finance pages</h1></div>
+  <div class="module"><span class="module-id">16</span><h4>Finance</h4><p><b>Purpose:</b> Record income/expense, payment state, evidence, allocation, account/tax details, and budget position.</p><ol><li>Create transaction → date, type, amount, category, counterparty, and payment status.</li><li>Link artist/project/release and attach invoice/receipt evidence.</li><li>Reconcile totals, overdue items, and budget variances.</li></ol><p class="handoff">Source data for Dashboard financials, Royalties, Artist Balances, and Analytics.</p></div>
+  <div class="module"><span class="module-id">17</span><h4>Royalties</h4><p><b>Purpose:</b> Calculate artist/label/producer/featured shares, deductions, recoupment, statements, and payments.</p><ol><li>Create period → artist, dates, source income, fees, deductions, and splits.</li><li>Verify sources equal gross and artist + label equals 100%.</li><li>Calculate → review contract/ownership/evidence → approve.</li><li>Generate statement → pay → record method, date, and reference.</li></ol><p class="handoff">Updates Artist Balances and artist-facing royalty history.</p></div>
+  <div class="module"><span class="module-id">18</span><h4>Artist Balances</h4><p><b>Purpose:</b> Track period opening balance, income, expenses, advances, royalties, payments, adjustments, and closing balance.</p><ol><li>Open/create artist period and add supported transactions.</li><li>Explain every adjustment with amount, date, reference, and notes.</li><li>Reconcile to source records → approve only when the closing balance agrees.</li></ol><p class="handoff">Supports statements, payment decisions, and finance reporting.</p></div>
+  <div class="module"><span class="module-id">19</span><h4>Tax Calendar</h4><p><b>Purpose:</b> Track filing/payment/estimate/extension obligations by due date and owner.</p><ol><li>Create event → type, due date, year/quarter, amount, owner, and recurrence.</li><li>Monitor upcoming/overdue items and supporting evidence.</li><li>Mark complete only after filing/payment is confirmed.</li></ol><p class="handoff">Create Tasks for preparation and keep confirmation files in Files.</p></div>
+  <div class="callout warn"><strong>Financial control</strong>Where staffing permits, separate entry, approval, and payment. Never use an adjustment to conceal an unexplained difference.</div>
+</section>
+
+<section class="page">
+  <div class="page-head"><span class="num">10</span><h1>Insight pages</h1></div>
+  <div class="module"><span class="module-id">20</span><h4>Analytics</h4><p><b>Purpose:</b> Executive, artist, release, marketing, and financial views with filters and export.</p><ol><li>Select the correct dashboard/tab and reporting filters.</li><li>Read KPI, trend, and comparison values together.</li><li>Investigate surprising values in the source module.</li><li>Correct source data, refresh, then export the agreed reporting period.</li></ol><p class="handoff">Turns operational records into review and planning decisions.</p></div>
+  <div class="module"><span class="module-id">21</span><h4>Song Analytics</h4><p><b>Purpose:</b> Capture platform performance, audience, commercial results, spend, growth, and notable events for a song/reporting period.</p><ol><li>Select song and consistent reporting period.</li><li>Enter streams/listeners/saves, audience, revenue, sales, spend, and context.</li><li>Save → compare periods → use growth and efficiency measures to decide next action.</li></ol><p class="handoff">Informs Campaigns, Development, Releases, and executive reporting.</p></div>
+  <h3>How to interpret analytics</h3>
+  <table><tr><th>Signal</th><th>Question</th><th>Likely source page</th></tr>
+    <tr><td>Revenue changed</td><td>Is it performance, timing, missing data, or classification?</td><td>Finance / Royalties</td></tr>
+    <tr><td>Release underperformed</td><td>Was readiness, audience, content, spend, or timing weak?</td><td>Releases / Campaigns / Song Analytics</td></tr>
+    <tr><td>Artist growth slowed</td><td>Which platform, audience, content, or development goal changed?</td><td>Song Analytics / Development</td></tr>
+    <tr><td>Campaign ROI fell</td><td>Did cost, conversion rate, attribution, or revenue move?</td><td>Campaigns / Finance</td></tr>
+  </table>
+  <div class="callout info"><strong>Use one reporting convention</strong>Do not mix lifetime totals with monthly or campaign-period values. Confirm date range, platform definitions, and currency before comparing.</div>
+</section>
+
+<section class="page">
+  <div class="page-head"><span class="num">11</span><h1>Account and control pages</h1></div>
+  <div class="module"><span class="module-id">22</span><h4>Team</h4><p><b>Purpose:</b> Create accounts, assign roles, update staff details, reset passwords, activate/deactivate, and remove access.</p><ol><li>Search before creating → add name, unique email, role, password, and department.</li><li>Apply least privilege; change role only for an approved business need.</li><li>Deactivate access promptly when no longer required.</li><li>Reassign work and records before permanent deletion.</li></ol><p class="handoff">Controls the navigation and actions each person receives at next sign-in.</p></div>
+  <div class="module"><span class="module-id">23</span><h4>Settings</h4><p><b>Purpose:</b> Personal profile, password, two-factor authentication, notifications, appearance, integration links, and permission overview.</p><ol><li>Keep profile and notification preferences current.</li><li>Use a strong password and enable authenticator-based 2FA.</li><li>Save appearance and validated platform links.</li><li>Review permissions and open Team when access changes are required.</li></ol><p class="handoff">Supports account security, alerts, and safe platform access.</p></div>
+  <div class="module"><span class="module-id">24</span><h4>Dashboard</h4><p><b>Purpose:</b> Return point for executive triage and verification after source records change.</p><ol><li>Refresh after important edits.</li><li>Confirm the expected KPI, queue, warning, or schedule changed.</li><li>If not, reopen the source record and verify its status/date/link.</li></ol><p class="handoff">The loop closes here, then starts again with the next priority.</p></div>
+  <h3>Access-change checklist</h3>
+  <ul class="check"><li>Request and business reason verified.</li><li>Correct role selected; no unnecessary access granted.</li><li>Existing tasks/projects/contracts reassigned if responsibility changed.</li><li>User instructed to sign out and back in after a role change.</li><li>Departing user deactivated promptly; deletion only after retention review.</li></ul>
+  <div class="callout danger"><strong>Security rule</strong>Never ask users to send passwords or authenticator codes. Administrators can assign/reset access, but credentials must be delivered through an approved secure channel.</div>
+</section>
+
+<section class="page">
+  <div class="page-head"><span class="num">12</span><h1>Administrator routines</h1></div>
+  <div class="routine"><strong>Daily</strong><div>Notifications → critical issues → approval queue → overdue tasks → upcoming releases → contract/tax warnings → assign owners and deadlines.</div></div>
+  <div class="routine"><strong>Weekly</strong><div>Weekly Report → project momentum → task ownership → release readiness → campaign pacing → artist development progress → unresolved decisions.</div></div>
+  <div class="routine"><strong>Monthly</strong><div>Finance reconciliation → royalty inputs → artist balances → analytics period → contract horizon → backup health → access review.</div></div>
+  <div class="routine"><strong>Quarterly</strong><div>Royalty approval/payment → development scorecards → contract options/renewals → tax plan → least-privilege audit → restore test.</div></div>
+  <h3>Before approving anything</h3>
+  <ul class="check"><li>The record is complete and the status reflects reality.</li><li>Required totals, dates, IDs, and percentages validate.</li><li>Supporting files are the correct final versions.</li><li>Linked records agree with one another.</li><li>Exceptions and overrides include a reason and authorized owner.</li><li>The next person/action is clear.</li></ul>
+  <h3>When something looks wrong</h3>
+  <div class="flow"><span>Do not edit the chart</span><b>→</b><span>Find the source</span><b>→</b><span>Check date/status/link</span><b>→</b><span>Correct once</span><b>→</b><span>Refresh and verify</span></div>
+  <table><tr><th>Symptom</th><th>First check</th></tr>
+    <tr><td>Dashboard number looks wrong</td><td>Source record date, status, amount, role scope, and links.</td></tr>
+    <tr><td>Page/action is missing</td><td>Signed-in role, Team assignment, and sign-out/sign-in after changes.</td></tr>
+    <tr><td>Release cannot advance</td><td>Current checklist plus Metadata, Ownership, master, and artwork readiness.</td></tr>
+    <tr><td>Royalty will not calculate</td><td>Source total = gross; artist + label = 100%; valid deductions/splits.</td></tr>
+    <tr><td>Upload rejected</td><td>Extension, true file type, size, destination, and connection.</td></tr>
+  </table>
+  <div class="callout"><strong>The simplest admin rule</strong>Every important record should answer: What is it? Who owns it? What state is it in? What evidence supports it? What happens next, and by when?</div>
+  <p class="footer">HoodBoy Entertainment · Lnkup Label Management Platform · Administrator Dashboard Quick Guide v1.0</p>
+</section>
+
+</body>
+</html>

@@ -2,6 +2,8 @@
 
 The current client guide is [docs/HBE_Client_User_Manual.html](docs/HBE_Client_User_Manual.html) (version 1.2, updated 15 September 2026).
 
+The concise administrator workflow guide is [docs/HBE_Admin_Dashboard_Quick_Guide.html](docs/HBE_Admin_Dashboard_Quick_Guide.html) (version 1.0, updated 15 September 2026).
+
 ## Local start
 
 1. Copy `backend/.env.example` to `backend/.env` and configure MongoDB/JWT values.
