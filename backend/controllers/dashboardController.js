@@ -644,4 +644,26 @@ const uploadMyImage = async (req, res) => {
   }
 };
 
-module.exports = { getDashboardStats, getMonthlyFinancials, getProjectStatusBreakdown, getUpcomingDeadlines, getUnifiedDashboard, getRoleDashboard, getMyProfile, updateMyProfile, uploadMyImage };
+// @desc    Remove the artist's own profile or cover photo and its local file
+// @route   DELETE /api/dashboard/profile/image
+// @access  Artist
+const removeMyImage = async (req, res) => {
+  try {
+    if (req.user.role !== 'artist') {
+      return res.status(403).json({ success: false, message: 'Artist accounts only' });
+    }
+    const artist = await Artist.findOne({ email: req.user.email });
+    if (!artist) return res.status(404).json({ success: false, message: 'No artist profile linked to your account yet' });
+
+    const imageField = req.body.field === 'coverPhoto' ? 'coverPhoto' : 'image';
+    const previousImageUrl = artist[imageField];
+    artist[imageField] = '';
+    await artist.save();
+    await removePreviousArtistImage(previousImageUrl);
+    res.json({ success: true, data: artist });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+module.exports = { getDashboardStats, getMonthlyFinancials, getProjectStatusBreakdown, getUpcomingDeadlines, getUnifiedDashboard, getRoleDashboard, getMyProfile, updateMyProfile, uploadMyImage, removeMyImage };

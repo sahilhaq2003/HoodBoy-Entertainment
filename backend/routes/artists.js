@@ -9,6 +9,7 @@ const {
   updateOnboardingStep,
   uploadDocument,
   uploadImage,
+  removeImage,
   removeDocument,
   approveOnboarding,
   rejectOnboarding,
@@ -39,5 +40,6 @@ router.delete('/:id/documents/:docId', checkPermission('artists', 'write'), remo
 
 // Image uploads
 router.post('/:id/image', checkPermission('artists', 'write'), upload.single('file'), uploadImage);
+router.delete('/:id/image', checkPermission('artists', 'write'), removeImage);
 
 module.exports = router;

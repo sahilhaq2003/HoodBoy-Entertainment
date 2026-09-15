@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Camera, Save, Loader2, AlertCircle, User, Mail, Phone, MapPin, Music2, Link2, Wallet, Building2 } from 'lucide-react';
+import { Camera, Save, Loader2, AlertCircle, User, Mail, Phone, MapPin, Music2, Link2, Wallet, Building2, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { dashboardApi } from '../services/api';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
@@ -95,6 +95,19 @@ const MyProfile: React.FC = () => {
     setUploading(null);
   };
 
+  const handleRemoveImage = async (field: 'image' | 'coverPhoto') => {
+    if (!profile || !window.confirm(`Remove this ${field === 'image' ? 'profile' : 'cover'} photo?`)) return;
+    setUploading(field);
+    try {
+      const res = await dashboardApi.removeMyImage(field);
+      setProfile(res.data.data);
+      toast.success(`${field === 'image' ? 'Profile' : 'Cover'} photo removed`);
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Failed to remove image');
+    }
+    setUploading(null);
+  };
+
   const setSocial = (key: keyof typeof EMPTY_SOCIAL, value: string) =>
     setForm((f) => ({ ...f, socialLinks: { ...f.socialLinks, [key]: value } }));
   const setAddr = (key: keyof typeof EMPTY_ADDRESS, value: string) =>
@@ -147,6 +160,11 @@ const MyProfile: React.FC = () => {
           >
             {uploading === 'coverPhoto' ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
           </button>
+          {profile.coverPhoto && (
+            <button onClick={() => handleRemoveImage('coverPhoto')} disabled={uploading === 'coverPhoto'} className="absolute top-3 right-12 p-2 rounded-lg bg-white/90 text-red-500 hover:text-red-700 shadow-sm transition-colors" title="Remove cover photo">
+              <Trash2 size={16} />
+            </button>
+          )}
         </div>
 
         <div className="px-6 pb-6 -mt-12 relative">
@@ -175,6 +193,11 @@ const MyProfile: React.FC = () => {
             >
               <Camera size={13} />
             </button>
+            {profile.image && (
+            <button onClick={() => handleRemoveImage('image')} disabled={uploading === 'image'} className="absolute bottom-1 right-9 p-1.5 rounded-full bg-white text-red-500 hover:text-red-700 shadow border border-gray-200 dark:bg-gray-800 dark:border-gray-600" title="Remove profile photo">
+                <Trash2 size={13} />
+              </button>
+            )}
           </div>
 
           <div className="mt-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">

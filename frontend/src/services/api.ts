@@ -88,6 +88,8 @@ export const dashboardApi = {
     api.post('/dashboard/profile/image', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
+  removeMyImage: (field: 'image' | 'coverPhoto') =>
+    api.delete('/dashboard/profile/image', { data: { field } }),
 };
 
 // Artists
@@ -120,6 +122,8 @@ export const artistsApi = {
     api.post(`/artists/${id}/image`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
+  removeImage: (id: string, field: 'image' | 'coverPhoto') =>
+    api.delete(`/artists/${id}/image`, { data: { field } }),
 };
 
 // Projects

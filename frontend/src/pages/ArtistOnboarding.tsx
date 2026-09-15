@@ -226,6 +226,19 @@ const ArtistOnboarding: React.FC = () => {
     setUploadingImage(null);
   };
 
+  const handleRemoveImage = async (field: 'image' | 'coverPhoto') => {
+    if (!artist || !window.confirm(`Remove this ${field === 'image' ? 'profile' : 'cover'} photo?`)) return;
+    setUploadingImage(field);
+    try {
+      const res = await artistsApi.removeImage(artist._id, field);
+      setArtist(res.data.data);
+      toast.success(`${field === 'image' ? 'Profile' : 'Cover'} photo removed`);
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Failed to remove image');
+    }
+    setUploadingImage(null);
+  };
+
   const addMusicLink = () => setMusicLinks([...musicLinks, '']);
   const removeMusicLink = (i: number) => { if (musicLinks.length > 1) setMusicLinks(musicLinks.filter((_, idx) => idx !== i)); };
   const updateMusicLink = (i: number, v: string) => { const u = [...musicLinks]; u[i] = v; setMusicLinks(u); };
@@ -294,6 +307,7 @@ const ArtistOnboarding: React.FC = () => {
                       <button onClick={() => profileInputRef.current?.click()} disabled={uploadingImage === 'image'} className="px-4 py-2 bg-white text-gray-600 font-medium rounded-lg text-sm border border-gray-200 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300 transition-all duration-200 text-xs flex items-center gap-2 w-full justify-center dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-100">
                         <Camera size={12} />{uploadingImage === 'image' ? 'Uploading...' : 'Upload Photo'}
                       </button>
+                      {artist.image && <button onClick={() => handleRemoveImage('image')} disabled={uploadingImage === 'image'} className="px-4 py-2 bg-white text-red-500 font-medium rounded-lg text-sm border border-red-200 hover:bg-red-50 transition-all duration-200 text-xs flex items-center gap-2 w-full justify-center dark:bg-gray-800 dark:border-red-900/50"><Trash2 size={12} />Remove Photo</button>}
                     </div>
                   </div>
                 </div>
@@ -308,6 +322,7 @@ const ArtistOnboarding: React.FC = () => {
                       <button onClick={() => coverInputRef.current?.click()} disabled={uploadingImage === 'coverPhoto'} className="px-4 py-2 bg-white text-gray-600 font-medium rounded-lg text-sm border border-gray-200 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300 transition-all duration-200 text-xs flex items-center gap-2 w-full justify-center dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-100">
                         <ImageIcon size={12} />{uploadingImage === 'coverPhoto' ? 'Uploading...' : 'Upload Cover'}
                       </button>
+                      {artist.coverPhoto && <button onClick={() => handleRemoveImage('coverPhoto')} disabled={uploadingImage === 'coverPhoto'} className="px-4 py-2 bg-white text-red-500 font-medium rounded-lg text-sm border border-red-200 hover:bg-red-50 transition-all duration-200 text-xs flex items-center gap-2 w-full justify-center dark:bg-gray-800 dark:border-red-900/50"><Trash2 size={12} />Remove Cover</button>}
                     </div>
                   </div>
                 </div>

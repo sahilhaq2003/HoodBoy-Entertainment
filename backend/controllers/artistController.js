@@ -330,6 +330,22 @@ const uploadImage = async (req, res) => {
   }
 };
 
+const removeImage = async (req, res) => {
+  try {
+    const artist = await Artist.findById(req.params.id);
+    if (!artist) return res.status(404).json({ success: false, message: 'Artist not found' });
+
+    const fieldType = req.body.field === 'coverPhoto' ? 'coverPhoto' : 'image';
+    const previousImageUrl = artist[fieldType];
+    artist[fieldType] = '';
+    await artist.save();
+    await removePreviousArtistImage(previousImageUrl);
+    res.json({ success: true, data: artist });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
 const removeDocument = async (req, res) => {
   try {
     const artist = await Artist.findById(req.params.id);
@@ -480,6 +496,7 @@ module.exports = {
   updateOnboardingStep,
   uploadDocument,
   uploadImage,
+  removeImage,
   removeDocument,
   approveOnboarding,
   rejectOnboarding,
