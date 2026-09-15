@@ -430,6 +430,7 @@ const FinancePage: React.FC = () => {
 
   const handleDeleteBudgetItem = async (itemId: string) => {
     if (!selectedBudget) return;
+    if (!window.confirm('Delete this budget item? This cannot be undone.')) return;
     try {
       await budgetsApi.deleteItem(selectedBudget._id, itemId);
       toast.success('Item removed');

@@ -186,6 +186,7 @@ const CampaignManager: React.FC = () => {
   };
 
   const handleDeleteContent = async (campaignId: string, contentId: string) => {
+    if (!window.confirm('Delete this content item? This cannot be undone.')) return;
     try {
       await campaignsApi.deleteContentItem(campaignId, contentId);
       toast.success('Content deleted');

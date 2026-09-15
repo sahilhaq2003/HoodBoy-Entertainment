@@ -195,7 +195,10 @@ const NotificationBell: React.FC = () => {
                         </button>
                       )}
                       <button
-                        onClick={(e) => { e.stopPropagation(); deleteNotif(n._id); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (window.confirm('Delete this notification? This cannot be undone.')) deleteNotif(n._id);
+                        }}
                         className="p-1.5 rounded-lg text-[var(--hbe-muted)] hover:text-[#DC2626] hover:bg-(--hbe-fill) transition-colors"
                         title="Delete"
                       >

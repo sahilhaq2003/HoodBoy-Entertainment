@@ -296,6 +296,7 @@ const Contacts: React.FC = () => {
 
   const handleDeleteInteraction = async (interactionId: string) => {
     if (!selectedContact) return;
+    if (!window.confirm('Delete this interaction? This cannot be undone.')) return;
     try {
       await contactsApi.deleteInteraction(selectedContact._id, interactionId);
       const res = await contactsApi.getById(selectedContact._id);
@@ -321,6 +322,7 @@ const Contacts: React.FC = () => {
 
   const handleDeleteReminder = async (reminderId: string) => {
     if (!selectedContact) return;
+    if (!window.confirm('Delete this reminder? This cannot be undone.')) return;
     try {
       await contactsApi.deleteReminder(selectedContact._id, reminderId);
       toast.success('Reminder deleted');
