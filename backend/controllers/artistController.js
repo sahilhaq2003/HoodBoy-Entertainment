@@ -2,6 +2,7 @@ const Artist = require('../models/Artist');
 const User = require('../models/User');
 const crypto = require('crypto');
 const { removePreviousArtistImage } = require('../services/legacyUploadCleanup');
+const { uploadArtistImage } = require('../services/cloudinaryArtistImages');
 
 const REQUIRED_ONBOARDING_DOCUMENTS = [
   'artist_agreement',
@@ -310,7 +311,7 @@ const uploadImage = async (req, res) => {
 
     if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
 
-    const imageUrl = `/uploads/images/${req.file.filename}`;
+    const imageUrl = await uploadArtistImage(req.file);
     const fieldType = req.body.field || 'image';
     const previousImageUrl = fieldType === 'coverPhoto' ? artist.coverPhoto : artist.image;
 

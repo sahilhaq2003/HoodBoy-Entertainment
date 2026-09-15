@@ -1,11 +1,13 @@
 const fs = require('fs');
 const path = require('path');
+const { removeCloudinaryArtistImage } = require('./cloudinaryArtistImages');
 
 const uploadRoot = path.resolve(__dirname, '..', 'uploads');
 
 // Image URLs created by the legacy upload middleware are local files. Never
 // attempt to delete arbitrary or externally hosted URLs from a profile field.
 const removePreviousArtistImage = async (imageUrl) => {
+  if (await removeCloudinaryArtistImage(imageUrl)) return;
   if (typeof imageUrl !== 'string' || !imageUrl.startsWith('/uploads/images/')) return;
 
   const relativePath = imageUrl.slice('/uploads/'.length);
