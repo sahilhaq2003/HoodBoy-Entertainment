@@ -12,10 +12,13 @@ connectDB();
 const app = express();
 
 // Middleware
-const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:5173,http://localhost:5174')
+const configuredOrigins = (process.env.CORS_ORIGINS || 'http://localhost:5173,http://localhost:5174')
   .split(',')
   .map(origin => origin.trim())
   .filter(Boolean);
+// Keep local Vite development available against the deployed API for
+// authenticated end-to-end testing without opening CORS to arbitrary sites.
+const allowedOrigins = [...new Set([...configuredOrigins, 'http://localhost:5173', 'http://localhost:5174'])];
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 // Large dashboard and management payloads compress especially well. This also
 // covers API traffic when the app is run without the production nginx proxy.
