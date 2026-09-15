@@ -10,6 +10,23 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+// The API stores legacy server uploads as `/uploads/...`. In production the
+// frontend and API use different hosts, so resolve those paths to the API host
+// before React renders an image, document, or media link.
+const uploadOrigin = (() => {
+  const apiUrl = import.meta.env.VITE_API_URL || '/api';
+  try { return new URL(apiUrl, window.location.origin).origin; } catch { return window.location.origin; }
+})();
+
+const resolveServerUploads = (value: unknown): unknown => {
+  if (typeof value === 'string') return value.startsWith('/uploads/') ? `${uploadOrigin}${value}` : value;
+  if (Array.isArray(value)) return value.map(resolveServerUploads);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, item]) => [key, resolveServerUploads(item)]));
+  }
+  return value;
+};
+
 // Add auth token to all requests
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('hbe_token') || sessionStorage.getItem('hbe_token');
@@ -35,6 +52,7 @@ api.interceptors.request.use((config) => {
 // Handle auth errors
 api.interceptors.response.use(
   (response) => {
+    response.data = resolveServerUploads(response.data);
     const cacheKey = (response.config as any).__hbeCacheKey;
     if (cacheKey) getCache.set(cacheKey, { expiresAt: Date.now() + GET_CACHE_TTL, response });
     return response;
