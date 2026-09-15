@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Music, Search, Plus, Disc, ChevronDown, ChevronRight, CheckCircle2, Circle, Clock, AlertTriangle, FileAudio, X, Upload, Edit2, Download, Trash2, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { artistsApi, songsApi } from '../services/api';
-import type { Artist, Song } from '../types';
+import type { Artist, ProductionStep, Song } from '../types';
 import StatusBadge from '../components/ui/StatusBadge';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
@@ -66,6 +66,7 @@ const Songs: React.FC = () => {
   const [songForm, setSongForm] = useState<SongForm>(emptySongForm());
   const [savingSong, setSavingSong] = useState(false);
   const [uploadingVersion, setUploadingVersion] = useState<string | null>(null);
+  const [savingWorkflowStep, setSavingWorkflowStep] = useState<string | null>(null);
   const [songDeleteTarget, setSongDeleteTarget] = useState<Song | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -100,12 +101,58 @@ const Songs: React.FC = () => {
     setSongs(prev => prev.map(song => song._id === songId ? res.data.data : song));
   };
 
-  const updateWorkflowStep = async (stepId: string, data: { status?: string; notes?: string }) => {
+  const getWorkflowValidationMessage = (song: Song, step: ProductionStep, nextStatus?: string) => {
+    if (!nextStatus) return null;
+
+    if (['in_progress', 'completed'].includes(nextStatus)) {
+      const incompleteStep = (song.productionWorkflow || [])
+        .filter(item => item.order < step.order)
+        .find(item => item.status !== 'completed');
+      if (incompleteStep) return `Complete “${incompleteStep.label}” first.`;
+    }
+
+    if (nextStatus !== 'completed' && step.status === 'completed') {
+      const laterActiveStep = (song.productionWorkflow || [])
+        .find(item => item.order > step.order && item.status !== 'pending');
+      if (laterActiveStep) return `Move “${laterActiveStep.label}” back to Pending first.`;
+    }
+
+    if (nextStatus === 'completed' && step.step === 'beat_ownership_verified') {
+      const beat = song.beatInfo;
+      if (!beat?.ownershipVerified || !beat.producer || !beat.licenseType) {
+        return 'Before completing this step, edit the song and enter the beat producer and licence type, then tick Ownership Verified.';
+      }
+    }
+
+    if (nextStatus === 'completed' && step.step === 'alternate_versions_created') {
+      const missing = ALL_VERSIONS.filter(type => !(song.versions || []).some(version => version.type === type));
+      if (missing.length) return `Upload the ${missing.length} remaining required song version(s) before completing this step.`;
+    }
+
+    if (nextStatus === 'completed' && step.step === 'credits_confirmed' && !(song.credits || []).length) {
+      return 'Add at least one song credit before completing this step.';
+    }
+
+    return null;
+  };
+
+  const updateWorkflowStep = async (step: ProductionStep, data: { status?: string; notes?: string }) => {
     if (!songDetail) return;
+    const validationMessage = getWorkflowValidationMessage(songDetail, step, data.status);
+    if (validationMessage) {
+      toast.error(validationMessage, { duration: 6000 });
+      return;
+    }
+
+    setSavingWorkflowStep(step._id);
     try {
-      await songsApi.updateWorkflowStep(songDetail._id, stepId, data);
+      await songsApi.updateWorkflowStep(songDetail._id, step._id, data);
       await refreshSongDetail(songDetail._id);
-    } catch (e: any) { console.error(e); toast.error(e.response?.data?.message || 'Failed to update workflow step'); }
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Unable to update this workflow step. Please try again.');
+    } finally {
+      setSavingWorkflowStep(null);
+    }
   };
 
   const ensureArtistsLoaded = async () => {
@@ -347,16 +394,21 @@ const Songs: React.FC = () => {
                                    step.status === 'blocked' ? <AlertTriangle size={14} className="text-red-500 flex-shrink-0" /> :
                                    <Circle size={14} className="text-gray-300 dark:text-gray-600 flex-shrink-0" />}
                                   <span className="truncate flex-1">{step.order}. {step.label}</span>
-                                  <select value={step.status} onChange={event => updateWorkflowStep(step._id, { status: event.target.value })} className="bg-white/80 dark:bg-gray-900/70 border border-current/20 rounded px-1.5 py-1 text-[10px] text-gray-700 dark:text-gray-200 outline-none">
+                                  <select
+                                    value={step.status}
+                                    disabled={savingWorkflowStep === step._id}
+                                    onChange={event => updateWorkflowStep(step, { status: event.target.value })}
+                                    className="bg-white/80 dark:bg-gray-900/70 border border-current/20 rounded px-1.5 py-1 text-[10px] text-gray-700 dark:text-gray-200 outline-none disabled:cursor-wait disabled:opacity-60"
+                                  >
                                     <option value="pending">Pending</option>
                                     <option value="in_progress">In Progress</option>
                                     <option value="blocked">Blocked</option>
                                     <option value="completed">Completed</option>
                                   </select>
                                 </div>
-                                <input key={`${step._id}-${step.notes}`} defaultValue={step.notes || ''} onBlur={event => {
-                                  if (event.target.value !== (step.notes || '')) updateWorkflowStep(step._id, { notes: event.target.value });
-                                }} placeholder="Notes or blocker reason" className="w-full mt-2 px-2 py-1.5 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-[10px] text-gray-600 dark:text-gray-300 outline-none focus:border-indigo-300 dark:focus:border-indigo-500" />
+                                <input key={`${step._id}-${step.notes}`} defaultValue={step.notes || ''} disabled={savingWorkflowStep === step._id} onBlur={event => {
+                                  if (event.target.value !== (step.notes || '')) updateWorkflowStep(step, { notes: event.target.value });
+                                }} placeholder="Notes or blocker reason" className="w-full mt-2 px-2 py-1.5 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-[10px] text-gray-600 dark:text-gray-300 outline-none focus:border-indigo-300 dark:focus:border-indigo-500 disabled:cursor-wait disabled:opacity-60" />
                               </div>
                             ))}
                           </div>
