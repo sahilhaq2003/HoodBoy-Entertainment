@@ -79,7 +79,8 @@ const removeCloudinaryDocument = async (documentUrl) => {
     if (uploadIndex === -1) return false;
     const pathParts = segments.slice(uploadIndex + 1);
     if (/^v\d+$/.test(pathParts[0])) pathParts.shift();
-    const publicId = pathParts.join('/').replace(/\.[^.]+$/, '');
+    // Cloudinary raw assets retain their extension in the public ID.
+    const publicId = pathParts.join('/');
     if (!publicId.startsWith('hbe/documents/')) return false;
     await cloudinary.uploader.destroy(publicId, { resource_type: 'raw', invalidate: true });
     return true;

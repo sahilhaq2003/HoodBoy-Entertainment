@@ -1,5 +1,5 @@
 const Contract = require('../models/Contract');
-const { uploadDocument } = require('../services/cloudinaryArtistImages');
+const { uploadDocument, removeCloudinaryDocument } = require('../services/cloudinaryArtistImages');
 
 const parseJsonFields = (body = {}) => {
   const data = { ...body };
@@ -80,8 +80,11 @@ exports.update = async (req, res) => {
   try {
     const contract = await Contract.findById(req.params.id);
     if (!contract) return res.status(404).json({ success: false, message: 'Contract not found' });
-    Object.assign(contract, await contractPayload(req));
+    const previousFileUrl = contract.fileUrl;
+    const payload = await contractPayload(req);
+    Object.assign(contract, payload);
     await contract.save();
+    if (payload.fileUrl && payload.fileUrl !== previousFileUrl) await removeCloudinaryDocument(previousFileUrl);
     res.json({ success: true, data: contract });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -92,6 +95,7 @@ exports.delete = async (req, res) => {
   try {
     const contract = await Contract.findByIdAndDelete(req.params.id);
     if (!contract) return res.status(404).json({ success: false, message: 'Contract not found' });
+    await removeCloudinaryDocument(contract.fileUrl);
     res.json({ success: true, message: 'Contract deleted' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

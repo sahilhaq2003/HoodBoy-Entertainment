@@ -1,5 +1,5 @@
 const Finance = require('../models/Finance');
-const { uploadDocument } = require('../services/cloudinaryArtistImages');
+const { uploadDocument, removeCloudinaryDocument } = require('../services/cloudinaryArtistImages');
 
 const financePayload = async (req) => {
   const payload = { ...req.body };
@@ -58,8 +58,13 @@ const updateFinance = async (req, res) => {
   try {
     const finance = await Finance.findById(req.params.id);
     if (!finance) return res.status(404).json({ success: false, message: 'Finance record not found' });
-    Object.assign(finance, await financePayload(req));
+    const previousReceiptUrl = finance.receiptUrl;
+    const previousInvoiceUrl = finance.invoiceUrl;
+    const payload = await financePayload(req);
+    Object.assign(finance, payload);
     await finance.save();
+    if (payload.receiptUrl && payload.receiptUrl !== previousReceiptUrl) await removeCloudinaryDocument(previousReceiptUrl);
+    if (payload.invoiceUrl && payload.invoiceUrl !== previousInvoiceUrl) await removeCloudinaryDocument(previousInvoiceUrl);
     res.json({ success: true, data: finance });
   } catch (error) { res.status(400).json({ success: false, message: error.message }); }
 };
@@ -68,6 +73,8 @@ const deleteFinance = async (req, res) => {
   try {
     const finance = await Finance.findByIdAndDelete(req.params.id);
     if (!finance) return res.status(404).json({ success: false, message: 'Finance record not found' });
+    await removeCloudinaryDocument(finance.receiptUrl);
+    await removeCloudinaryDocument(finance.invoiceUrl);
     res.json({ success: true, message: 'Finance record deleted' });
   } catch (error) { res.status(500).json({ success: false, message: error.message }); }
 };
