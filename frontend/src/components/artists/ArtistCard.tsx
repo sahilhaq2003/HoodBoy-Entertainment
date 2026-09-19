@@ -62,7 +62,7 @@ const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onOpen, onDelete }) => 
           style={{ background: color }}
         >
           {artist.image ? (
-            <img src={artist.image} alt={name} className="w-full h-full object-cover" />
+            <img src={artist.image} alt={name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
           ) : (
             getInitials(name)
           )}

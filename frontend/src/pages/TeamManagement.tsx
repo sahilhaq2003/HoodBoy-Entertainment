@@ -248,7 +248,7 @@ const TeamManagement: React.FC = () => {
                 <div key={u._id} className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50/50 dark:hover:bg-gray-800/60 transition-colors">
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
                     style={{ background: `linear-gradient(135deg, ${rc.color}, ${rc.color}99)` }}>
-                    {u.avatar ? <img src={u.avatar} alt={u.name} className="w-full h-full object-cover rounded-xl" /> : u.name.charAt(0)}
+                    {u.avatar ? <img src={u.avatar} alt={u.name} loading="lazy" decoding="async" className="w-full h-full object-cover rounded-xl" /> : u.name.charAt(0)}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">

@@ -125,7 +125,7 @@ const Login: React.FC = () => {
           {/* Top row */}
           <div className="relative z-10 flex flex-col">
             <div className="flex items-center gap-3 mb-10">
-              <img src="/logo.png" alt="HoodBoy Entertainment" className="w-20 h-20 object-contain flex-shrink-0 drop-shadow-lg" />
+              <img src="/logo-160.png" alt="HoodBoy Entertainment" width="80" height="80" decoding="async" className="w-20 h-20 object-contain flex-shrink-0 drop-shadow-lg" />
               <div>
                 <div className="text-white font-bold text-xl tracking-tight">HoodBoy Entertainment</div>
                 <div className="text-purple-200 text-[10.5px] font-medium tracking-wide uppercase">Lnkup Label Management Platform</div>
@@ -179,7 +179,7 @@ const Login: React.FC = () => {
             <div className="absolute -top-10 -right-10 w-36 h-36 rounded-full bg-white/10 blur-xl" />
             <div className="absolute bottom-0 left-0 w-full h-10 bg-white/[0.05] rounded-t-full" />
             <div className="relative z-10 flex items-center gap-3 mb-4">
-              <img src="/logo.png" alt="HoodBoy Entertainment" className="w-16 h-16 object-contain flex-shrink-0" />
+              <img src="/logo-160.png" alt="HoodBoy Entertainment" width="64" height="64" decoding="async" className="w-16 h-16 object-contain flex-shrink-0" />
               <div>
                 <div className="text-white font-bold tracking-tight">HoodBoy Entertainment</div>
                 <div className="text-purple-200 text-[10px] font-medium uppercase tracking-wider">Lnkup Label Management Platform</div>

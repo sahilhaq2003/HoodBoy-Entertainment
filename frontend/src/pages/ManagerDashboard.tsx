@@ -153,7 +153,7 @@ const ManagerDashboard: React.FC = () => {
                 <div key={idx} className="flex items-center justify-between p-3 rounded-xl border border-(--hbe-line) bg-(--hbe-fill-soft) hover:bg-(--hbe-fill) transition-colors">
                   <div className="flex items-center gap-3 min-w-0">
                     {artist.image ? (
-                      <img src={artist.image} alt={artist.stageName || artist.name} className="w-10 h-10 rounded-[11px] object-cover shrink-0" />
+                      <img src={artist.image} alt={artist.stageName || artist.name} loading="lazy" decoding="async" className="w-10 h-10 rounded-[11px] object-cover shrink-0" />
                     ) : (
                       <div className="w-10 h-10 rounded-[11px] bg-[#7C3AED]/12 flex items-center justify-center shrink-0">
                         <Users size={16} className="text-[#8B5CF6]" />

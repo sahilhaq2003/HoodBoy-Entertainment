@@ -34,7 +34,11 @@ app.use('/uploads', (req, res, next) => {
     return res.status(404).json({ success: false, message: 'Use the authorized file endpoint' });
   }
   return next();
-}, express.static(path.join(__dirname, 'uploads')));
+}, express.static(path.join(__dirname, 'uploads'), {
+  maxAge: '7d',
+  immutable: true,
+  etag: true,
+}));
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));

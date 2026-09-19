@@ -97,7 +97,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       {/* Logo */}
       <div className="flex min-h-[72px] items-center justify-between px-5 py-4">
         <div className="flex items-center gap-3 min-w-0">
-          <img src="/logo.png" alt="HoodBoy Entertainment" className="w-11 h-11 object-contain flex-shrink-0 drop-shadow-sm" />
+          <img src="/logo-160.png" alt="HoodBoy Entertainment" width="44" height="44" decoding="async" className="w-11 h-11 object-contain flex-shrink-0 drop-shadow-sm" />
           <div className="min-w-0">
             <div className="text-[19px] font-extrabold tracking-[-0.02em] bg-gradient-to-r from-[#7C3AED] via-[#8B5CF6] to-[#A855F7] bg-clip-text text-transparent drop-shadow-sm leading-tight">HoodBoy Ent.</div>
           </div>

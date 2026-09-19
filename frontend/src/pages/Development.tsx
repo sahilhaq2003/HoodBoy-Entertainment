@@ -299,7 +299,7 @@ const Development: React.FC = () => {
                     style={{ background: getAvatarColor(name) }}
                   >
                     {(item.artist as any).image ? (
-                      <img src={(item.artist as any).image} alt={name} className="w-full h-full object-cover rounded-xl" />
+                      <img src={(item.artist as any).image} alt={name} loading="lazy" decoding="async" className="w-full h-full object-cover rounded-xl" />
                     ) : getInitials(name)}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -393,7 +393,7 @@ const Development: React.FC = () => {
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold text-xs" style={{ background: getAvatarColor(name) }}>
-                          {artist?.image ? <img src={artist.image} alt={name} className="w-full h-full object-cover rounded-lg" /> : getInitials(name)}
+                          {artist?.image ? <img src={artist.image} alt={name} loading="lazy" decoding="async" className="w-full h-full object-cover rounded-lg" /> : getInitials(name)}
                         </div>
                         <div>
                           <div className="text-sm font-semibold text-gray-900">{name}</div>

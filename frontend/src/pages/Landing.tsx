@@ -40,7 +40,7 @@ const Landing: React.FC = () => {
 
         <header className="grow-nav">
           <Link className="grow-brand" to="/" aria-label="HoodBoy Entertainment home">
-            <img src="/logo.png" alt="" />
+            <img src="/logo-160.png" alt="" width="160" height="160" decoding="async" />
             <span><strong>HoodBoy Entertainment</strong><small>Lnkup platform</small></span>
           </Link>
           <Link className="grow-login" to="/login">Sign in <ArrowUpRight size={14} /></Link>

@@ -364,7 +364,7 @@ const Dashboard: React.FC = () => {
               {topArtists.map((artist, idx) => (
                 <div key={artist._id} className="flex items-center gap-3 p-2.5 rounded-xl transition-colors hover:bg-(--hbe-hover-fill)" style={{ animationDelay: `${idx * 60}ms` }}>
                   {artist.image ? (
-                    <img src={artist.image} alt={artist.stageName || artist.name} className="w-8 h-8 rounded-[10px] object-cover shrink-0" />
+                    <img src={artist.image} alt={artist.stageName || artist.name} loading="lazy" decoding="async" className="w-8 h-8 rounded-[10px] object-cover shrink-0" />
                   ) : (
                     <div className="w-8 h-8 rounded-[10px] flex items-center justify-center text-xs font-bold text-white shrink-0" style={{ background: 'linear-gradient(135deg,#7C3AED,#0EA5E9)' }}>
                       {(artist.stageName || artist.name).charAt(0)}

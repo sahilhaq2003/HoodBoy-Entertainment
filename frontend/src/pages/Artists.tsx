@@ -216,7 +216,7 @@ const Artists: React.FC = () => {
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold text-xs flex-shrink-0" style={{ background: getAvatarColor(displayName) }}>
-                            {artist.image ? <img src={artist.image} alt={displayName} className="w-full h-full object-cover rounded-lg" /> : getInitials(displayName)}
+                            {artist.image ? <img src={artist.image} alt={displayName} loading="lazy" decoding="async" className="w-full h-full object-cover rounded-lg" /> : getInitials(displayName)}
                           </div>
                           <div>
                             <div className="text-sm font-semibold text-gray-900">{displayName}</div>
