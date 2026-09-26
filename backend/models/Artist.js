@@ -118,6 +118,12 @@ const artistSchema = new mongoose.Schema({
   totalStreams: { type: Number, default: 0 },
   totalRevenue: { type: Number, default: 0 },
   royaltyRate: { type: Number, default: 15 },
+
+  // LabelGrid integration (kept separate from the artist's business profile)
+  labelgridArtistId: { type: String, default: '', index: true },
+  labelgridSyncStatus: { type: String, enum: ['not_synced', 'syncing', 'synced', 'error'], default: 'not_synced' },
+  labelgridLastSyncedAt: { type: Date },
+  labelgridSyncError: { type: String, default: '' },
 }, { timestamps: true });
 
 // Virtual for display name

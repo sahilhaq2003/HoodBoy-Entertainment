@@ -1,9 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { User, Lock, Bell, Palette, Database, Shield, Save, Loader2, Camera, X, Users, ExternalLink, Copy } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
-import { settingsApi } from '../services/api';
+import { settingsApi, labelgridApi } from '../services/api';
 import { authApi } from '../services/api';
 import { applyAppearance, getAppearance, type AppearanceFontSize, type AppearanceTheme } from '../utils/appearance';
 
@@ -62,6 +62,27 @@ const Settings: React.FC = () => {
   const [selectedTheme, setSelectedTheme] = useState<AppearanceTheme>(initialAppearance.theme);
   const [fontSize, setFontSize] = useState<AppearanceFontSize>(initialAppearance.fontSize);
   const [integrationLinks, setIntegrationLinks] = useState({ spotify: '', appleMusic: '', distributor: '', ...user?.integrationLinks });
+  const [labelgrid, setLabelgrid] = useState<any>(null);
+  const [labelgridBusy, setLabelgridBusy] = useState('');
+
+  const loadLabelGrid = async () => {
+    if (user?.role !== 'admin') return;
+    try { setLabelgrid((await labelgridApi.getStatus()).data.data); }
+    catch (e: any) { setLabelgrid({ status: 'connection_error', message: e.response?.data?.message || 'Unable to check LabelGrid' }); }
+  };
+  useEffect(() => { if (activeSection === 'integrations') loadLabelGrid(); }, [activeSection]);
+
+  const runLabelGrid = async (action: 'test' | 'artists' | 'releases') => {
+    setLabelgridBusy(action);
+    try {
+      if (action === 'artists') await labelgridApi.syncArtists();
+      else if (action === 'releases') await labelgridApi.syncReleases();
+      else await labelgridApi.testConnection();
+      toast.success(action === 'test' ? 'LabelGrid connection checked' : `LabelGrid ${action} synchronized`);
+      await loadLabelGrid();
+    } catch (e: any) { toast.error(e.response?.data?.message || 'LabelGrid action failed'); }
+    finally { setLabelgridBusy(''); }
+  };
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -396,6 +417,12 @@ const Settings: React.FC = () => {
                 { key: 'appleMusic' as const, label: 'Apple Music for Artists / label profile' },
                 { key: 'distributor' as const, label: 'Distributor dashboard' },
               ].map(item => <div key={item.key}><label className="block text-xs font-medium text-gray-500 mb-1.5 dark:text-gray-400">{item.label}</label><div className="flex gap-2"><input type="url" value={integrationLinks[item.key] || ''} onChange={e => setIntegrationLinks(prev => ({ ...prev, [item.key]: e.target.value }))} placeholder="https://..." className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />{/^https?:\/\//i.test(integrationLinks[item.key] || '') && <a href={integrationLinks[item.key]} target="_blank" rel="noreferrer" className="p-2 border rounded-lg text-indigo-600 dark:border-gray-600" title="Open link"><ExternalLink size={17} /></a>}</div></div>)}</div>
+              {user?.role === 'admin' && <div className="mt-7 border-t border-gray-200 pt-6 dark:border-gray-700">
+                <div className="flex items-center justify-between gap-3"><div><h3 className="font-bold text-gray-900 dark:text-gray-100">LabelGrid</h3><p className="text-xs text-gray-500">Server-side distribution API connection</p></div><span className={`rounded-full px-3 py-1 text-xs font-bold ${labelgrid?.status === 'connected' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{String(labelgrid?.status || 'loading').replaceAll('_', ' ')}</span></div>
+                <dl className="mt-4 grid grid-cols-2 gap-3 text-xs sm:grid-cols-4"><div><dt className="text-gray-500">API URL</dt><dd className="mt-1 break-all font-semibold dark:text-gray-200">{labelgrid?.baseUrl || '—'}</dd></div><div><dt className="text-gray-500">API token</dt><dd className="mt-1 font-semibold dark:text-gray-200">{labelgrid?.credentialHint || 'Not configured'}</dd></div><div><dt className="text-gray-500">Synced artists</dt><dd className="mt-1 font-semibold dark:text-gray-200">{labelgrid?.syncedArtists ?? '—'}</dd></div><div><dt className="text-gray-500">Synced releases / errors</dt><dd className="mt-1 font-semibold dark:text-gray-200">{labelgrid?.syncedReleases ?? '—'} / {labelgrid?.syncErrors ?? '—'}</dd></div><div><dt className="text-gray-500">Last successful sync</dt><dd className="mt-1 font-semibold dark:text-gray-200">{labelgrid?.lastSuccessfulSync ? new Date(labelgrid.lastSuccessfulSync).toLocaleString() : 'Never'}</dd></div><div><dt className="text-gray-500">Last failed sync</dt><dd className="mt-1 font-semibold dark:text-gray-200">{labelgrid?.lastFailedSync ? new Date(labelgrid.lastFailedSync).toLocaleString() : 'None'}</dd></div><div><dt className="text-gray-500">Webhook</dt><dd className="mt-1 font-semibold dark:text-gray-200">{labelgrid?.webhookStatus?.replaceAll('_', ' ') || '—'}</dd></div></dl>
+                {labelgrid?.message && <p className="mt-3 text-xs text-gray-500">{labelgrid.message}</p>}
+                <div className="mt-4 flex flex-wrap gap-2">{[['test','Test Connection'],['artists','Sync Artists'],['releases','Sync Releases']] .map(([key,label]) => <button key={key} type="button" disabled={Boolean(labelgridBusy)} onClick={() => runLabelGrid(key as 'test'|'artists'|'releases')} className="rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold disabled:opacity-50 dark:border-gray-600 dark:text-gray-200">{labelgridBusy === key ? 'Working…' : label}</button>)}</div>
+              </div>}
             </div>
           )}
 

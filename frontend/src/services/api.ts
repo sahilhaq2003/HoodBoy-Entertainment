@@ -215,6 +215,29 @@ export const releasesApi = {
   getDashboard: () => api.get('/releases/dashboard'),
 };
 
+export const distributionApi = {
+  getAll: (params?: object) => api.get('/distribution', { params }),
+  getById: (id: string) => api.get(`/distribution/${id}`),
+  getConnection: () => api.get('/distribution/connection'),
+  getReferenceData: () => api.get('/distribution/reference-data'),
+  create: (data: FormData) => api.post('/distribution', data, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  update: (id: string, data: FormData) => api.put(`/distribution/${id}`, data, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  submit: (id: string) => api.post(`/distribution/${id}/submit`),
+  sync: (id: string) => api.post(`/distribution/${id}/sync`),
+  getRoyaltySummary: (params?: object) => api.get('/distribution/royalties/summary', { params }),
+  exportRoyalties: () => api.get('/distribution/royalties/export', { responseType: 'blob' }),
+  getLabelGridRoyalties: (params?: object) => api.get('/distribution/labelgrid/royalties', { params }),
+  getLabelGridAnalytics: (params?: object) => api.get('/distribution/labelgrid/analytics', { params }),
+};
+
+export const labelgridApi = {
+  getStatus: () => api.get('/labelgrid/connection-status'),
+  testConnection: () => api.get('/labelgrid/connection-status'),
+  syncArtists: () => api.post('/labelgrid/sync/artists'),
+  syncReleases: () => api.post('/labelgrid/sync/releases'),
+  syncArtist: (id: string) => api.post(`/labelgrid/artists/${id}/sync`),
+};
+
 // Contracts
 export const contractsApi = {
   getAll: (params?: object) => api.get('/contracts', { params }),

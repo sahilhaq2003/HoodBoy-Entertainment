@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HoodBoy Entertainment - LabelGrid API Integration & Workflow Guide</title>
+<style>
+  @page { size: A4; margin: 14mm 14mm 15mm; }
+  @page:first { margin: 0; }
+  :root {
+    --ink: #151827;
+    --muted: #626979;
+    --purple: #6d28d9;
+    --purple2: #8b5cf6;
+    --gold: #f4bd45;
+    --line: #dfe2e8;
+    --soft: #f6f3ff;
+    --green: #16834a;
+    --red: #c52b32;
+    --blue: #1477b8;
+    --amber: #b76a09;
+    --dark-bg: #11091f;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; color: var(--ink); background: #fff; font: 9.2pt/1.42 "Segoe UI", Arial, sans-serif; }
+  h1, h2, h3, h4, p { margin-top: 0; }
+  h1 { font-size: 22pt; line-height: 1.1; letter-spacing: -.5px; margin-bottom: 6px; }
+  h2 { font-size: 15pt; line-height: 1.18; letter-spacing: -.25px; margin-bottom: 6px; color: var(--purple); }
+  h3 { color: #4c1d95; font-size: 11pt; margin: 8px 0 4px; }
+  h4 { font-size: 9.5pt; margin: 0 0 2px; }
+  p { margin-bottom: 6px; }
+  ul, ol { margin: 3px 0 6px 16px; padding: 0; }
+  li { margin: 2px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 6px 0 9px; font-size: 8.2pt; }
+  th, td { border: 1px solid var(--line); padding: 5px 6px; vertical-align: top; }
+  th { color: #44206e; background: #eee9ff; text-align: left; font-weight: 700; }
+  
+  .page { page-break-before: always; padding-top: 2px; }
+  
+  /* COVER PAGE */
+  .cover {
+    height: 297mm;
+    padding: 22mm 20mm;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    color: #fff;
+    background: linear-gradient(145deg, #0d0618 0%, #290e4e 40%, #6d28d9 75%, #9333ea 100%);
+  }
+  .cover:before {
+    content: "";
+    position: absolute;
+    width: 180mm;
+    height: 180mm;
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 50%;
+    right: -75mm;
+    top: -75mm;
+  }
+  .cover:after {
+    content: "";
+    position: absolute;
+    width: 110mm;
+    height: 110mm;
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 50%;
+    left: -55mm;
+    bottom: -40mm;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; position: relative; z-index: 1; }
+  .brand img { width: 28mm; height: 28mm; object-fit: contain; filter: drop-shadow(0 6px 12px rgba(0,0,0,.4)); }
+  .brand strong { display: block; font-size: 19pt; letter-spacing: -.3px; }
+  .brand span { color: #e9d5ff; font-size: 8.5pt; letter-spacing: 1.4px; text-transform: uppercase; }
+  .cover-main { position: relative; z-index: 1; margin: auto 0; max-width: 165mm; }
+  .eyebrow {
+    display: inline-block;
+    margin-bottom: 14px;
+    padding: 5px 12px;
+    border: 1px solid rgba(255,255,255,.3);
+    border-radius: 99px;
+    background: rgba(255,255,255,.12);
+    font-size: 8pt;
+    font-weight: 700;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+  }
+  .cover h1 { color: #fff; font-size: 34pt; line-height: 1.05; margin-bottom: 14px; }
+  .cover-lead { max-width: 145mm; color: #f2e9ff; font-size: 13.5pt; line-height: 1.45; }
+  .cover-flow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 22px;
+    font-size: 7.8pt;
+    font-weight: 700;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+  }
+  .cover-flow span { background: rgba(255,255,255,0.15); padding: 5px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); }
+  .cover-flow b { color: var(--gold); font-size: 11pt; }
+  .cover-meta {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    justify-content: space-between;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255,255,255,.22);
+    color: #eadcff;
+    font-size: 8.5pt;
+  }
+  
+  /* HEADER & SECTION ELEMENTS */
+  .page-head { display: flex; align-items: center; gap: 9px; padding-bottom: 7px; margin-bottom: 8px; border-bottom: 2px solid #eee9ff; }
+  .num { width: 28px; height: 28px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 8px; color: #fff; background: linear-gradient(135deg, #6d28d9, #a855f7); font-weight: 800; font-size: 10pt; }
+  .page-head h1 { margin: 0; font-size: 18pt; }
+  .lead { color: var(--muted); font-size: 9.8pt; margin-bottom: 8px; }
+  
+  /* UTILITY CARDS & GRIDS */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+  .card { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; page-break-inside: avoid; background: #fff; }
+  .card h3 { margin-top: 0; }
+  
+  .flow-box {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin: 6px 0 10px;
+    padding: 6px 8px;
+    background: #f8f6ff;
+    border: 1px solid #ddd6fe;
+    border-radius: 7px;
+    page-break-inside: avoid;
+  }
+  .flow-box .step-item { flex: 1; text-align: center; font-size: 7.8pt; font-weight: 700; color: #4c1d95; background: #fff; padding: 5px; border-radius: 5px; border: 1px solid #e9d5ff; }
+  .flow-box .arr { color: var(--purple2); font-weight: bold; font-size: 10pt; }
+
+  .callout { padding: 8px 10px; margin: 7px 0 9px; border-left: 4px solid var(--purple); border-radius: 0 8px 8px 0; background: var(--soft); page-break-inside: avoid; font-size: 8.8pt; }
+  .callout strong { display: block; margin-bottom: 2px; color: #4c1d95; }
+  .callout.warn { border-color: #d97706; background: #fffbeb; }
+  .callout.warn strong { color: #b45309; }
+  .callout.danger { border-color: #dc2626; background: #fef2f2; }
+  .callout.danger strong { color: #b91c1c; }
+  .callout.info { border-color: #0284c7; background: #f0f9ff; }
+  .callout.info strong { color: #0369a1; }
+  
+  .code-block {
+    background: #1e1e2e;
+    color: #cdd6f4;
+    padding: 8px 10px;
+    border-radius: 7px;
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 7.8pt;
+    line-height: 1.35;
+    margin: 6px 0 8px;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  
+  .badge { display: inline-block; padding: 2px 6px; border-radius: 99px; font-size: 7.2pt; font-weight: 700; text-transform: uppercase; }
+  .badge.success { background: #dcfce7; color: #15803d; }
+  .badge.pending { background: #fef9c3; color: #a16207; }
+  .badge.error { background: #fee2e2; color: #b91c1c; }
+  .badge.info { background: #e0f2fe; color: #0369a1; }
+  
+  .steps-list { counter-reset: step; list-style: none; margin-left: 0; padding-left: 0; }
+  .steps-list li { counter-increment: step; position: relative; min-height: 22px; padding: 4px 0 6px 28px; font-size: 8.8pt; }
+  .steps-list li:before {
+    content: counter(step);
+    position: absolute;
+    left: 0; top: 3px;
+    width: 20px; height: 20px;
+    display: grid; place-items: center;
+    border-radius: 6px;
+    color: #5b21b6; background: #ede9fe;
+    font-size: 8pt; font-weight: 800;
+  }
+
+  .footer { margin-top: 10px; padding-top: 6px; border-top: 1px solid #e5e7eb; color: #777e8b; font-size: 7.5pt; display: flex; justify-content: space-between; }
+  @media print { a { color: inherit; text-decoration: none; } }
+</style>
+</head>
+<body>
+
+<!-- COVER PAGE -->
+<section class="cover">
+  <div class="brand">
+    <img src="../frontend/public/logo.png" alt="HoodBoy Entertainment Logo">
+    <div>
+      <strong>HoodBoy Entertainment</strong>
+      <span>Lnkup Label Management System</span>
+    </div>
+  </div>
+  <div class="cover-main">
+    <div class="eyebrow">Technical & Operational Guide</div>
+    <h1>LabelGrid API<br>Integration Manual</h1>
+    <p class="cover-lead">A comprehensive step-by-step guide explaining how the HoodBoy Entertainment system operates after integrating the LabelGrid OpenAPI standard for automated digital music distribution, asset ingestion, status tracking, and webhooks.</p>
+    <div class="cover-flow">
+      <span>1. Setup & Env</span><b>→</b>
+      <span>2. Admin Health</span><b>→</b>
+      <span>3. Asset Ingestion</span><b>→</b>
+      <span>4. Validation & Submit</span><b>→</b>
+      <span>5. Webhooks & Sync</span>
+    </div>
+  </div>
+  <div class="cover-meta">
+    <span>System Specification v2.0</span>
+    <span>September 2026</span>
+    <span>Label Operations & Engineering</span>
+  </div>
+</section>
+
+<!-- PAGE 1: ARCHITECTURE & SYSTEM OVERVIEW -->
+<section class="page">
+  <div class="page-head">
+    <span class="num">1</span>
+    <h1>Architecture & System Overview</h1>
+  </div>
+  <p class="lead">The HoodBoy Entertainment (HBE) Label Management System uses a dual-layer architecture combining local Mongoose/MongoDB persistence with LabelGrid's remote OpenAPI endpoints.</p>
+  
+  <div class="flow-box">
+    <div class="step-item">Frontend UI<br>(React + Vite)</div>
+    <div class="arr">➔</div>
+    <div class="step-item">HBE Backend API<br>(Node / Express)</div>
+    <div class="arr">➔</div>
+    <div class="step-item">Local MongoDB<br>(HBE Workflow State)</div>
+    <div class="arr">➔</div>
+    <div class="step-item">LabelGrid Service<br>(`services/labelgrid`)</div>
+    <div class="arr">➔</div>
+    <div class="step-item">LabelGrid API<br>(`/api/public`)</div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Key Architectural Principles</h3>
+      <ul>
+        <li><strong>Single API Proxy:</strong> The client browser communicates <em>only</em> with the HBE backend. It never calls LabelGrid endpoints directly.</li>
+        <li><strong>Zero Secret Exposure:</strong> Bearer tokens and webhook secrets reside strictly on the server side (`backend/.env`). No secrets exist in `frontend/.env` or client memory.</li>
+        <li><strong>Idempotent Remote Linking:</strong> Local MongoDB records store LabelGrid entity IDs (`labelgridArtistId`, `labelgridReleaseId`, `labelgridTrackId`). Retries always use existing IDs rather than creating duplicate remote entities.</li>
+        <li><strong>Authoritative Remote Validation:</strong> Distribution triggers local verification first, followed by LabelGrid's pre-flight validation API before final delivery.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>LabelGrid OpenAPI Alignment</h3>
+      <ul>
+        <li><strong>Documented Spec:</strong> Built against the official public LabelGrid API standard (`https://api.labelgrid.com/docs/api`).</li>
+        <li><strong>No Mock Fallbacks:</strong> Operates strictly against real API endpoints in both sandbox and production environments.</li>
+        <li><strong>Presigned S3 Assets:</strong> Uses LabelGrid's presigned S3/cloud URL generation with local SHA-256 hash validation for reliable audio asset streaming.</li>
+        <li><strong>HMAC Webhook Security:</strong> Receives real-time state changes via cryptographically signed webhooks.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>System Data Model & Linkage</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>HBE Local Model</th>
+        <th>LabelGrid Entity Mapping</th>
+        <th>Stored Identifiers</th>
+        <th>Synchronization Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Artist (`Artist.js`)</strong></td>
+        <td>LabelGrid Artist Profile</td>
+        <td>`labelgridArtistId`, `labelgridSyncStatus`, `labelgridSyncError`</td>
+        <td>Automated lookup/creation on submit or manual admin bulk sync.</td>
+      </tr>
+      <tr>
+        <td><strong>Distribution Release (`Distribution.js`)</strong></td>
+        <td>LabelGrid Release</td>
+        <td>`labelgridReleaseId`, `labelgridStatus`, `labelgridValidationResult`</td>
+        <td>Creation, cover image upload, DSP outlet target assignment, submit for distribution.</td>
+      </tr>
+      <tr>
+        <td><strong>Embedded Track (`Track`)</strong></td>
+        <td>LabelGrid Track</td>
+        <td>`labelgridTrackId`, `labelgridUploadState`, `audioPresignedUrl`</td>
+        <td>Presigned URL fetch, direct binary stream, SHA-256 confirmation.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout info">
+    <strong>Note on Legacy Data & Local Records:</strong>
+    Local MongoDB remains the authoritative source of truth for HBE label workflows, user access levels, and local financial ledgers. LabelGrid IDs are attached lazily without requiring destructive database migrations.
+  </div>
+
+  <div class="footer">
+    <span>HoodBoy Entertainment — LabelGrid Manual</span>
+    <span>Page 1</span>
+  </div>
+</section>
+
+<!-- PAGE 2: ENVIRONMENT CONFIGURATION & SETUP -->
+<section class="page">
+  <div class="page-head">
+    <span class="num">2</span>
+    <h1>Environment Configuration & Setup</h1>
+  </div>
+  <p class="lead">Proper configuration requires setting four environment variables on the backend server, whitelisting server IP addresses, and ensuring required node runtime capabilities.</p>
+
+  <div class="card">
+    <h3>1. Required Backend Environment Variables</h3>
+    <p>Configure these variables inside <code>backend/.env</code> on your deployment server:</p>
+    <div class="code-block">LABELGRID_API_TOKEN=your_long_lived_labelgrid_bearer_token
+LABELGRID_BASE_URL=https://api.labelgrid.com/api/public
+LABELGRID_LABEL_ID=10482
+LABELGRID_WEBHOOK_SECRET=whsec_98f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3</div>
+  </div>
+
+  <div class="grid2" style="margin-top: 8px;">
+    <div class="card">
+      <h3>2. Server & Network Requirements</h3>
+      <ul>
+        <li><strong>Node.js Runtime:</strong> Node 20 LTS or higher required for native global <code>fetch</code>, <code>FormData</code>, <code>Blob</code>, and <code>AbortSignal.timeout</code>.</li>
+        <li><strong>Outbound IP Allowlist:</strong> Ensure your production/sandbox server static outbound IP is registered in the LabelGrid Developer Console.</li>
+        <li><strong>Asset Persistence:</strong> Keep <code>backend/uploads/distribution</code> directory persistent and readable across app restarts until asset confirmation completes.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>3. Webhook Setup Instructions</h3>
+      <ul>
+        <li><strong>Public Webhook URL:</strong> Configure LabelGrid webhook endpoint to point to:<br><code>https://api.hoodboyent.com/api/webhooks/labelgrid</code></li>
+        <li><strong>Subscribed Events:</strong> Select release review, delivery, outlet status, transcode, and takedown events.</li>
+        <li><strong>Secret Storage:</strong> Copy the generated secret key into <code>LABELGRID_WEBHOOK_SECRET</code>.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <strong>Security Alert:</strong>
+    Never commit <code>LABELGRID_API_TOKEN</code> or <code>LABELGRID_WEBHOOK_SECRET</code> to git or pass them to frontend code. The backend uses static token headers for outgoing calls and HMAC signature validation for incoming webhooks.
+  </div>
+
+  <h3>System Initialization Flow</h3>
+  <ul class="steps-list">
+    <li><strong>Set Environment Variables:</strong> Populate <code>backend/.env</code> with API credentials and restart the backend server daemon.</li>
+    <li><strong>Verify Admin Status:</strong> Navigate to <strong>Settings ➔ Integrations ➔ LabelGrid</strong> in the Admin Dashboard.</li>
+    <li><strong>Perform Connection Health Test:</strong> Click <strong>Test Connection</strong>. The system calls <code>GET /me</code> via backend service to confirm HTTP 200 connectivity.</li>
+    <li><strong>Execute Initial Artist Sync:</strong> Click <strong>Sync Artists</strong> to match existing local HBE artists with LabelGrid profiles and store remote IDs.</li>
+  </ul>
+
+  <div class="footer">
+    <span>HoodBoy Entertainment — LabelGrid Manual</span>
+    <span>Page 2</span>
+  </div>
+</section>
+
+<!-- PAGE 3: STEP-BY-STEP WORKFLOW (STEPS 1 - 4) -->
+<section class="page">
+  <div class="page-head">
+    <span class="num">3</span>
+    <h1>Step-by-Step Operating Workflow (Steps 1 – 4)</h1>
+  </div>
+  <p class="lead">Detailed operational breakdown of how music releases move from creation through media asset ingestion using the integrated LabelGrid API.</p>
+
+  <div class="card">
+    <h3>Step 1: Admin System Health & Bulk Synchronization</h3>
+    <p>Admins begin in <strong>Settings ➔ Integrations ➔ LabelGrid</strong>. The backend executes background checks:</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Indicator Status</th>
+          <th>Backend Condition</th>
+          <th>Admin Action Required</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="badge success">CONNECTED</span></td>
+          <td>HTTP 200 returned from `GET /me`. Token & Label ID valid.</td>
+          <td>Ready for operational release distribution.</td>
+        </tr>
+        <tr>
+          <td><span class="badge pending">NOT CONFIGURED</span></td>
+          <td>`LABELGRID_API_TOKEN` or `LABELGRID_LABEL_ID` missing.</td>
+          <td>Update `backend/.env` with valid credentials and restart backend.</td>
+        </tr>
+        <tr>
+          <td><span class="badge error">AUTH ERROR</span></td>
+          <td>HTTP 401/403 from LabelGrid API.</td>
+          <td>Verify bearer token validity or IP allowlist settings in LabelGrid console.</td>
+        </tr>
+        <tr>
+          <td><span class="badge error">UNAVAILABLE</span></td>
+          <td>Network timeout or HTTP 5xx error from LabelGrid server.</td>
+          <td>Check system logs and LabelGrid status page.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card" style="margin-top: 8px;">
+    <h3>Step 2: Artist Profile Synchronization</h3>
+    <p>Before submitting a release, artist metadata must be linked to LabelGrid. When an admin clicks <strong>Sync Artists</strong> or creates a new release:</p>
+    <ul>
+      <li>HBE checks if <code>artist.labelgridArtistId</code> exists.</li>
+      <li>If missing, HBE queries LabelGrid by name/email or creates a new artist profile via <code>POST /api/public/artists</code>.</li>
+      <li>The returned ID is saved into MongoDB to prevent duplicate profile creation.</li>
+    </ul>
+  </div>
+
+  <div class="grid2" style="margin-top: 8px;">
+    <div class="card">
+      <h3>Step 3: Release Creation & Dynamic Reference Data</h3>
+      <ul>
+        <li><strong>Reference Data Fetch:</strong> HBE fetches dynamic genres, languages, and DSP outlets directly via <code>GET /api/distribution/reference-data</code>.</li>
+        <li><strong>Draft Draft Assembly:</strong> The user fills title, main/featured artists, release date, UPC/catalog number, and explicit content ratings.</li>
+        <li><strong>Entity Mapping:</strong> Local release receives <code>labelgridReleaseId</code> upon creation call to <code>POST /api/public/releases</code>.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>Step 4: Media Asset Upload Engine</h3>
+      <ul>
+        <li><strong>Cover Art:</strong> Multipart upload sends 3000x3000px JPG/PNG directly to <code>POST /api/public/releases/:id/artwork</code>.</li>
+        <li><strong>Audio Presigned URL:</strong> HBE requests a presigned AWS S3 upload URL for each track.</li>
+        <li><strong>Stream & Hash:</strong> Audio file streams directly to presigned URL; HBE calculates SHA-256 checksum simultaneously.</li>
+        <li><strong>Confirmation:</strong> Call sent to LabelGrid to mark track audio upload as complete.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout info" style="margin-top: 8px;">
+    <strong>Resiliency Mechanism:</strong> If artwork or audio upload fails mid-flight, retrying the operation re-uses the existing <code>labelgridReleaseId</code> and <code>labelgridTrackId</code>, skipping redundant remote creation calls.
+  </div>
+
+  <div class="footer">
+    <span>HoodBoy Entertainment — LabelGrid Manual</span>
+    <span>Page 3</span>
+  </div>
+</section>
+
+<!-- PAGE 4: STEP-BY-STEP WORKFLOW (STEPS 5 - 8) -->
+<section class="page">
+  <div class="page-head">
+    <span class="num">4</span>
+    <h1>Step-by-Step Operating Workflow (Steps 5 – 8)</h1>
+  </div>
+  <p class="lead">Finalizing distribution submission, automated validation, webhook tracking, and financial/analytics synchronization.</p>
+
+  <div class="card">
+    <h3>Step 5: Automated Validation & Distribution Submission</h3>
+    <p>When the user clicks <strong>Distribute Release</strong>, HBE initiates a single-flight execution pipeline:</p>
+    <ol class="steps-list">
+      <li><strong>Locking UI:</strong> The submission button is instantly disabled to prevent double-submissions.</li>
+      <li><strong>Local Pre-check:</strong> Validates presence of cover art, audio track files, ISRC codes, and legal metadata.</li>
+      <li><strong>LabelGrid Validation API:</strong> Calls LabelGrid validation endpoint (<code>GET /api/public/releases/:id/validate</code>).</li>
+      <li><strong>Conditional Submission:</strong> Distribution is triggered <em>only if</em> validation response is <code>OK</code>. If errors are returned, they are formatted and presented directly to the user.</li>
+    </ol>
+  </div>
+
+  <div class="grid2" style="margin-top: 8px;">
+    <div class="card">
+      <h3>Step 6: Delivery & Status Synchronization</h3>
+      <p>Release status in HBE automatically updates based on normalized provider states:</p>
+      <table>
+        <thead>
+          <tr>
+            <th>LabelGrid Raw Status</th>
+            <th>HBE Display Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>`DRAFT` / `PENDING`</td><td><span class="badge pending">DRAFT</span></td></tr>
+          <tr><td>`VALIDATING`</td><td><span class="badge info">VALIDATING</span></td></tr>
+          <tr><td>`PROCESSING` / `IN_REVIEW`</td><td><span class="badge info">IN REVIEW</span></td></tr>
+          <tr><td>`DELIVERED` / `APPROVED`</td><td><span class="badge success">DELIVERED</span></td></tr>
+          <tr><td>`REJECTED` / `NEEDS_ACTION`</td><td><span class="badge error">ACTION REQ</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Step 7: Automated Webhooks Engine</h3>
+      <p>LabelGrid posts real-time event updates to <code>/api/webhooks/labelgrid</code>:</p>
+      <ul>
+        <li><strong>HMAC Signature Verification:</strong> Backend verifies <code>X-LabelGrid-Signature</code> using raw request body and <code>LABELGRID_WEBHOOK_SECRET</code>.</li>
+        <li><strong>Freshness Check:</strong> Timestamps older than 5 minutes are rejected to block replay attacks.</li>
+        <li><strong>Automatic Updates:</strong> Updates delivery status across DSP outlets (Spotify, Apple Music, Tidal) automatically.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top: 8px;">
+    <h3>Step 8: Financial Analytics & Royalty Integration</h3>
+    <p>LabelGrid royalty breakdown and streaming analytics are proxied via <code>GET /api/distribution/labelgrid/royalties</code> and <code>GET /api/distribution/labelgrid/analytics</code>. HBE's internal financial engine maintains local ledgers while embedding LabelGrid analytics for complete transparency.</p>
+  </div>
+
+  <div class="footer">
+    <span>HoodBoy Entertainment — LabelGrid Manual</span>
+    <span>Page 4</span>
+  </div>
+</section>
+
+<!-- PAGE 5: ERROR HANDLING & OPERATOR CHECKLIST -->
+<section class="page">
+  <div class="page-head">
+    <span class="num">5</span>
+    <h1>Error Recovery Matrix & Admin Checklist</h1>
+  </div>
+  <p class="lead">Troubleshooting guidelines, security safeguards, and standard operating procedures for label administrators.</p>
+
+  <h3>Error Translation & Troubleshooting Matrix</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Failure Scenario</th>
+        <th>System Diagnostic Message</th>
+        <th>Root Cause & Resolution Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Validation Failure</strong></td>
+        <td>`Validation Error: Missing Track Composer`</td>
+        <td>LabelGrid validation rejected release metadata. Open track metadata editor, populate writer/composer credits, and re-submit.</td>
+      </tr>
+      <tr>
+        <td><strong>Audio Presigned Expiry</strong></td>
+        <td>`Audio Upload Failed: Expired URL`</td>
+        <td>S3 presigned URL timed out. Click **Retry Upload**; HBE will request a fresh presigned URL without duplicating the release.</td>
+      </tr>
+      <tr>
+        <td><strong>Invalid Webhook Signature</strong></td>
+        <td>`HTTP 401 Unauthorized: Invalid HMAC`</td>
+        <td>Webhook secret mismatch. Verify `LABELGRID_WEBHOOK_SECRET` in `backend/.env` matches LabelGrid developer console setting.</td>
+      </tr>
+      <tr>
+        <td><strong>Rate Limit Exceeded</strong></td>
+        <td>`HTTP 429 Too Many Requests`</td>
+        <td>LabelGrid API rate limit reached. HBE automatically enforces exponential backoff retries. No user action required.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="card" style="margin-top: 8px;">
+    <h3>Master Operator & Administrator Deployment Checklist</h3>
+    <ul class="steps-list">
+      <li><strong>Environment Verification:</strong> Confirm <code>LABELGRID_API_TOKEN</code>, <code>LABELGRID_BASE_URL</code>, <code>LABELGRID_LABEL_ID</code>, and <code>LABELGRID_WEBHOOK_SECRET</code> are loaded in backend environment.</li>
+      <li><strong>Connection Health Test:</strong> Open <strong>Settings ➔ Integrations ➔ LabelGrid</strong> and confirm green <span class="badge success">CONNECTED</span> badge.</li>
+      <li><strong>Artist Linkage:</strong> Perform initial bulk sync to attach <code>labelgridArtistId</code> to all active label roster artists.</li>
+      <li><strong>Artwork & Audio Preparation:</strong> Confirm artwork is RGB 3000x3000px JPG/PNG and audio files are 16-bit 44.1kHz WAV.</li>
+      <li><strong>Pre-Submission Verification:</strong> Review ISRC codes, explicit tags, dynamic genres, and DSP target selections.</li>
+      <li><strong>Submit & Monitor:</strong> Click **Distribute Release**. Verify single-flight button locking and monitor status updates via dashboard or webhooks.</li>
+    </ul>
+  </div>
+
+  <div class="callout danger" style="margin-top: 8px;">
+    <strong>Crucial Safety Rule:</strong>
+    Do not alter local Mongoose <code>labelgridReleaseId</code> fields manually in MongoDB. Removing these IDs will cause retries to create duplicate remote releases on LabelGrid.
+  </div>
+
+  <div class="footer">
+    <span>HoodBoy Entertainment — LabelGrid Manual</span>
+    <span>Page 5</span>
+  </div>
+</section>
+
+</body>
+</html>

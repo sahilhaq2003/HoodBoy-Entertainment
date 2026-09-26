@@ -12,9 +12,11 @@ const connectDB = async () => {
     };
 
     const uri = process.env.MONGODB_URI;
+    const safeUri = uri ? uri.replace(/:([^@]+)@/, ':****@') : 'Undefined';
+    console.log(`🔌 MongoDB target URI: ${safeUri}`);
 
     const conn = await mongoose.connect(uri, options);
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+    console.log(`✅ MongoDB Connected: ${safeUri} (Host: ${conn.connection.host})`);
   } catch (error) {
     console.error(`❌ MongoDB Connection Error: ${error.message}`);
     console.error('⚠️  Running without database. Start MongoDB to enable full functionality.');

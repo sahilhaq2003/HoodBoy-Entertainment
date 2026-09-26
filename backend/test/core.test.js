@@ -1,5 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
 
 const { checkPermission } = require('../middleware/rbac');
 const { ROLE_ACCESS } = require('../middleware/rbac');
@@ -14,6 +15,9 @@ const { validateOwnershipRecord } = require('../services/ownershipValidationServ
 const { errorHandler } = require('../middleware/errorHandler');
 const { _totp, _verifyTotp } = require('../controllers/authController');
 const { makePdf, makeSilentWav } = require('../scripts/seedDemo');
+const { LabelGridClient } = require('../services/labelgrid/labelgridClient');
+const { mapArtist, normalizeStatus } = require('../services/labelgrid/labelgridMapper');
+const { verifyWebhook } = require('../services/labelgrid/labelgridWebhook');
 
 const validSources = (amount) => ({
   streaming: amount, publishing: 0, mechanical: 0, performance: 0,
@@ -211,4 +215,25 @@ test('authenticator codes and generated demo fixtures are valid', () => {
   assert.equal(wav.subarray(0, 4).toString(), 'RIFF');
   assert.equal(wav.subarray(8, 12).toString(), 'WAVE');
   assert.equal(wav.length, 16044);
+});
+
+test('LabelGrid client fails closed when server credentials are absent', async () => {
+  const client = new LabelGridClient({ token: '', baseUrl: 'https://api.labelgrid.com/api/public' });
+  await assert.rejects(client.get('/me'), error => error.code === 'LABELGRID_NOT_CONFIGURED');
+});
+
+test('LabelGrid mappings use documented fields and normalize documented states', () => {
+  const artist = mapArtist({ artistName: 'Test Artist', legalName: 'Legal Name', email: 'artist@example.test', socialLinks: { spotify: 'https://open.spotify.com/artist/test' } });
+  assert.equal(artist.artist_name, 'Test Artist');
+  assert.equal(artist.spotify_url, 'https://open.spotify.com/artist/test');
+  assert.equal(normalizeStatus({ state: 'live' }), 'live');
+  assert.equal(normalizeStatus({ review_status: 'require_changes' }), 'rejected');
+});
+
+test('LabelGrid webhook verification checks HMAC and signed timestamp', () => {
+  const secret = 'test-webhook-secret';
+  const raw = Buffer.from(JSON.stringify({ event: 'delivery.completed', timestamp: new Date().toISOString(), data: { release_id: 12, distro_queue_id: 34 } }));
+  const signature = crypto.createHmac('sha256', secret).update(raw).digest('hex');
+  assert.equal(verifyWebhook(raw, signature, secret).data.release_id, 12);
+  assert.throws(() => verifyWebhook(raw, '0'.repeat(64), secret), /Invalid LabelGrid webhook signature/);
 });

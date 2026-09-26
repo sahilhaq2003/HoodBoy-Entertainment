@@ -18,6 +18,7 @@ const iconMap: Record<string, React.ReactNode> = {
   '/artists': <Users size={17} />,
   '/songs': <Music size={17} />,
   '/releases': <Radio size={17} />,
+  '/distribution': <Disc size={17} />,
   '/the-lnk-up': <Tv size={17} />,
   '/projects': <FolderOpen size={17} />,
   '/contracts': <FileText size={17} />,
@@ -55,7 +56,7 @@ const SECTION_ORDER: Array<{ label: string; prefix: string }> = [
 
 const sectionFor = (path: string): { label: string } => {
   if (path === '/' || path.endsWith('-dashboard')) return { label: 'Overview' };
-  if (['/artists', '/songs', '/releases', '/metadata', '/files', '/my-music', '/my-releases'].some((p) => path.startsWith(p)))
+  if (['/artists', '/songs', '/releases', '/distribution', '/metadata', '/files', '/my-music', '/my-releases'].some((p) => path.startsWith(p)))
     return { label: 'Catalog' };
   if (['/projects', '/development', '/tasks', '/contracts', '/contract-templates', '/contacts', '/campaigns', '/the-lnk-up'].some((p) => path.startsWith(p)))
     return { label: 'Operations' };

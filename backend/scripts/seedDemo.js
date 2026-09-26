@@ -7,15 +7,8 @@
  *
  * Run:  node scripts/seedDemo.js   (from the backend directory)
  *
- * Demo logins use the password supplied through DEMO_PASSWORD.
- *   demo.admin@hbe.local      (admin)
- *   demo.manager@hbe.local    (manager)
- *   demo.finance@hbe.local    (finance)
- *   demo.marketing@hbe.local  (marketing)
- *   demo.kalo@hbe.local       (artist login for Kalo)
- *   demo.jae@hbe.local        (artist login for JaeDayo)
- *   demo.lyrica@hbe.local     (artist login for Lyrica)
- *   demo.onaje@hbe.local      (artist login for Onaje)
+ * The script is only an importer. Runtime screens read all seeded records from
+ * MongoDB through the API; no demo business data is embedded in the frontend.
  */
 
 require('dotenv').config({ path: __dirname + '/../.env' });
@@ -27,6 +20,7 @@ const User = require('../models/User');
 const Artist = require('../models/Artist');
 const Song = require('../models/Song');
 const Release = require('../models/Release');
+const DistributionRelease = require('../models/DistributionRelease');
 const Project = require('../models/Project');
 const Task = require('../models/Task');
 const Finance = require('../models/Finance');
@@ -49,8 +43,15 @@ const FileVersion = require('../models/FileVersion');
 const Notification = require('../models/Notification');
 const Activity = require('../models/Activity');
 const LnkUp = require('../models/LnkUp');
+const { validateOwnershipRecord } = require('../services/ownershipValidationService');
 
-const PASS = process.env.DEMO_PASSWORD;
+const DEMO_ACCOUNTS = {
+  admin: { email: 'admin@hbelabel.com', password: 'HBEAdmin@2026' },
+  manager: { email: 'manager@hbelabel.com', password: 'HBEManager@2026' },
+  artist: { email: 'artist@hbelabel.com', password: 'HBEArtist@2026' },
+  finance: { email: 'finance@hbelabel.com', password: 'HBEFinance@2026' },
+  marketing: { email: 'marketing@hbelabel.com', password: 'HBEMarketing@2026' },
+};
 const ids = {};
 const track = (modelName, result) => {
   const arr = Array.isArray(result) ? result : [result];
@@ -60,6 +61,32 @@ const track = (modelName, result) => {
 
 const daysFromNow = (n) => new Date(Date.now() + n * 86400000);
 const iso = (n) => daysFromNow(n).toISOString().slice(0, 10);
+
+const RELEASE_CHECKLISTS = {
+  preparation: ['Song approved', 'Ownership confirmed', 'Final master delivered', 'Artwork approved', 'Metadata completed', 'Lyrics completed', 'Budget approved'],
+  distribution: ['Upload release', 'Confirm platforms', 'Verify profiles', 'Pre-save page', 'Platform pitches', 'Confirm release date'],
+  marketing: ['Content calendar', 'Press materials', 'Playlist pitching', 'Ads launched', 'Video schedule', 'Interviews'],
+  post_release: ['Performance tracking', 'Platform fixes', 'Retargeting', 'Additional content', 'Royalty updates', 'Campaign report'],
+};
+const RELEASE_PHASES = ['preparation', 'distribution', 'marketing', 'post_release'];
+const buildReleasePhases = (currentPhase, currentCompletedItems = 0) => {
+  const currentIndex = currentPhase === 'completed' ? RELEASE_PHASES.length : RELEASE_PHASES.indexOf(currentPhase);
+  if (currentIndex < 0) throw new Error(`Invalid release phase: ${currentPhase}`);
+  return Object.fromEntries(RELEASE_PHASES.map((phase, phaseIndex) => {
+    const completed = phaseIndex < currentIndex || currentPhase === 'completed';
+    const completedItems = completed ? RELEASE_CHECKLISTS[phase].length : phaseIndex === currentIndex ? currentCompletedItems : 0;
+    return [phase, {
+      completed,
+      ...(phaseIndex <= currentIndex ? { startedAt: daysFromNow(-45 + phaseIndex * 10) } : {}),
+      ...(completed ? { completedAt: daysFromNow(-36 + phaseIndex * 10) } : {}),
+      checklist: RELEASE_CHECKLISTS[phase].map((item, index) => ({
+        item, status: index < completedItems ? 'completed' : 'pending', order: index,
+        ...(index < completedItems ? { completedAt: daysFromNow(-36 + phaseIndex * 10) } : {}),
+        ...(phaseIndex === currentIndex && index >= completedItems ? { dueDate: daysFromNow(7 + index) } : {}),
+      })),
+    }];
+  }));
+};
 
 const makePdf = (label) => {
   const stream = `BT /F1 18 Tf 72 720 Td (${label.replace(/[()\\]/g, '\\$&')}) Tj ET`;
@@ -124,7 +151,6 @@ async function createAll(Model, docs) {
 
 async function clearExistingDemo() {
   const markers = await mongoose.connection.collection('_demomarkers').find({}).toArray();
-  if (!markers.length) return;
   for (const m of markers) {
     const Model = mongoose.models[m.model];
     if (!Model || !Array.isArray(m.ids) || !m.ids.length) continue;
@@ -132,6 +158,11 @@ async function clearExistingDemo() {
     console.log(`  cleaned ${m.model}: ${res.deletedCount} removed`);
   }
   await mongoose.connection.collection('_demomarkers').deleteMany({});
+  await User.deleteMany({ email: { $in: [
+    'demo.admin@hbe.local', 'demo.manager@hbe.local', 'demo.finance@hbe.local', 'demo.marketing@hbe.local',
+    'demo.ar@hbe.local', 'demo.kalo@hbe.local', 'demo.jae@hbe.local', 'demo.lyrica@hbe.local', 'demo.onaje@hbe.local',
+    ...Object.values(DEMO_ACCOUNTS).map(account => account.email),
+  ] } });
   console.log('Existing demo data removed.\n');
 }
 
@@ -146,25 +177,67 @@ async function saveMarkers() {
   }
 }
 
+async function validateSeedIntegrity() {
+  const releases = await Release.find({ _id: { $in: ids.Release || [] } });
+  for (const release of releases) {
+    if (!release.songs.length) throw new Error(`Demo release "${release.title}" has no songs`);
+    const currentIndex = release.currentPhase === 'completed' ? RELEASE_PHASES.length : RELEASE_PHASES.indexOf(release.currentPhase);
+    for (let index = 0; index < RELEASE_PHASES.length; index += 1) {
+      const phase = RELEASE_PHASES[index];
+      const phaseData = release.phases[phase];
+      if (phaseData.checklist.length !== RELEASE_CHECKLISTS[phase].length) {
+        throw new Error(`Demo release "${release.title}" has a non-standard ${phase} checklist`);
+      }
+      const shouldBeComplete = index < currentIndex || release.currentPhase === 'completed';
+      if (phaseData.completed !== shouldBeComplete) {
+        throw new Error(`Demo release "${release.title}" has an invalid ${phase} completion state`);
+      }
+      if (phaseData.completed && phaseData.checklist.some(item => item.status !== 'completed' && item.status !== 'skipped')) {
+        throw new Error(`Demo release "${release.title}" completed ${phase} with incomplete checklist items`);
+      }
+    }
+    const expectedStatus = { distribution: 'in_preparation', marketing: 'submitted', post_release: 'released', completed: 'released' }[release.currentPhase];
+    if (expectedStatus && release.status !== expectedStatus) {
+      throw new Error(`Demo release "${release.title}" status ${release.status} does not match ${release.currentPhase}`);
+    }
+    if (currentIndex > 0) {
+      for (const songId of release.songs) {
+        const ownership = await Ownership.findOne({ songId });
+        if (!ownership) throw new Error(`Demo release "${release.title}" is missing ownership data`);
+        const result = validateOwnershipRecord(ownership);
+        if (!result.valid || !ownership.releaseApproved) {
+          throw new Error(`Demo release "${release.title}" has a song that is not release-ready: ${result.errors.join('; ')}`);
+        }
+      }
+    }
+  }
+  console.log(`Validated ${releases.length} demo release workflows and ownership gates.`);
+}
+
 async function seed() {
   ensureDemoAssets();
-  const admin = await User.create({ name: 'Demo Admin', email: 'demo.admin@hbe.local', password: PASS, role: 'admin', department: 'executive', phone: '+1 (555) 000-0001' });
-  const manager = await User.create({ name: 'Demo Manager', email: 'demo.manager@hbe.local', password: PASS, role: 'manager', department: 'operations', phone: '+1 (555) 000-0002' });
-  const finUser = await User.create({ name: 'Demo Finance', email: 'demo.finance@hbe.local', password: PASS, role: 'finance', department: 'finance', phone: '+1 (555) 000-0003' });
-  const mktUser = await User.create({ name: 'Demo Marketing', email: 'demo.marketing@hbe.local', password: PASS, role: 'marketing', department: 'marketing', phone: '+1 (555) 000-0004' });
-  const aRUser = await User.create({ name: 'Demo A&R', email: 'demo.ar@hbe.local', password: PASS, role: 'manager', department: 'a_and_r', phone: '+1 (555) 000-0005' });
-  track('User', [admin, manager, finUser, mktUser, aRUser]);
+  const admin = await User.create({ name: 'Demo Admin', ...DEMO_ACCOUNTS.admin, role: 'admin', department: 'executive', phone: '+1 (555) 000-0001' });
+  const manager = await User.create({ name: 'Demo Manager', ...DEMO_ACCOUNTS.manager, role: 'manager', department: 'operations', phone: '+1 (555) 000-0002' });
+  const finUser = await User.create({ name: 'Demo Finance', ...DEMO_ACCOUNTS.finance, role: 'finance', department: 'finance', phone: '+1 (555) 000-0003' });
+  const mktUser = await User.create({ name: 'Demo Marketing', ...DEMO_ACCOUNTS.marketing, role: 'marketing', department: 'marketing', phone: '+1 (555) 000-0004' });
+  const artistUser = await User.create({ name: 'Kalo', ...DEMO_ACCOUNTS.artist, role: 'artist', department: 'Artist' });
+  const aRUser = manager;
+  const kaloUser = artistUser;
+  const jaeUser = artistUser;
+  const lyricaUser = artistUser;
+  const onajeUser = artistUser;
+  track('User', [admin, manager, finUser, mktUser, artistUser]);
 
   // ---- Artists ----------------------------------------------------------
   const kalo = await Artist.create({
     legalName: 'Kalin Ogwulu', artistName: 'Kalo', name: 'Kalin Ogwulu', stageName: 'Kalo',
-    email: 'demo.kalo@hbe.local', phone: '+1 (555) 111-0001', dateOfBirth: new Date('1998-03-14'),
+    email: DEMO_ACCOUNTS.artist.email, phone: '+1 (555) 111-0001', dateOfBirth: new Date('1998-03-14'),
     address: { street: '4120 Echo Park Ave', city: 'Los Angeles', state: 'CA', zipCode: '90026', country: 'USA' },
     emergencyContact: { name: 'Maya Ogwulu', relationship: 'Sister', phone: '+1 (555) 111-9999', email: 'maya@example.com' },
     bio: 'West Coast hip-hop artist signed to HoodBoy Entertainment. Known for sharp wordplay and late-night garage productions.',
     socialLinks: { instagram: 'https://instagram.com/kalo', tiktok: 'https://tiktok.com/@kalo', youtube: 'https://youtube.com/@kalo', spotify: 'https://open.spotify.com/artist/kalo', twitter: 'https://x.com/kalo' },
     genre: 'Hip-Hop', proAffiliation: 'ASCAP',
-    publisher: { name: 'HoodBoy Publishing', contact: 'demo.finance@hbe.local' },
+    publisher: { name: 'HoodBoy Publishing', contact: DEMO_ACCOUNTS.finance.email },
     paymentInfo: { method: 'Bank Transfer', bankName: 'Chase', accountNumber: '****4412', routingNumber: '****0021', paypalEmail: 'payments.kalo@example.com' },
     taxInfo: { taxId: '***-**-1234', taxFormType: 'W-9', filingStatus: 'Single' },
     status: 'active', onboardingStatus: 'approved', onboardingStep: 4, approvedAt: daysFromNow(-220),
@@ -214,13 +287,6 @@ async function seed() {
     royaltyRate: 50, totalStreams: 0, totalRevenue: 0,
   });
   track('Artist', [kalo, jae, lyrica, onaje]);
-
-  // Artist role logins (matching artist emails -> self-scoped dashboard)
-  const kaloUser = await User.create({ name: 'Kalo', email: 'demo.kalo@hbe.local', password: PASS, role: 'artist', department: 'Artist' });
-  const jaeUser = await User.create({ name: 'JaeDayo', email: 'demo.jae@hbe.local', password: PASS, role: 'artist', department: 'Artist' });
-  const lyricaUser = await User.create({ name: 'Lyrica', email: 'demo.lyrica@hbe.local', password: PASS, role: 'artist', department: 'Artist' });
-  const onajeUser = await User.create({ name: 'Onaje', email: 'demo.onaje@hbe.local', password: PASS, role: 'artist', department: 'Artist' });
-  track('User', [kaloUser, jaeUser, lyricaUser, onajeUser]);
 
   // ---- Songs ------------------------------------------------------------
   const completedWf = Song.buildProductionWorkflow();
@@ -275,6 +341,7 @@ async function seed() {
     title: 'State of Mind', artist: kalo._id, genre: 'Hip-Hop', duration: 164,
     status: 'released', releaseDate: daysFromNow(-300), producedBy: 'Demo (Producer)', writtenBy: 'Kalo',
     isrc: 'US-HBE-25-00012', streams: 602000, revenue: 4200, priority: 'medium',
+    productionWorkflow: completedWf,
     credits: [
       { name: 'Kalo', role: 'songwriter', percentage: 100 },
       { name: 'Demo (Producer)', role: 'producer', percentage: 50 },
@@ -287,6 +354,7 @@ async function seed() {
     title: 'Gbedu', artist: jae._id, genre: 'Afrobeats', duration: 221,
     status: 'released', releaseDate: daysFromNow(-90), producedBy: 'Ian Tree', writtenBy: 'JaeDayo',
     isrc: 'US-HBE-26-00004', streams: 1390000, revenue: 9200, priority: 'high', assignedTo: mktUser._id,
+    productionWorkflow: completedWf,
     versions: [{ type: 'explicit_master', fileUrl: '/uploads/demo/gbedu.wav', fileName: 'gbedu.wav', format: 'wav', uploadedBy: admin._id }],
     credits: [
       { name: 'JaeDayo', role: 'songwriter', percentage: 100 },
@@ -312,6 +380,7 @@ async function seed() {
     title: 'Circles', artist: lyrica._id, genre: 'R&B / Soul', duration: 214,
     status: 'released', releaseDate: daysFromNow(-45), producedBy: 'Neo Mae', writtenBy: 'Lyrica',
     isrc: 'US-HBE-26-00006', streams: 341000, revenue: 2900, priority: 'high', assignedTo: mktUser._id,
+    productionWorkflow: completedWf,
     versions: [{ type: 'explicit_master', fileUrl: '/uploads/demo/circles.wav', fileName: 'circles.wav', format: 'wav', uploadedBy: admin._id }],
     credits: [
       { name: 'Lyrica', role: 'songwriter', percentage: 100 },
@@ -323,8 +392,9 @@ async function seed() {
 
   const s8 = await Song.create([{
     title: 'Golden', artist: lyrica._id, genre: 'R&B / Soul', duration: 187,
-    status: 'awaiting_approval', producedBy: 'Neo Mae', writtenBy: 'Lyrica',
+    status: 'approved', releaseDate: daysFromNow(35), producedBy: 'Neo Mae', writtenBy: 'Lyrica',
     isrc: 'US-HBE-26-00007', priority: 'medium', assignedTo: aRUser._id,
+    productionWorkflow: completedWf,
     credits: [
       { name: 'Lyrica', role: 'songwriter', percentage: 100 },
       { name: 'Neo Mae', role: 'producer', percentage: 50 },
@@ -362,16 +432,7 @@ async function seed() {
   const r1 = await Release.create([{
     title: 'No Days Off', artist: kalo._id, project: null, songs: [s1doc._id],
     releaseDate: daysFromNow(-120), type: 'single', status: 'released', currentPhase: 'post_release',
-    phases: {
-      preparation: { completed: true, startedAt: daysFromNow(-150), completedAt: daysFromNow(-130),
-        checklist: [{ item: 'Master approved', status: 'completed', order: 1 }, { item: 'Artwork final', status: 'completed', order: 2 }] },
-      distribution: { completed: true, startedAt: daysFromNow(-128), completedAt: daysFromNow(-118),
-        checklist: [{ item: 'Deliver to distributor', status: 'completed', order: 1 }] },
-      marketing: { completed: true, startedAt: daysFromNow(-125), completedAt: daysFromNow(-100),
-        checklist: [{ item: 'Playlist pitching', status: 'completed', order: 1 }] },
-      post_release: { completed: false, startedAt: daysFromNow(-118),
-        checklist: [{ item: 'Report streams', status: 'in_progress', order: 1 }] },
-    },
+    phases: buildReleasePhases('post_release', 3),
     ownershipConfirmed: true, masterApproved: true, artworkApproved: true, metadataComplete: true,
     platforms: [
       { name: 'Spotify', status: 'live', link: 'https://open.spotify.com/track/demos1', liveAt: daysFromNow(-120) },
@@ -385,7 +446,8 @@ async function seed() {
 
   const r2 = await Release.create([{
     title: 'State of Mind', artist: kalo._id, songs: [s4doc._id],
-    releaseDate: daysFromNow(-300), type: 'single', status: 'released', currentPhase: 'post_release',
+    releaseDate: daysFromNow(-300), type: 'single', status: 'released', currentPhase: 'completed',
+    phases: buildReleasePhases('completed'),
     ownershipConfirmed: true, masterApproved: true, artworkApproved: true, metadataComplete: true,
     platforms: [{ name: 'Spotify', status: 'live' }],
     coverArt: '/uploads/demo/state-of-mind-art.jpg', upc: '0810011001235',
@@ -396,14 +458,7 @@ async function seed() {
   const r3 = await Release.create([{
     title: 'Belly Room', artist: kalo._id, project: null, songs: [s2doc._id, s3doc._id],
     releaseDate: daysFromNow(28), type: 'ep', status: 'in_preparation', currentPhase: 'preparation',
-    phases: {
-      preparation: { completed: false, startedAt: daysFromNow(-14),
-        checklist: [
-          { item: 'Complete all masters', status: 'in_progress', order: 1, dueDate: daysFromNow(14) },
-          { item: 'Finalize artwork', status: 'pending', order: 2, dueDate: daysFromNow(20) },
-          { item: 'Confirm ownership splits', status: 'pending', order: 3, dueDate: daysFromNow(25) },
-        ] },
-    },
+    phases: buildReleasePhases('preparation', 0),
     ownershipConfirmed: false, masterApproved: false, artworkApproved: false, metadataComplete: false,
     marketingBudget: 6000, coverArt: '/uploads/demo/belly-room-art.jpg', upc: '0810011001236',
     assignedTo: mktUser._id, priority: 'high', notes: '5-track EP, 2 tracks remain in production.',
@@ -412,7 +467,8 @@ async function seed() {
 
   const r4 = await Release.create([{
     title: 'Runner', artist: jae._id, songs: [s5doc._id],
-    releaseDate: daysFromNow(-90), type: 'single', status: 'released', currentPhase: 'post_release',
+    releaseDate: daysFromNow(-90), type: 'single', status: 'released', currentPhase: 'completed',
+    phases: buildReleasePhases('completed'),
     ownershipConfirmed: true, masterApproved: true, artworkApproved: true, metadataComplete: true,
     platforms: [{ name: 'Spotify', status: 'live' }, { name: 'Apple Music', status: 'live' }],
     marketingBudget: 2500, coverArt: '/uploads/demo/runner-art.jpg', upc: '0810011001237',
@@ -421,10 +477,11 @@ async function seed() {
   const [r4doc] = r4;
 
   const r5 = await Release.create([{
-    title: 'Daydream', artist: lyrica._id, songs: [s7doc._id],
-    releaseDate: daysFromNow(-45), type: 'single', status: 'released', currentPhase: 'marketing',
+    title: 'Circles', artist: lyrica._id, songs: [s7doc._id],
+    releaseDate: daysFromNow(-45), type: 'single', status: 'released', currentPhase: 'post_release',
+    phases: buildReleasePhases('post_release', 2),
     ownershipConfirmed: true, masterApproved: true, artworkApproved: true, metadataComplete: true,
-    platforms: [{ name: 'Spotify', status: 'live' }],
+    platforms: [{ name: 'Spotify', status: 'live', submittedAt: daysFromNow(-60), liveAt: daysFromNow(-45) }],
     marketingBudget: 1500, coverArt: '/uploads/demo/daydream-art.jpg', upc: '0810011001238',
     assignedTo: mktUser._id, priority: 'medium',
   }]);
@@ -433,12 +490,48 @@ async function seed() {
   const r6 = await Release.create([{
     title: 'Top Floor', artist: onaje._id, songs: [s9doc._id],
     releaseDate: daysFromNow(42), type: 'single', status: 'scheduled', currentPhase: 'preparation',
+    phases: buildReleasePhases('preparation', 0),
     ownershipConfirmed: false, masterApproved: false, artworkApproved: false, metadataComplete: false,
     marketingBudget: 2000, coverArt: '', upc: '0810011001239',
     assignedTo: aRUser._id, priority: 'medium',
   }]);
   const [r6doc] = r6;
-  track('Release', [r1doc, r2doc, r3doc, r4doc, r5doc, r6doc]);
+
+  const r7 = await Release.create([{
+    title: 'Golden', artist: lyrica._id, songs: [s8doc._id],
+    releaseDate: daysFromNow(35), type: 'single', status: 'submitted', currentPhase: 'marketing',
+    phases: buildReleasePhases('marketing', 3),
+    ownershipConfirmed: true, masterApproved: true, artworkApproved: true, metadataComplete: true,
+    platforms: [{ name: 'Spotify', status: 'submitted', submittedAt: daysFromNow(-2) }],
+    marketingBudget: 2200, coverArt: '/uploads/demo/daydream-art.jpg', upc: '0810011001240',
+    assignedTo: mktUser._id, priority: 'medium', notes: 'Distribution completed; launch campaign is in progress.',
+  }]);
+  const [r7doc] = r7;
+  track('Release', [r1doc, r2doc, r3doc, r4doc, r5doc, r6doc, r7doc]);
+
+  // ---- Distribution catalog (database-backed mock adapter records) ------
+  await createAll(DistributionRelease, [
+    {
+      title: 'No Days Off', artist: kalo._id, type: 'single', releaseDate: daysFromNow(-120), genre: 'Hip-Hop', language: 'English', explicit: true,
+      upc: '0810011001234', copyright: '© 2026 HoodBoy Entertainment', territories: ['WORLDWIDE'], coverArtUrl: '/uploads/demo/no-days-off-art.jpg', coverArtFileName: 'no-days-off-art.jpg',
+      tracks: [{ title: 'No Days Off', audioUrl: '/uploads/demo/no-days-off-explicit.wav', audioFileName: 'no-days-off-explicit.wav', isrc: 'US-HBE-26-00001', explicit: true, language: 'English', genre: 'Hip-Hop', copyright: '© 2026 HoodBoy Entertainment', contributors: [{ name: 'Kalo', role: 'primary_artist' }, { name: 'Demo (Producer)', role: 'producer' }, { name: 'Kalo', role: 'songwriter' }] }],
+      status: 'live', provider: 'local_demo', submittedAt: daysFromNow(-145), deliveredAt: daysFromNow(-125), liveAt: daysFromNow(-120), lastSyncedAt: daysFromNow(-1),
+      storeStatuses: [{ store: 'Spotify', status: 'live', updatedAt: daysFromNow(-120) }, { store: 'Apple Music', status: 'live', updatedAt: daysFromNow(-120) }, { store: 'YouTube Music', status: 'live', updatedAt: daysFromNow(-119) }],
+      providerPayload: { message: 'Local demonstration fixture; not externally delivered' }, createdBy: admin._id, updatedBy: admin._id,
+    },
+    {
+      title: 'Golden', artist: lyrica._id, type: 'single', releaseDate: daysFromNow(35), genre: 'R&B / Soul', language: 'English', explicit: false,
+      upc: '0810011001240', copyright: '© 2026 HoodBoy Entertainment', territories: ['WORLDWIDE'], coverArtUrl: '/uploads/demo/daydream-art.jpg', coverArtFileName: 'daydream-art.jpg',
+      tracks: [{ title: 'Golden', audioUrl: '/uploads/demo/circles.wav', audioFileName: 'golden-master.wav', isrc: 'US-HBE-26-00007', explicit: false, language: 'English', genre: 'R&B / Soul', copyright: '© 2026 HoodBoy Entertainment', contributors: [{ name: 'Lyrica', role: 'primary_artist' }, { name: 'Neo Mae', role: 'producer' }, { name: 'Lyrica', role: 'songwriter' }] }],
+      status: 'processing', provider: 'local_demo', submittedAt: daysFromNow(-2), lastSyncedAt: daysFromNow(0), providerPayload: { message: 'Local demonstration fixture' }, createdBy: mktUser._id, updatedBy: mktUser._id,
+    },
+    {
+      title: 'Top Floor', artist: onaje._id, type: 'single', releaseDate: daysFromNow(42), genre: 'Alternative R&B', language: 'English', explicit: false,
+      copyright: '© 2026 HoodBoy Entertainment', territories: ['WORLDWIDE'], coverArtUrl: '/uploads/demo/state-of-mind-art.jpg', coverArtFileName: 'state-of-mind-art.jpg',
+      tracks: [{ title: 'Top Floor', audioUrl: '/uploads/demo/pressure-ref.wav', audioFileName: 'top-floor-reference.wav', isrc: 'US-HBE-26-00008', explicit: false, language: 'English', genre: 'Alternative R&B', copyright: '© 2026 HoodBoy Entertainment', contributors: [{ name: 'Onaje', role: 'primary_artist' }, { name: 'Keyson', role: 'producer' }, { name: 'Onaje', role: 'songwriter' }] }],
+      status: 'draft', provider: 'local_demo', providerPayload: { message: 'Local editable demonstration draft' }, createdBy: manager._id, updatedBy: manager._id,
+    },
+  ]);
 
   // ---- Projects ---------------------------------------------------------
   const p1 = await Project.create([{
@@ -883,11 +976,12 @@ async function seed() {
     publishers: [],
     producer: 'Demo (Producer)', producerPercentage: 0,
     featuredArtists: [],
-    beatLicense: { type: 'exclusive', producer: 'Demo (Producer)', cost: 3000, terms: 'Exclusive worldwide', expirationDate: daysFromNow(215), purchaseDate: daysFromNow(-150), licenseNumber: 'BL-10001', territory: 'Worldwide', usageLimit: 'Unlimited' },
-    samples: [{ title: 'Night Drive', originalArtist: 'Demo Sample', owner: 'Cleared Sample Co', percentage: 0, clearanceStatus: 'cleared' }],
+    beatLicense: { type: 'exclusive', producer: 'Demo (Producer)', cost: 3000, terms: 'Exclusive worldwide', expirationDate: daysFromNow(215), purchaseDate: daysFromNow(-150), licenseNumber: 'BL-10001', territory: 'Worldwide', usageLimit: 'Unlimited', documentUrl: '/uploads/demo/beat-license-nodays.pdf' },
+    samples: [],
     signatures: [
-      { partyName: 'Kalo', role: 'master_owner', status: 'signed', signedAt: daysFromNow(-149) },
-      { partyName: 'Demo (Producer)', role: 'producer', status: 'signed', signedAt: daysFromNow(-148) },
+      { partyName: 'HoodBoy Entertainment', role: 'master_owner', status: 'signed', signedAt: daysFromNow(-149), documentUrl: '/uploads/demo/kalo-agreement.pdf' },
+      { partyName: 'Kalo', role: 'songwriter', status: 'signed', signedAt: daysFromNow(-149), documentUrl: '/uploads/demo/kalo-agreement.pdf' },
+      { partyName: 'Demo (Producer)', role: 'producer', status: 'signed', signedAt: daysFromNow(-148), documentUrl: '/uploads/demo/beat-license-nodays.pdf' },
     ],
     copyrightStatus: 'registered', copyrightNumber: 'PA-1-234-567',
     proStatus: 'registered', proName: 'ASCAP', proIpi: '006543210',
@@ -903,8 +997,12 @@ async function seed() {
     publishers: [],
     producer: 'Ian Tree', producerPercentage: 0,
     featuredArtists: [],
-    beatLicense: { type: 'exclusive', producer: 'Ian Tree', cost: 2400, purchaseDate: daysFromNow(-160) },
-    signatures: [{ partyName: 'JaeDayo', role: 'master_owner', status: 'signed', signedAt: daysFromNow(-159) }],
+    beatLicense: { type: 'exclusive', producer: 'Ian Tree', cost: 2400, terms: 'Exclusive worldwide master use', purchaseDate: daysFromNow(-160), documentUrl: '/uploads/demo/beat-license-nodays.pdf' },
+    signatures: [
+      { partyName: 'HoodBoy Entertainment', role: 'master_owner', status: 'signed', signedAt: daysFromNow(-159), documentUrl: '/uploads/demo/kalo-agreement.pdf' },
+      { partyName: 'JaeDayo', role: 'songwriter', status: 'signed', signedAt: daysFromNow(-159), documentUrl: '/uploads/demo/kalo-agreement.pdf' },
+      { partyName: 'Ian Tree', role: 'producer', status: 'signed', signedAt: daysFromNow(-159), documentUrl: '/uploads/demo/beat-license-nodays.pdf' },
+    ],
     copyrightStatus: 'registered', copyrightNumber: 'PA-1-321-098',
     proStatus: 'registered', proName: 'BMI', proIpi: '005123456',
     distributionStatus: 'distributed', releaseApproved: true, approvedBy: admin._id, approvedAt: daysFromNow(-159),
@@ -926,7 +1024,25 @@ async function seed() {
     notes: 'Writer split still being finalized (second writer to be added).',
   }]);
   const [o3doc] = o3;
-  track('Ownership', [o1doc, o2doc, o3doc]);
+
+  const readyOwnership = async (songId, writer, producer, proName) => Ownership.create([{
+    songId, masterOwner: 'HoodBoy Entertainment',
+    writers: [{ name: writer, percentage: 100, role: 'songwriter' }], publishers: [],
+    producer, producerPercentage: 0, featuredArtists: [], samples: [],
+    beatLicense: { type: 'work_for_hire', producer, terms: 'Worldwide work-for-hire; master rights assigned to HoodBoy Entertainment', documentUrl: '/uploads/demo/beat-license-nodays.pdf' },
+    signatures: [
+      { partyName: 'HoodBoy Entertainment', role: 'master_owner', status: 'signed', signedAt: daysFromNow(-60), documentUrl: '/uploads/demo/kalo-agreement.pdf' },
+      { partyName: writer, role: 'songwriter', status: 'signed', signedAt: daysFromNow(-60), documentUrl: '/uploads/demo/kalo-agreement.pdf' },
+      { partyName: producer, role: 'producer', status: 'signed', signedAt: daysFromNow(-60), documentUrl: '/uploads/demo/beat-license-nodays.pdf' },
+    ],
+    copyrightStatus: 'registered', proStatus: 'registered', proName,
+    distributionStatus: 'ready', releaseApproved: true, approvedBy: admin._id, approvedAt: daysFromNow(-59),
+    totalPercentage: 100, isComplete: true, signaturesComplete: true, isReadyForRelease: true,
+  }]);
+  const [o4doc] = await readyOwnership(s4doc._id, 'Kalo', 'Demo (Producer)', 'ASCAP');
+  const [o5doc] = await readyOwnership(s7doc._id, 'Lyrica', 'Neo Mae', 'SESAC');
+  const [o6doc] = await readyOwnership(s8doc._id, 'Lyrica', 'Neo Mae', 'SESAC');
+  track('Ownership', [o1doc, o2doc, o3doc, o4doc, o5doc, o6doc]);
 
   // ---- Song metadata ----------------------------------------------------
   const sm1 = await SongMetadata.create([{
@@ -937,7 +1053,7 @@ async function seed() {
     copyright: '© 2026 HoodBoy Entertainment', copyrightOwner: 'HoodBoy Entertainment', copyrightYear: 2026,
     publisher: 'HoodBoy Publishing', proAffiliation: 'ASCAP', writerSplit: 'Kalo 100%',
     publishers: [{ name: 'HoodBoy Publishing', percentage: 100, proAffiliation: 'ASCAP', ipi: '000567890' }],
-    contactInformation: { name: 'Demo Finance', email: 'demo.finance@hbe.local', phone: '+1 (555) 000-0003' },
+    contactInformation: { name: 'Demo Finance', email: DEMO_ACCOUNTS.finance.email, phone: '+1 (555) 000-0003' },
     streamingPlatforms: { spotifyUri: 'spotify:track:demos1', spotifyId: 'demos1', appleMusicId: 'demos1' },
     preSaveLink: 'https://presave.example/no-days-off',
     distributionDate: daysFromNow(-120), distributionPlatform: 'DistroKid', preSaveDate: daysFromNow(-135),
@@ -961,7 +1077,7 @@ async function seed() {
     copyright: '© 2026 HoodBoy Entertainment', copyrightOwner: 'HoodBoy Entertainment', copyrightYear: 2026,
     publisher: 'HoodBoy Publishing', proAffiliation: 'BMI', writerSplit: 'JaeDayo 100%',
     publishers: [{ name: 'HoodBoy Publishing', percentage: 100, proAffiliation: 'BMI', ipi: '000654321' }],
-    contactInformation: { name: 'Demo Finance', email: 'demo.finance@hbe.local' },
+    contactInformation: { name: 'Demo Finance', email: DEMO_ACCOUNTS.finance.email },
     streamingPlatforms: { spotifyUri: 'spotify:track:demos2', spotifyId: 'demos2' },
     distributionDate: daysFromNow(-90), distributionPlatform: 'DistroKid',
     audioFormat: 'wav', sampleRate: '44.1kHz', bitDepth: '24-bit', isExplicit: false,
@@ -981,7 +1097,7 @@ async function seed() {
     copyright: '© 2026 HoodBoy Entertainment', copyrightOwner: 'HoodBoy Entertainment', copyrightYear: 2026,
     publisher: 'HoodBoy Publishing', proAffiliation: 'ASCAP', writerSplit: 'Kalo 100%',
     publishers: [{ name: 'HoodBoy Publishing', percentage: 100, proAffiliation: 'ASCAP', ipi: '000567890' }],
-    contactInformation: { name: 'Demo Finance', email: 'demo.finance@hbe.local' },
+    contactInformation: { name: 'Demo Finance', email: DEMO_ACCOUNTS.finance.email },
     preSaveLink: 'https://presave.example/pressure',
     audioFormat: 'mp3', sampleRate: '44.1kHz', bitDepth: '16-bit', isExplicit: true,
     credits: [
@@ -1139,25 +1255,19 @@ async function seed() {
     { action: 'signed', entityType: 'contract', entityId: con1doc._id, entityName: 'Kalo Exclusive Recording Agreement', user: manager._id, userName: 'Demo Manager', details: 'Signed contract on file' },
   ]);
 
+  await validateSeedIntegrity();
   await saveMarkers();
 
   console.log('=== DEMO SEED COMPLETE ===');
   console.log(`Total demo documents: ${Object.values(ids).reduce((s, a) => s + a.length, 0)}`);
   for (const [model, arr] of Object.entries(ids)) console.log(`  ${model}: ${arr.length}`);
-  console.log('\nDemo logins (password: ' + PASS + ')');
-  console.log('  admin:    demo.admin@hbe.local');
-  console.log('  manager:  demo.manager@hbe.local');
-  console.log('  finance:  demo.finance@hbe.local');
-  console.log('  marketing:demo.marketing@hbe.local');
-  console.log('  artist:   demo.kalo@hbe.local (also demo.jae / demo.lyrica / demo.onaje)');
+  console.log('\nDemo logins:');
+  for (const [role, account] of Object.entries(DEMO_ACCOUNTS)) console.log(`  ${role.padEnd(10)} ${account.email} / ${account.password}`);
   console.log('\nTo remove all demo data:  node scripts/clearDemo.js');
 }
 
 const run = async () => {
   try {
-    if (!PASS || PASS.length < 12) {
-      throw new Error('DEMO_PASSWORD must be set to at least 12 characters before seeding demo accounts');
-    }
     await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/hbe_label', {
       serverSelectionTimeoutMS: 10000,
     });

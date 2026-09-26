@@ -310,6 +310,61 @@ export interface ReleaseDashboardData {
   upcoming: Release[];
 }
 
+export type DistributionStatus = 'draft' | 'submitted' | 'processing' | 'approved' | 'delivered' | 'live' | 'rejected' | 'takedown_requested' | 'removed' | 'error';
+
+export interface DistributionTrack {
+  _id?: string;
+  title: string;
+  version?: string;
+  audioUrl?: string;
+  audioFileName?: string;
+  isrc?: string;
+  explicit: boolean;
+  language: string;
+  genre?: string;
+  contributors: Array<{ name: string; role: 'primary_artist' | 'featured_artist' | 'producer' | 'songwriter' | 'composer' }>;
+  copyright?: string;
+  labelgridTrackId?: string;
+  uploadStatus?: 'preparing' | 'uploading' | 'processing' | 'uploaded' | 'failed';
+  sampleStatus?: 'no' | 'yes_cleared' | 'yes_clearance_required' | 'unsure';
+  audioQcResult?: any;
+  duplicateQcResult?: any;
+  fingerprintResult?: any;
+}
+
+export interface DistributionRelease {
+  _id: string;
+  title: string;
+  artist: Artist;
+  type: 'single' | 'ep' | 'album';
+  releaseDate: string;
+  genre: string;
+  language: string;
+  explicit: boolean;
+  upc: string;
+  copyright: string;
+  territories: string[];
+  coverArtUrl?: string;
+  coverArtFileName?: string;
+  tracks: DistributionTrack[];
+  status: DistributionStatus;
+  qcStatus?: 'pending_qc' | 'qc_processing' | 'action_required' | 'manual_review' | 'qc_passed' | 'qc_failed' | 'ready_for_labelgrid';
+  rightsStatus?: 'not_reviewed' | 'documents_required' | 'under_review' | 'approved' | 'rejected';
+  adminReviewNotes?: string;
+  provider: string;
+  providerReleaseId?: string;
+  labelgridReleaseId?: string;
+  labelgridRawStatus?: string;
+  syncStatus?: 'not_synced' | 'syncing' | 'synced' | 'error';
+  lastSyncError?: string;
+  lastSyncedAt?: string;
+  submittedAt?: string;
+  rejectionReason?: string;
+  syncErrors?: Array<{ message: string; code?: string; occurredAt: string; resolvedAt?: string }>;
+  storeStatuses?: Array<{ store: string; status: string; url?: string; updatedAt?: string }>;
+  createdAt: string;
+}
+
 export interface ContractParty {
   name: string;
   role: string;

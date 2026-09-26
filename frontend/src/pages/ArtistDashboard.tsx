@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Music, Radio, DollarSign, Headphones, TrendingUp,
   Clock, CheckCircle, AlertCircle, BarChart3,
@@ -162,6 +163,14 @@ const ArtistDashboard: React.FC = () => {
           { label: 'Total Revenue', value: fmtCur(kpis.totalRevenue), tone: 'up' },
         ]}
       />
+
+      <div className="flex flex-col gap-4 rounded-2xl border border-violet-500/20 bg-violet-500/5 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-bold text-[var(--hbe-text)]">Music Distribution</p>
+          <p className="mt-1 text-xs text-[var(--hbe-muted)]">Create delivery drafts, upload masters and artwork, and follow each release through the distribution pipeline.</p>
+        </div>
+        <Link to="/distribution" className="shrink-0 rounded-xl bg-violet-600 px-4 py-2.5 text-center text-sm font-bold text-white">Open Distribution</Link>
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Total Songs" value={kpis.totalSongs} icon={<Music size={19} />} color="#7C3AED" />

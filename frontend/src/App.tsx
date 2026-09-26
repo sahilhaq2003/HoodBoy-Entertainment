@@ -2,6 +2,7 @@ import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth, getDashboardPath } from './contexts/AuthContext';
+import { SocketProvider } from './contexts/SocketContext';
 import ErrorBoundary from './components/ui/ErrorBoundary';
 import { applyAppearance, getAppearance } from './utils/appearance';
 
@@ -25,6 +26,8 @@ const MyRoyalties = lazy(() => import('./pages/MyRoyalties'));
 const ArtistOnboarding = lazy(() => import('./pages/ArtistOnboarding'));
 const Songs = lazy(() => import('./pages/Songs'));
 const Releases = lazy(() => import('./pages/Releases'));
+const Distribution = lazy(() => import('./pages/Distribution'));
+const DistributionDetail = lazy(() => import('./pages/DistributionDetail'));
 const Contracts = lazy(() => import('./pages/Contracts'));
 const Finance = lazy(() => import('./pages/Finance'));
 const Royalties = lazy(() => import('./pages/Royalties'));
@@ -128,6 +131,8 @@ const AppRoutes: React.FC = () => {
         <Route path="artists/:id" element={<AccessGuard resource="artists"><ArtistProfile /></AccessGuard>} />
         <Route path="songs" element={<AccessGuard resource="songs"><Songs /></AccessGuard>} />
         <Route path="releases" element={<AccessGuard resource="releases"><Releases /></AccessGuard>} />
+        <Route path="distribution" element={<AccessGuard resource="distribution"><Distribution /></AccessGuard>} />
+        <Route path="distribution/:id" element={<AccessGuard resource="distribution"><DistributionDetail /></AccessGuard>} />
         <Route path="the-lnk-up" element={<AccessGuard resource="theLnkUp"><LnkUp /></AccessGuard>} />
         <Route path="projects" element={<AccessGuard resource="projects"><Projects /></AccessGuard>} />
         <Route path="development" element={<AccessGuard resource="development"><Development /></AccessGuard>} />
@@ -183,6 +188,7 @@ const App: React.FC = () => {
     <BrowserRouter>
       <ErrorBoundary>
       <ThemeProvider>
+        <SocketProvider>
         <AuthProvider>
           <AppRoutes />
           <Toaster
@@ -201,6 +207,7 @@ const App: React.FC = () => {
             }}
           />
         </AuthProvider>
+      </SocketProvider>
       </ThemeProvider>
       </ErrorBoundary>
     </BrowserRouter>
