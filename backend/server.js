@@ -133,9 +133,10 @@ const listen = () => httpServer.listen(PORT, HOST, () => {
 const start = async () => {
   try {
     const sequelize = await connectDB();
+    const srv = listen();
     const { ensureSchema } = require('./lib/ensureSchema');
-    await ensureSchema(sequelize);
-    return listen();
+    ensureSchema(sequelize).catch(error => console.error(`MySQL schema sync warning: ${error.message}`));
+    return srv;
   } catch (error) {
     console.error(`MySQL startup failed: ${error.message}`);
     process.exitCode = 1;

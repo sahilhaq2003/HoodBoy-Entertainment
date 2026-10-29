@@ -38,6 +38,8 @@ async function ensureSchema(sequelize) {
   loadModels();
   const query = sequelize.getQueryInterface();
   const models = [...orm.getModels().values()];
+  const [tableRows] = await sequelize.query('SHOW TABLES');
+  const existingTables = new Set(tableRows.map(row => String(Object.values(row)[0]).toLowerCase()));
 
   // 1. Create missing tables & add any missing columns to existing tables
   for (const Model of models) {
@@ -55,19 +57,46 @@ async function ensureSchema(sequelize) {
       };
     }
 
-    const existingTable = await query.describeTable(Model.collectionName).catch(() => null);
-    if (!existingTable) {
+    const tableExists = existingTables.has(Model.collectionName.toLowerCase());
+    if (!tableExists) {
       await ignoreBenignSchemaError(() => query.createTable(Model.collectionName, columns, {
         charset: 'utf8mb4', collate: 'utf8mb4_0900_ai_ci', engine: 'InnoDB',
       }));
-    } else {
-      for (const [field, colDef] of Object.entries(columns)) {
-        if (!existingTable[field]) {
-          await ignoreBenignSchemaError(() => query.addColumn(Model.collectionName, field, {
-            type: colDef.type,
-            allowNull: colDef.allowNull !== false,
-            defaultValue: colDef.defaultValue,
+      existingTables.add(Model.collectionName.toLowerCase());
+
+      // Create indexes & foreign keys for newly created table
+      const seen = new Set();
+      for (const [fields, options] of Model.schema._indexes) {
+        const valid = Object.keys(fields).filter(field => Object.hasOwn(Model.schema.definition, field));
+        if (!valid.length || valid.some(field => Model._sql.getAttributes()[field]?.type instanceof DataTypes.JSON)) continue;
+        const signature = valid.join('|');
+        if (seen.has(signature)) continue;
+        seen.add(signature);
+        const indexedFields = valid.map(field => field === 'path' ? { name: field, length: 191 } : field);
+        await ignoreBenignSchemaError(() => query.addIndex(Model.collectionName, indexedFields, {
+          name: indexName(Model.collectionName, valid, options.unique ? '_uq' : ''),
+          unique: Boolean(options.unique),
+        }));
+      }
+      for (const [field, raw] of Object.entries(Model.schema.definition)) {
+        if (raw?.unique && !seen.has(field)) {
+          await ignoreBenignSchemaError(() => query.addIndex(Model.collectionName, [field], {
+            name: indexName(Model.collectionName, [field], '_uq'),
+            unique: true,
           }));
+        }
+      }
+    } else {
+      const existingTable = await query.describeTable(Model.collectionName).catch(() => null);
+      if (existingTable) {
+        for (const [field, colDef] of Object.entries(columns)) {
+          if (!existingTable[field]) {
+            await ignoreBenignSchemaError(() => query.addColumn(Model.collectionName, field, {
+              type: colDef.type,
+              allowNull: colDef.allowNull !== false,
+              defaultValue: colDef.defaultValue,
+            }));
+          }
         }
       }
     }
@@ -94,8 +123,7 @@ async function ensureSchema(sequelize) {
       const target = spec.ref && orm.getModels().get(spec.ref);
       if (!spec.array || !target) continue;
       const linkTableName = orm.linkTable(Model.collectionName, field);
-      const existingLink = await query.describeTable(linkTableName).catch(() => null);
-      if (!existingLink) {
+      if (!existingTables.has(linkTableName.toLowerCase())) {
         await ignoreBenignSchemaError(() => query.createTable(linkTableName, {
           ownerId: {
             type: DataTypes.CHAR(24), allowNull: false, primaryKey: true,
@@ -114,49 +142,7 @@ async function ensureSchema(sequelize) {
     }
   }
 
-  // 4. Ensure indexes exist
-  for (const Model of models) {
-    const seen = new Set();
-    for (const [fields, options] of Model.schema._indexes) {
-      const valid = Object.keys(fields).filter(field => Object.hasOwn(Model.schema.definition, field));
-      if (!valid.length || valid.some(field => Model._sql.getAttributes()[field]?.type instanceof DataTypes.JSON)) continue;
-      const signature = valid.join('|');
-      if (seen.has(signature)) continue;
-      seen.add(signature);
-      const indexedFields = valid.map(field => field === 'path' ? { name: field, length: 191 } : field);
-      await ignoreBenignSchemaError(() => query.addIndex(Model.collectionName, indexedFields, {
-        name: indexName(Model.collectionName, valid, options.unique ? '_uq' : ''),
-        unique: Boolean(options.unique),
-      }));
-    }
-    for (const [field, raw] of Object.entries(Model.schema.definition)) {
-      if (raw?.unique && !seen.has(field)) {
-        await ignoreBenignSchemaError(() => query.addIndex(Model.collectionName, [field], {
-          name: indexName(Model.collectionName, [field], '_uq'),
-          unique: true,
-        }));
-      }
-    }
-  }
-
-  // 5. Ensure foreign key constraints exist
-  for (const Model of models) {
-    for (const [field, raw] of Object.entries(Model.schema.definition)) {
-      const reference = raw?.ref;
-      const target = reference && orm.getModels().get(reference);
-      if (!target) continue;
-      await ignoreBenignSchemaError(() => query.addConstraint(Model.collectionName, {
-        fields: [field],
-        type: 'foreign key',
-        name: `fk_${Model.collectionName}_${field}`.slice(0, 64),
-        references: { table: target.collectionName, field: 'id' },
-        onUpdate: 'CASCADE',
-        onDelete: raw.required ? 'RESTRICT' : 'SET NULL',
-      }));
-    }
-  }
-
-  // 6. Ensure at least one admin user exists if the users table is completely empty
+  // 4. Ensure at least one admin user exists if the users table is completely empty
   const User = orm.getModels().get('User');
   if (User) {
     const userCount = await User.countDocuments({});
