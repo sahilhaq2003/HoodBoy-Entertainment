@@ -1,7 +1,7 @@
 const DistributionRelease = require('../models/DistributionRelease');
 const Artist = require('../models/Artist');
 const RoyaltyLedger = require('../models/RoyaltyLedger');
-const labelgrid = require('../services/labelgrid/labelgridService');
+const distribeats = require('../services/distribeats/distribeatsService');
 const qcService = require('../services/qcService');
 
 /** Emit a release update to all sockets watching that release and all admin sockets. */
@@ -12,15 +12,15 @@ const emitRelease = (release) => {
       title: release.title,
       status: release.status,
       syncStatus: release.syncStatus,
-      labelgridRawStatus: release.labelgridRawStatus,
-      labelgridReleaseId: release.labelgridReleaseId,
+      distribeatsRawStatus: release.distribeatsRawStatus,
+      distribeatsReleaseId: release.distribeatsReleaseId,
       storeStatuses: release.storeStatuses,
       uploadState: release.uploadState,
       lastSyncedAt: release.lastSyncedAt,
       lastSyncError: release.lastSyncError,
     };
-    global.io?.to(`release:${release._id}`).emit('labelgrid:release_updated', payload);
-    global.io?.to('labelgrid:admin').emit('labelgrid:release_updated', payload);
+    global.io?.to(`release:${release._id}`).emit('distribeats:release_updated', payload);
+    global.io?.to('distribeats:admin').emit('distribeats:release_updated', payload);
   } catch {}
 };
 
@@ -49,19 +49,20 @@ const validateRelease = release => {
   release.tracks?.forEach((track, index) => {
     if (!track.title) errors.push(`Track ${index + 1}: title is required`);
     if (!track.audioUrl) errors.push(`Track ${index + 1}: audio file is required`);
+    if (track.audioFileName && !/\.(wav|flac)$/i.test(track.audioFileName)) errors.push(`Track ${index + 1}: Distribeats accepts WAV or FLAC audio only`);
     if (!track.contributors?.some(item => item.role === 'primary_artist')) errors.push(`Track ${index + 1}: primary artist credit is required`);
   });
   return errors;
 };
 
 exports.connectionStatus = async (req, res) => {
-  const status = await labelgrid.connectionStatus();
+  const status = await distribeats.connectionStatus();
   if (req.user.role !== 'admin') { delete status.credentialHint; delete status.account; }
   res.json({ success: true, data: status });
 };
 
 exports.referenceData = async (_req, res) => {
-  try { res.json({ success: true, data: await labelgrid.getReferenceData() }); }
+  try { res.json({ success: true, data: await distribeats.getReferenceData() }); }
   catch (error) { res.status(error.status || 502).json({ success: false, message: error.message, code: error.code }); }
 };
 
@@ -75,14 +76,19 @@ exports.getAll = async (req, res) => {
       { upc: { $regex: req.query.q, $options: 'i' } },
       { providerReleaseId: { $regex: req.query.q, $options: 'i' } },
     ];
-    const data = await DistributionRelease.find(filter).populate('artist', 'name stageName artistName image').sort({ createdAt: -1 });
+    const data = await DistributionRelease.find(filter)
+      .populate('artist', 'name stageName artistName image')
+      .sort({ createdAt: -1 })
+      .lean();
     res.json({ success: true, data });
   } catch (error) { res.status(500).json({ success: false, message: error.message }); }
 };
 
 exports.getOne = async (req, res) => {
   try {
-    const release = await DistributionRelease.findOne({ _id: req.params.id, ...(await scope(req)) }).populate('artist', 'name stageName artistName image');
+    const release = await DistributionRelease.findOne({ _id: req.params.id, ...(await scope(req)) })
+      .populate('artist', 'name stageName artistName image')
+      .lean();
     if (!release) return res.status(404).json({ success: false, message: 'Distribution release not found' });
     res.json({ success: true, data: release });
   } catch (error) { res.status(500).json({ success: false, message: error.message }); }
@@ -105,6 +111,10 @@ const payloadFromRequest = async req => {
     upc: req.body.upc || '', copyright: req.body.copyright, producer: req.body.producer || '',
     featuringArtists: parseArray(req.body.featuringArtists), songwriters: parseArray(req.body.songwriters),
     composers: parseArray(req.body.composers), territories: parseArray(req.body.territories || 'WORLDWIDE'),
+    subGenre: req.body.subGenre || '', mixingEngineers: parseArray(req.body.mixingEngineers),
+    masteringEngineers: parseArray(req.body.masteringEngineers), spotifyArtistUrl: req.body.spotifyArtistUrl || '',
+    aiDocumentUrl: req.body.aiDocumentUrl || '',
+    attestations: parseJson(req.body.attestations, { age: false, rights: false }),
     excludedTerritories: parseArray(req.body.excludedTerritories), tracks,
     catalogNumber: req.body.catalogNumber || '', publishingCopyright: req.body.publishingCopyright || '',
     artworkAiUsage: req.body.artworkAiUsage || 'none', dspOutletIds: parseArray(req.body.dspOutletIds || 'all_dsps'),
@@ -141,46 +151,68 @@ exports.submit = async (req, res) => {
     if (!release) return res.status(404).json({ success: false, message: 'Distribution release not found' });
     if (!['draft', 'rejected', 'error'].includes(release.status)) return res.status(409).json({ success: false, message: 'Release has already been submitted' });
     
-    // Protect LabelGrid flow based on QC status
-    if (release.qcStatus !== 'ready_for_labelgrid') {
+    if (release.qcStatus !== 'ready_for_distribution') {
       return res.status(422).json({ 
         success: false, 
-        message: 'Release cannot be submitted to LabelGrid until Content/QC review is completed.' 
+        message: 'Release cannot be submitted to Distribeats until Content/QC review is completed.'
       });
     }
 
     const errors = validateRelease(release);
     if (errors.length) return res.status(422).json({ success: false, message: 'Release is not ready for distribution', errors });
     const artist = await Artist.findById(release.artist);
-    await labelgrid.submitRelease(release, artist);
+    await distribeats.submitRelease(release, artist);
     emitRelease(release);
-    res.json({ success: true, data: release, integration: await labelgrid.connectionStatus() });
+    res.json({ success: true, data: release, integration: await distribeats.connectionStatus() });
   } catch (error) { res.status(error.status || 502).json({ success: false, message: error.message, code: error.code, errors: error.details?.errors || error.details?.errors_structured }); }
+};
+
+exports.distribute = async (req, res) => {
+  try {
+    const release = await DistributionRelease.findOne({ _id: req.params.id, ...(await scope(req)) });
+    if (!release) return res.status(404).json({ success: false, message: 'Distribution release not found' });
+    if (!release.distribeatsReleaseId) return res.status(409).json({ success: false, message: 'Release has not been submitted to Distribeats.' });
+    await distribeats.syncReleaseStatus(release);
+    emitRelease(release);
+    res.json({ success: true, data: release });
+  } catch (error) { res.status(error.status || 502).json({ success: false, message: error.message, code: error.code }); }
 };
 
 exports.sync = async (req, res) => {
   try {
     const release = await DistributionRelease.findOne({ _id: req.params.id, ...(await scope(req)) });
     if (!release) return res.status(404).json({ success: false, message: 'Distribution release not found' });
-    await labelgrid.syncReleaseStatus(release);
+    await distribeats.syncReleaseStatus(release);
     emitRelease(release);
-    res.json({ success: true, data: release, integration: await labelgrid.connectionStatus() });
+    res.json({ success: true, data: release, integration: await distribeats.connectionStatus() });
   } catch (error) {
     await DistributionRelease.findByIdAndUpdate(req.params.id, { $push: { syncErrors: { message: error.message, code: error.code || 'SYNC_ERROR' } }, status: 'error' }).catch(() => {});
     res.status(502).json({ success: false, message: error.message, code: error.code });
   }
 };
 
-exports.labelgridRoyalties = async (req, res) => {
-  try { res.json({ success: true, data: await labelgrid.getRoyalties(req.query) }); }
-  catch (error) { res.status(error.status || 502).json({ success: false, message: error.message, code: error.code }); }
+exports.takedown = async (req, res) => {
+  try {
+    const release = await DistributionRelease.findOne({ _id: req.params.id, ...(await scope(req)) });
+    if (!release) return res.status(404).json({ success: false, message: 'Distribution release not found' });
+    if (!req.body.reason?.trim()) return res.status(422).json({ success: false, message: 'A takedown reason is required' });
+    await distribeats.requestTakedown(release, req.body.reason.trim());
+    emitRelease(release);
+    res.json({ success: true, data: release });
+  } catch (error) { res.status(error.status || 502).json({ success: false, message: error.message, code: error.code }); }
 };
 
-exports.labelgridAnalytics = async (req, res) => {
+exports.getDdex = async (req, res) => {
   try {
-    const endDate = req.query.endDate || new Date().toISOString().slice(0, 10);
-    const startDate = req.query.startDate || new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
-    res.json({ success: true, data: await labelgrid.getAnalytics({ ...req.query, startDate, endDate }) });
+    const release = await DistributionRelease.findOne({ _id: req.params.id, ...(await scope(req)) });
+    if (!release) return res.status(404).json({ success: false, message: 'Distribution release not found' });
+    const format = req.query.format === 'json' ? 'json' : 'xml';
+    const version = req.query.version === '3.8.2' ? '3.8.2' : '4.2';
+    const feed = await distribeats.getReleaseDdex(release, { format, version, redirect: req.query.redirect === 'true' });
+    if (format === 'json' || typeof feed === 'object') return res.json({ success: true, data: feed });
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="ern-${release.distribeatsReleaseId || release._id}-${version}.xml"`);
+    res.send(feed);
   } catch (error) { res.status(error.status || 502).json({ success: false, message: error.message, code: error.code }); }
 };
 
@@ -189,14 +221,14 @@ exports.royaltySummary = async (req, res) => {
     const filter = {};
     if (req.user.role === 'artist') filter.artist = (await artistForUser(req))?._id || null;
     if (req.query.period) filter.period = req.query.period;
-    const entries = await RoyaltyLedger.find(filter).populate('artist', 'name stageName').populate('release', 'title').populate('song', 'title').sort({ periodStart: -1 });
+    const entries = await RoyaltyLedger.find(filter).populate('artist', 'name stageName').populate('release', 'title').populate('song', 'title').sort({ periodStart: -1 }).lean();
     const byPlatform = {};
     const byRelease = {};
     const byTrack = {};
     let totalRevenue = 0; let artistEarnings = 0; let streamsSales = 0;
     entries.forEach(entry => {
       totalRevenue += entry.grossIncome || 0; artistEarnings += entry.artistShare || 0;
-      Object.entries(entry.incomeBySource?.toObject?.() || entry.incomeBySource || {}).forEach(([key, value]) => { byPlatform[key] = (byPlatform[key] || 0) + Number(value || 0); });
+      Object.entries(entry.incomeBySource || {}).forEach(([key, value]) => { byPlatform[key] = (byPlatform[key] || 0) + Number(value || 0); });
       if (entry.release?.title) byRelease[entry.release.title] = (byRelease[entry.release.title] || 0) + entry.grossIncome;
       if (entry.song?.title) byTrack[entry.song.title] = (byTrack[entry.song.title] || 0) + entry.grossIncome;
       streamsSales += Number(entry.units || entry.streams || 0);
@@ -209,7 +241,7 @@ exports.exportRoyalties = async (req, res) => {
   try {
     const filter = {};
     if (req.user.role === 'artist') filter.artist = (await artistForUser(req))?._id || null;
-    const entries = await RoyaltyLedger.find(filter).populate('artist', 'name stageName').populate('release', 'title').populate('song', 'title').sort({ periodStart: -1 });
+    const entries = await RoyaltyLedger.find(filter).populate('artist', 'name stageName').populate('release', 'title').populate('song', 'title').sort({ periodStart: -1 }).lean();
     const escape = value => `"${String(value ?? '').replace(/"/g, '""')}"`;
     const rows = [['Period', 'Artist', 'Release', 'Track', 'Gross Revenue', 'Artist Earnings', 'Paid', 'Balance', 'Status'], ...entries.map(e => [e.period, e.artist?.stageName || e.artist?.name, e.release?.title, e.song?.title, e.grossIncome, e.artistShare, e.totalPaid, e.remainingBalance, e.status])];
     res.setHeader('Content-Type', 'text/csv');

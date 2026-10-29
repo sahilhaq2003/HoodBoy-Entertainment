@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require('../lib/mysql-orm');
 
 const fileVersionSchema = new mongoose.Schema({
   file: { type: mongoose.Schema.Types.ObjectId, ref: 'File', required: true },

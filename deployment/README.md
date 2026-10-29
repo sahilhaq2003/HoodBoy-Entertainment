@@ -4,7 +4,7 @@ Production uses two CloudPanel Node.js sites on one VPS:
 
 - `hbe.lol` runs the built Vite frontend on port `3000` as site user `hbe`.
 - `api.hbe.lol` runs the Express API on port `5000` as site user `hbe-api`.
-- MongoDB remains on Atlas.
+- MySQL 8 runs privately on `127.0.0.1:3306` using the actual database user.
 - Backend uploads persist in `/home/hbe-api/storage/uploads`.
 
 ## First-time setup
@@ -13,7 +13,7 @@ Production uses two CloudPanel Node.js sites on one VPS:
 2. Create the two CloudPanel Node.js sites with the users and ports above.
 3. Add the GitHub Actions public key to each CloudPanel site user.
 4. Clone the repository into each site's CloudPanel document root.
-5. Create `backend/.env` only in the backend checkout.
+5. Create `backend/.env` only in the backend checkout. Configure `DB_HOST=127.0.0.1`, `DB_PORT=3306`, `DB_NAME=hbedb`, and the real MySQL username/password.
 6. Run `deployment/deploy-frontend.sh` as `hbe` and
    `deployment/deploy-backend.sh` as `hbe-api`.
 7. Issue CloudPanel Let's Encrypt certificates for both sites.

@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require('../lib/mysql-orm');
 
 const financeSchema = new mongoose.Schema({
   type: {

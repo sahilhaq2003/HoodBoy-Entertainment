@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require('../lib/mysql-orm');
 
 const contractSchema = new mongoose.Schema({
   title: { type: String, required: true, trim: true },

@@ -220,41 +220,41 @@ const getUnifiedDashboard = async (req, res) => {
 
     const [recentTasks, recentReleases, recentContracts] = await Promise.all([
       Task.find({ deadline: { $gte: now, $lte: in30Days }, status: { $ne: 'completed' } })
-        .populate('assignedTo', 'name').sort('deadline').limit(5),
+        .populate('assignedTo', 'name').sort('deadline').limit(5).lean(),
       Release.find({ releaseDate: { $gte: now, $lte: in30Days } })
-        .populate('artist', 'name stageName').sort('releaseDate').limit(5),
+        .populate('artist', 'name stageName').sort('releaseDate').limit(5).lean(),
       Contract.find({ endDate: { $gte: now, $lte: in30Days }, status: 'active' })
-        .populate('artist', 'name stageName').sort('endDate').limit(3),
+        .populate('artist', 'name stageName').sort('endDate').limit(3).lean(),
     ]);
 
     const topArtists = await Artist.find({ status: 'active' })
       .sort('-totalRevenue').limit(5)
-      .select('name stageName totalStreams totalRevenue image');
+      .select('name stageName totalStreams totalRevenue image').lean();
 
     const campaignPerf = await Campaign.find({ status: 'active' })
       .populate('artist', 'name stageName')
       .select('name artist budget spent reach impressions progress')
-      .limit(5);
+      .limit(5).lean();
 
     // Activity feed - last 30 days
     const in30DaysActivity = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const recentActivity = await Activity.find({ createdAt: { $gte: in30DaysActivity } })
       .populate('user', 'name role')
       .sort({ createdAt: -1 })
-      .limit(20);
+      .limit(20).lean();
 
     // Deadline timeline - all upcoming deadlines in one view
     const deadlineTimeline = await Task.find({ deadline: { $gte: now }, status: { $ne: 'completed' } })
       .populate('assignedTo', 'name')
       .sort({ deadline: 1 })
-      .limit(15);
+      .limit(15).lean();
 
     // Contract expiration alerts
     const in90Days = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
     const contractAlerts = await Contract.find({ status: 'active', endDate: { $gte: now, $lte: in90Days } })
       .populate('artist', 'name stageName')
       .sort({ endDate: 1 })
-      .limit(5);
+      .limit(5).lean();
 
     const songStatusMap = {};
     songsByStatus.forEach(s => { songStatusMap[s._id] = s.count; });

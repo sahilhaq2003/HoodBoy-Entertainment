@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require('../lib/mysql-orm');
 
 const checklistItemSchema = new mongoose.Schema({
   item: { type: String, required: true },

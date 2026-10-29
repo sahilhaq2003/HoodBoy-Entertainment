@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require('../lib/mysql-orm');
 
 const activitySchema = new mongoose.Schema({
   action: { type: String, required: true },

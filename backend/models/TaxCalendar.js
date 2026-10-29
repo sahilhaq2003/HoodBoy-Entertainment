@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require('../lib/mysql-orm');
 
 const taxCalendarSchema = new mongoose.Schema({
   title: { type: String, required: true },

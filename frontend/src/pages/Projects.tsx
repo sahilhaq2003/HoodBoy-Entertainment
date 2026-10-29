@@ -5,7 +5,7 @@ import { projectsApi, artistsApi } from '../services/api';
 import type { Project, Artist } from '../types';
 import StatusBadge from '../components/ui/StatusBadge';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
-import { formatCurrency, formatDate, daysUntil, getInitials } from '../utils/helpers';
+import { formatCurrency, formatDate, daysUntil } from '../utils/helpers';
 
 const emptyForm = {
   name: '',
@@ -195,75 +195,63 @@ const Projects: React.FC = () => {
                   : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400';
 
             return (
-              <div
+              <article
                 key={project._id}
-                className="hbe-card group relative overflow-hidden rounded-2xl hover:-translate-y-1 transition-all duration-300 animate-step-enter"
+                className="hbe-card group relative overflow-hidden rounded-2xl border border-[var(--hbe-line-soft)] bg-[var(--hbe-panel)] shadow-[0_4px_18px_rgba(15,23,42,0.05)] transition-all duration-300 hover:-translate-y-0.5 hover:border-[color-mix(in_srgb,var(--hbe-accent)_25%,var(--hbe-line-soft))] hover:shadow-[0_16px_38px_rgba(15,23,42,0.10)] animate-step-enter"
                 style={{ animationDelay: `${Math.min(idx * 40, 200)}ms` }}
               >
-                {/* Type accent banner */}
                 <div
-                  className="relative h-14 flex items-start justify-between p-2.5"
-                  style={{ background: `linear-gradient(135deg, ${typeColor} 0%, ${typeColor}88 55%, ${typeColor}33 100%)` }}
-                >
-                  <div className="absolute inset-x-0 bottom-0 h-full bg-gradient-to-t from-[var(--hbe-panel)] via-[var(--hbe-panel)]/8 to-transparent dark:via-black/20 dark:to-black/15" />
-                  <div className="absolute right-10 -top-6 h-16 w-16 rounded-full bg-white/10" />
-                  <div className="absolute right-24 top-1 h-5 w-5 rounded-full bg-white/10" />
-                  <div className="absolute left-1/3 top-2 h-2 w-2 rounded-full bg-white/15" />
-                  <span className="relative z-10 inline-flex items-center gap-1 rounded-md bg-black/30 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur-sm ring-1 ring-white/25 dark:bg-black/45 dark:ring-white/20">
-                    <Music size={10} />{project.type}
-                  </span>
-                  <div className="relative z-10 flex items-center gap-1.5">
-                    <button onClick={() => openEdit(project)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/90 text-gray-700 shadow-sm ring-1 ring-white/40 transition-all hover:bg-white hover:text-[var(--hbe-accent)] hover:shadow-md hover:scale-105 dark:bg-slate-900/85 dark:text-slate-200 dark:ring-white/15 dark:hover:bg-slate-800 dark:hover:text-[#A78BFA]" title="Edit">
-                      <Edit2 size={13} />
-                    </button>
-                    <button onClick={() => setDeleteId(project._id)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/90 text-gray-700 shadow-sm ring-1 ring-white/40 transition-all hover:bg-red-500 hover:text-white hover:shadow-md hover:scale-105 dark:bg-slate-900/85 dark:text-slate-200 dark:ring-white/15 dark:hover:bg-red-500/90 dark:hover:text-white" title="Delete">
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-                </div>
+                  className="absolute inset-x-0 top-0 h-1"
+                  style={{ background: `linear-gradient(90deg, ${typeColor}, ${typeColor}66 70%, transparent)` }}
+                />
 
-                {/* Body */}
-                <div className="relative px-5 pb-5">
-                  {/* Header */}
-                  <div className="-mt-7 mb-3 flex items-center gap-3">
-                    <div className="relative flex-shrink-0">
+                <div className="relative p-5 pt-6">
+                  <div className="mb-5 flex items-start justify-between gap-4">
+                    <div className="flex min-w-0 items-center gap-3.5">
                       <div
-                        className="flex h-14 w-14 items-center justify-center rounded-2xl text-sm font-bold text-white ring-4 ring-[var(--hbe-panel)] transition-transform duration-300 group-hover:scale-105"
-                        style={{ background: `linear-gradient(135deg, ${typeColor}, ${typeColor}aa)`, boxShadow: `0 8px 20px ${typeColor}40` }}
+                        className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border transition-transform duration-300 group-hover:scale-[1.04]"
+                        style={{ background: `${typeColor}12`, color: typeColor, borderColor: `${typeColor}24` }}
                       >
-                        {getInitials(projectName)}
+                        <Music size={20} strokeWidth={1.8} />
+                        <span
+                          className="absolute -bottom-1 -right-1 h-3 w-3 rounded-full border-2 border-[var(--hbe-panel)]"
+                          style={{ background: statusDot }}
+                        />
                       </div>
-                      <span
-                        className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full ring-2 ring-[var(--hbe-panel)]"
-                        style={{ background: statusDot }}
-                        title={project.status.replace(/_/g, ' ')}
-                      />
+                      <div className="min-w-0">
+                        <div className="mb-1 flex items-center gap-2">
+                          <span className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: typeColor }}>{project.type}</span>
+                          <span className="h-1 w-1 rounded-full bg-[var(--hbe-line)]" />
+                          <span className="truncate text-[11px] font-medium text-[var(--hbe-muted)]">{projectName}</span>
+                        </div>
+                        <h3 className="truncate text-base font-bold leading-tight text-[var(--hbe-text)] transition-colors group-hover:text-[var(--hbe-accent)]">
+                          {project.name}
+                        </h3>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <h3 className="truncate text-[15px] font-bold text-[var(--hbe-text)] leading-tight transition-colors group-hover:text-[var(--hbe-accent)]">
-                        {project.name}
-                      </h3>
-                      <p className="mt-1 flex items-center gap-1 truncate text-xs text-[var(--hbe-muted)]">
-                        <User size={11} className="flex-shrink-0" />{projectName}
-                      </p>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <button onClick={() => openEdit(project)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-transparent text-[var(--hbe-muted)] transition hover:border-[var(--hbe-line-soft)] hover:bg-[var(--hbe-fill)] hover:text-[var(--hbe-accent)]" title="Edit project" aria-label={`Edit ${project.name}`}>
+                        <Edit2 size={14} />
+                      </button>
+                      <button onClick={() => setDeleteId(project._id)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-transparent text-[var(--hbe-muted)] transition hover:border-red-500/15 hover:bg-red-500/8 hover:text-red-500" title="Delete project" aria-label={`Delete ${project.name}`}>
+                        <Trash2 size={14} />
+                      </button>
                     </div>
                   </div>
 
-                  {/* Badges */}
-                  <div className="mb-4 flex flex-wrap items-center gap-1.5">
+                  <div className="mb-4 flex flex-wrap items-center gap-2">
                     <StatusBadge status={project.status} />
                     <StatusBadge status={project.priority} type="priority" />
                   </div>
 
-                  {/* Completion */}
-                  <div className="mb-4">
-                    <div className="mb-1.5 flex items-center justify-between text-[11px]">
-                      <span className="font-medium text-[var(--hbe-muted)]">Completion</span>
-                      <span className="font-bold text-[var(--hbe-text)]">{project.completionPercentage}%</span>
+                  <div className="mb-4 rounded-xl border border-[var(--hbe-line-soft)] bg-[var(--hbe-fill)]/55 p-3.5">
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-[var(--hbe-muted)]">Project completion</span>
+                      <span className="text-xs font-bold tabular-nums text-[var(--hbe-text)]">{project.completionPercentage}%</span>
                     </div>
-                    <div className="h-1.5 overflow-hidden rounded-full bg-[var(--hbe-fill)]">
+                    <div className="h-2 overflow-hidden rounded-full bg-[var(--hbe-line-soft)]">
                       <div
-                        className="h-full rounded-full transition-all duration-700"
+                        className="h-full rounded-full shadow-sm transition-all duration-700"
                         style={{
                           width: `${project.completionPercentage}%`,
                           background: project.completionPercentage >= 100
@@ -276,12 +264,11 @@ const Projects: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Budget */}
                   {project.budget ? (
                     <div className="mb-4">
-                      <div className="mb-1.5 flex items-center justify-between text-[11px]">
-                        <span className="font-medium text-[var(--hbe-muted)] flex items-center gap-1"><Wallet size={11} />Budget</span>
-                        <span className="font-bold text-[var(--hbe-text)]">
+                      <div className="mb-2 flex items-center justify-between text-[11px]">
+                        <span className="flex items-center gap-1.5 font-semibold text-[var(--hbe-muted)]"><Wallet size={12} />Budget usage</span>
+                        <span className="font-bold tabular-nums text-[var(--hbe-text)]">
                           {formatCurrency(project.spent || 0)}
                           <span className="font-medium text-[var(--hbe-muted)]"> / {formatCurrency(project.budget)}</span>
                         </span>
@@ -298,12 +285,11 @@ const Projects: React.FC = () => {
                       {budgetPct > 90 && <div className="mt-1 text-[10px] font-semibold text-red-500">Over 90% of budget used</div>}
                     </div>
                   ) : (
-                    <div className="mb-4 flex items-center gap-1.5 text-[11px] text-[var(--hbe-muted)]"><Wallet size={11} />No budget set</div>
+                    <div className="mb-4 flex items-center gap-1.5 text-[11px] font-medium text-[var(--hbe-muted)]"><Wallet size={12} />No budget set</div>
                   )}
 
-                  {/* Footer */}
-                  <div className="grid grid-cols-2 gap-3 border-t border-[var(--hbe-line-soft)] pt-3.5">
-                    <div className="min-w-0">
+                  <div className="grid grid-cols-2 divide-x divide-[var(--hbe-line-soft)] border-t border-[var(--hbe-line-soft)] pt-4">
+                    <div className="min-w-0 pr-4">
                       <div className="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--hbe-muted)]">
                         <Calendar size={11} />Release
                       </div>
@@ -314,7 +300,7 @@ const Projects: React.FC = () => {
                         )}
                       </div>
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 pl-4">
                       <div className="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--hbe-muted)]">
                         <User size={11} />Assigned
                       </div>
@@ -322,7 +308,7 @@ const Projects: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              </div>
+              </article>
             );
           })}
           {filtered.length === 0 && (

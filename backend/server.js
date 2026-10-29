@@ -9,9 +9,6 @@ const { Server: SocketIO } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const connectDB = require('./config/db');
 
-// Connect to database
-connectDB();
-
 const app = express();
 
 // ── CORS origins ──────────────────────────────────────────────────────────────
@@ -25,11 +22,11 @@ const allowedOrigins = [...new Set([...configuredOrigins, 'http://localhost:5173
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(compression({ threshold: 1024 }));
 
-// LabelGrid webhook MUST receive the raw body before express.json() parses it.
+// Distribeats webhook MUST receive the raw body before express.json() parses it.
 app.post(
-  '/api/webhooks/labelgrid',
+  '/api/webhooks/distribeats',
   express.raw({ type: 'application/json', limit: '64kb' }),
-  require('./controllers/labelgridController').webhook
+  require('./controllers/distribeatsController').webhook
 );
 
 app.use(express.json({ limit: '5mb' }));
@@ -59,7 +56,7 @@ app.use('/api/ownership', require('./routes/ownership'));
 app.use('/api/contracts', require('./routes/contracts'));
 app.use('/api/releases', require('./routes/releases'));
 app.use('/api/distribution', require('./routes/distribution'));
-app.use('/api/labelgrid', require('./routes/labelgrid'));
+app.use('/api/distribeats', require('./routes/distribeats'));
 app.use('/api/weekly-reports', require('./routes/weeklyReports'));
 app.use('/api/metadata', require('./routes/metadata'));
 app.use('/api/contacts', require('./routes/contacts'));
@@ -116,8 +113,8 @@ io.on('connection', (socket) => {
   // Per-user and per-role rooms for targeted emissions.
   if (userId) socket.join(`user:${userId}`);
   if (role)   socket.join(`role:${role}`);
-  // Admins receive all labelgrid-admin broadcasts.
-  if (role === 'admin') socket.join('labelgrid:admin');
+  // Admins receive all Distribeats integration broadcasts.
+  if (role === 'admin') socket.join('distribeats:admin');
 
   // Clients join a release room so they get live updates for a specific release.
   socket.on('join:release', (releaseId) => { if (releaseId) socket.join(`release:${releaseId}`); });
@@ -127,8 +124,22 @@ io.on('connection', (socket) => {
 // ── Start server ──────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
 const HOST = process.env.HOST || '127.0.0.1';
-httpServer.listen(PORT, HOST, () => {
-  const safeMongoUri = process.env.MONGODB_URI ? process.env.MONGODB_URI.replace(/:([^@]+)@/, ':****@') : 'Not Configured';
+const listen = () => httpServer.listen(PORT, HOST, () => {
+  const databaseTarget = `${process.env.DB_HOST}:${process.env.DB_PORT || 3306}/${process.env.DB_NAME}`;
   console.log(`🚀 HBE API running on http://${HOST}:${PORT} [Socket.IO enabled]`);
-  console.log(`🍃 MongoDB URI: ${safeMongoUri}`);
+  console.log(`MySQL database: ${databaseTarget}`);
 });
+
+const start = async () => {
+  try {
+    await connectDB();
+    return listen();
+  } catch (error) {
+    console.error(`MySQL startup failed: ${error.message}`);
+    process.exitCode = 1;
+    return null;
+  }
+};
+
+if (require.main === module) start();
+module.exports = { app, httpServer, start };

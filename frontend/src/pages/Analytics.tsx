@@ -524,7 +524,7 @@ const Analytics: React.FC = () => {
                 </thead>
                 <tbody>
                   {artists.artists.map((a: any) => (
-                    <tr key={a._id} className="hover:bg-gray-50 transition-colors border-b border-gray-50">
+                    <tr key={a._id || a.displayName} className="hover:bg-gray-50 transition-colors border-b border-gray-50">
                       <td className="py-3 px-4 text-sm font-medium text-gray-900">{a.displayName}</td>
                       <td className="py-3 px-4 text-sm text-right text-gray-900">{fmtNum(a.totalStreams || 0)}</td>
                       <td className="py-3 px-4 text-sm text-right text-gray-900">{fmtCurrency(a.totalRevenue || 0)}</td>
@@ -573,7 +573,7 @@ const Analytics: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {artists.artists.slice(0, 6).map((a: any) => (
-              <div key={a._id} className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md hover:border-gray-300 transition-all duration-200 p-5">
+              <div key={a._id || a.displayName} className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md hover:border-gray-300 transition-all duration-200 p-5">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm">
                     {a.displayName?.charAt(0) || '?'}
@@ -806,7 +806,7 @@ const Analytics: React.FC = () => {
                 </thead>
                 <tbody>
                   {operational.teamPerformance.map((m: any) => (
-                    <tr key={m._id} className="hover:bg-gray-50 transition-colors border-b border-gray-50">
+                    <tr key={m._id || m.name} className="hover:bg-gray-50 transition-colors border-b border-gray-50">
                       <td className="py-3 px-4 text-sm font-medium text-gray-900">{m.name}</td>
                       <td className="py-3 px-4 text-sm text-right text-gray-900">{m.total}</td>
                       <td className="py-3 px-4 text-sm text-right text-emerald-600 font-medium">{m.completed}</td>

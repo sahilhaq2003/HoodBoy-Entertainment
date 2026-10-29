@@ -1,6 +1,6 @@
 const SongMetadata = require('../models/SongMetadata');
 const Song = require('../models/Song');
-const mongoose = require('mongoose');
+const mongoose = require('../lib/mysql-orm');
 
 const normalizeMetadata = (input = {}) => {
   const data = { ...input };

@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require('../lib/mysql-orm');
 
 const perSongAnalyticsSchema = new mongoose.Schema({
   song: { type: mongoose.Schema.Types.ObjectId, ref: 'Song', required: true },

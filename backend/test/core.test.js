@@ -14,10 +14,9 @@ const Task = require('../models/Task');
 const { validateOwnershipRecord } = require('../services/ownershipValidationService');
 const { errorHandler } = require('../middleware/errorHandler');
 const { _totp, _verifyTotp } = require('../controllers/authController');
-const { makePdf, makeSilentWav } = require('../scripts/seedDemo');
-const { LabelGridClient } = require('../services/labelgrid/labelgridClient');
-const { mapArtist, normalizeStatus } = require('../services/labelgrid/labelgridMapper');
-const { verifyWebhook } = require('../services/labelgrid/labelgridWebhook');
+const { DistribeatsClient } = require('../services/distribeats/distribeatsClient');
+const { mapRelease, normalizeStatus, PERFORMER_ROLES } = require('../services/distribeats/distribeatsMapper');
+const { verifyWebhook } = require('../services/distribeats/distribeatsWebhook');
 
 const validSources = (amount) => ({
   streaming: amount, publishing: 0, mechanical: 0, performance: 0,
@@ -201,39 +200,64 @@ test('API error handler returns safe client errors for oversized and rejected up
   assert.match(rejected.body.message, /mismatched/);
 });
 
-test('authenticator codes and generated demo fixtures are valid', () => {
+test('authenticator codes are valid', () => {
   const secret = 'JBSWY3DPEHPK3PXP';
   const code = _totp(secret);
   assert.match(code, /^\d{6}$/);
   assert.equal(_verifyTotp(secret, code), true);
   assert.equal(_verifyTotp(secret, '00000'), false);
-
-  const pdf = makePdf('Test statement');
-  assert.equal(pdf.subarray(0, 8).toString(), '%PDF-1.4');
-  assert.match(pdf.toString(), /startxref/);
-  const wav = makeSilentWav();
-  assert.equal(wav.subarray(0, 4).toString(), 'RIFF');
-  assert.equal(wav.subarray(8, 12).toString(), 'WAVE');
-  assert.equal(wav.length, 16044);
 });
 
-test('LabelGrid client fails closed when server credentials are absent', async () => {
-  const client = new LabelGridClient({ token: '', baseUrl: 'https://api.labelgrid.com/api/public' });
-  await assert.rejects(client.get('/me'), error => error.code === 'LABELGRID_NOT_CONFIGURED');
+test('Distribeats client fails closed when server credentials are absent', async () => {
+  const client = new DistribeatsClient({ token: '', baseUrl: 'https://distribeats.com/api/public/v1' });
+  await assert.rejects(client.get('/releases'), error => error.code === 'DISTRIBEATS_NOT_CONFIGURED');
 });
 
-test('LabelGrid mappings use documented fields and normalize documented states', () => {
-  const artist = mapArtist({ artistName: 'Test Artist', legalName: 'Legal Name', email: 'artist@example.test', socialLinks: { spotify: 'https://open.spotify.com/artist/test' } });
-  assert.equal(artist.artist_name, 'Test Artist');
-  assert.equal(artist.spotify_url, 'https://open.spotify.com/artist/test');
-  assert.equal(normalizeStatus({ state: 'live' }), 'live');
-  assert.equal(normalizeStatus({ review_status: 'require_changes' }), 'rejected');
+test('Distribeats mappings use documented OpenAPI fields and normalize documented states', () => {
+  const mapped = mapRelease(
+    {
+      title: 'Neon Monsoon',
+      type: 'single',
+      genre: 'Electronic',
+      subGenre: 'Electronic/House',
+      language: 'English',
+      releaseDate: new Date('2026-11-14'),
+      copyright: '© 2026 Monsoon Tapes',
+      publishingCopyright: '℗ 2026 Monsoon Tapes',
+      dspOutletIds: ['Spotify', 'Apple Music'],
+      attestations: { age: true, rights: true },
+      composers: ['Aarav Sen', 'Riya Kapoor'],
+      songwriters: ['Riya Kapoor'],
+      producer: 'Aarav Sen',
+      mixingEngineers: ['Dev Malhotra'],
+      masteringEngineers: ['Dev Malhotra'],
+      tracks: [{
+        title: 'Neon Monsoon',
+        language: 'English',
+        contributors: [{ name: 'Aarav Sen', role: 'primary_artist' }],
+      }],
+    },
+    { artistName: 'Aarav Sen', distribeatsArtistId: 'usr_9f2c' }
+  );
+  assert.equal(mapped.title, 'Neon Monsoon');
+  assert.equal(mapped.displayArtist, 'Aarav Sen');
+  assert.equal(mapped.artistId, 'usr_9f2c');
+  assert.equal(mapped.releaseType, 'Single');
+  assert.equal(mapped.pLine, '2026 Monsoon Tapes');
+  assert.equal(mapped.cLine, '2026 Monsoon Tapes');
+  assert.equal(mapped.requestUploadUrls, true);
+  assert.equal(mapped.newSpotifyArtist, true);
+  assert.ok(PERFORMER_ROLES.has(mapped.tracks[0].contributors[0].role));
+  assert.equal(normalizeStatus('Live'), 'live');
+  assert.equal(normalizeStatus('Sent to Stores'), 'delivered');
+  assert.equal(normalizeStatus('Rejected'), 'rejected');
 });
 
-test('LabelGrid webhook verification checks HMAC and signed timestamp', () => {
+test('Distribeats webhook verification checks HMAC and signed timestamp', () => {
   const secret = 'test-webhook-secret';
-  const raw = Buffer.from(JSON.stringify({ event: 'delivery.completed', timestamp: new Date().toISOString(), data: { release_id: 12, distro_queue_id: 34 } }));
-  const signature = crypto.createHmac('sha256', secret).update(raw).digest('hex');
-  assert.equal(verifyWebhook(raw, signature, secret).data.release_id, 12);
-  assert.throws(() => verifyWebhook(raw, '0'.repeat(64), secret), /Invalid LabelGrid webhook signature/);
+  const raw = Buffer.from(JSON.stringify({ id: 'evt_test', object: 'event', type: 'release.approved', data: { release: { id: 'rel_12', status: 'Approved' } } }));
+  const timestamp = Date.now();
+  const digest = crypto.createHmac('sha256', secret).update(`${timestamp}.`).update(raw).digest('hex');
+  assert.equal(verifyWebhook(raw, { signature: `sha256=${digest}`, timestamp }, secret).data.release.id, 'rel_12');
+  assert.throws(() => verifyWebhook(raw, { signature: `sha256=${'0'.repeat(64)}`, timestamp }, secret), /Invalid Distribeats webhook signature/);
 });

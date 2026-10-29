@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require('../lib/mysql-orm');
 const Artist = require('../models/Artist');
 const Song = require('../models/Song');
 const Release = require('../models/Release');

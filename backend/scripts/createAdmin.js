@@ -1,5 +1,5 @@
 require('dotenv').config({ path: __dirname + '/../.env' });
-const mongoose = require('mongoose');
+const mongoose = require('../lib/mysql-orm');
 const User = require('../models/User');
 
 async function createAdmin() {
@@ -7,15 +7,9 @@ async function createAdmin() {
   const password = process.argv[3] || 'HBEAdmin@2026';
   const name = process.argv[4] || 'System Administrator';
 
-  const mongoUri = process.env.MONGODB_URI;
-  if (!mongoUri) {
-    console.error('ERROR: MONGODB_URI is not set in backend/.env');
-    process.exit(1);
-  }
-
   try {
-    await mongoose.connect(mongoUri);
-    console.log('Connected to MongoDB...');
+    await mongoose.connect();
+    console.log('Connected to MySQL...');
 
     let user = await User.findOne({ email: email.toLowerCase() });
 
@@ -51,7 +45,7 @@ async function createAdmin() {
     console.error('Error creating admin user:', err.message);
   } finally {
     await mongoose.disconnect();
-    console.log('Disconnected from MongoDB.');
+    console.log('Disconnected from MySQL.');
   }
 }
 

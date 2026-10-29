@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require('../lib/mysql-orm');
 
 const monthlyScorecardSchema = new mongoose.Schema({
   month: { type: String, required: true },

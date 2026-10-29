@@ -11,6 +11,17 @@ const errorHandler = (err, req, res, next) => {
     return res.status(400).json({ success: false, message: `Duplicate value for ${field}` });
   }
 
+  if (err.name === 'SequelizeUniqueConstraintError') {
+    const field = err.errors?.[0]?.path || 'field';
+    return res.status(400).json({ success: false, message: `Duplicate value for ${field}` });
+  }
+  if (err.name === 'SequelizeForeignKeyConstraintError') {
+    return res.status(409).json({ success: false, message: 'This record is referenced by another resource or contains an invalid reference.' });
+  }
+  if (err.name === 'SequelizeConnectionError' || err.name === 'SequelizeConnectionRefusedError') {
+    return res.status(503).json({ success: false, message: 'Database temporarily unavailable' });
+  }
+
   if (err.name === 'CastError') {
     return res.status(400).json({ success: false, message: 'Invalid ID format' });
   }

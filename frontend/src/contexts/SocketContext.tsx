@@ -3,21 +3,21 @@
  *
  * The socket is lazily connected after the user logs in (token is present in
  * localStorage/sessionStorage) and automatically disconnected on logout.
- * All LabelGrid real-time events flow through this single connection.
+ * All ToneGrid real-time events flow through this single connection.
  */
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import toast from 'react-hot-toast';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-export interface LabelGridReleaseUpdate {
+export interface DistribeatsReleaseUpdate {
   releaseId: string;
   title: string;
   status: string;
   qcStatus?: string;
   syncStatus?: string;
-  labelgridRawStatus?: string;
-  labelgridReleaseId?: string;
+  distribeatsRawStatus?: string;
+  distribeatsReleaseId?: string;
   storeStatuses?: { store: string; status: string; updatedAt?: string }[];
   uploadState?: Record<string, string>;
   lastSyncedAt?: string;
@@ -26,7 +26,7 @@ export interface LabelGridReleaseUpdate {
   eventData?: { outlet?: string; outletStatus?: string; message?: string };
 }
 
-export interface LabelGridSyncProgress {
+export interface DistribeatsSyncProgress {
   type: string;
   phase: string;
   current?: number;
@@ -37,10 +37,9 @@ export interface LabelGridSyncProgress {
   success?: boolean;
   message?: string;
   successCount?: number;
-  labelgridArtistId?: string;
 }
 
-export interface LabelGridWebhookReceived {
+export interface DistribeatsWebhookReceived {
   event: string;
   releaseId: string;
   title: string;
@@ -53,12 +52,12 @@ interface SocketContextValue {
   /** Join a per-release room so this client receives targeted release updates. */
   joinRelease: (releaseId: string) => void;
   leaveRelease: (releaseId: string) => void;
-  /** Last LabelGrid status object received from the server (broadcasted after every check). */
-  labelgridStatus: any;
-  /** Real-time feed of LabelGrid webhook events (admin). */
-  webhookFeed: LabelGridWebhookReceived[];
+  /** Last ToneGrid status object received from the server (broadcasted after every check). */
+  distribeatsStatus: any;
+  /** Real-time feed of ToneGrid webhook events (admin). */
+  webhookFeed: DistribeatsWebhookReceived[];
   /** Active sync progress state (bulk artist / release sync). */
-  syncProgress: LabelGridSyncProgress | null;
+  syncProgress: DistribeatsSyncProgress | null;
 }
 
 const SocketContext = createContext<SocketContextValue>({
@@ -66,7 +65,7 @@ const SocketContext = createContext<SocketContextValue>({
   connected: false,
   joinRelease: () => {},
   leaveRelease: () => {},
-  labelgridStatus: null,
+  distribeatsStatus: null,
   webhookFeed: [],
   syncProgress: null,
 });
@@ -81,9 +80,9 @@ const SOCKET_URL = import.meta.env.VITE_API_URL
 export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const socketRef = useRef<Socket | null>(null);
   const [connected, setConnected] = useState(false);
-  const [labelgridStatus, setLabelgridStatus] = useState<any>(null);
-  const [webhookFeed, setWebhookFeed] = useState<LabelGridWebhookReceived[]>([]);
-  const [syncProgress, setSyncProgress] = useState<LabelGridSyncProgress | null>(null);
+  const [distribeatsStatus, setDistribeatsStatus] = useState<any>(null);
+  const [webhookFeed, setWebhookFeed] = useState<DistribeatsWebhookReceived[]>([]);
+  const [syncProgress, setSyncProgress] = useState<DistribeatsSyncProgress | null>(null);
 
   // Re-connect / disconnect whenever the JWT token changes (login / logout).
   useEffect(() => {
@@ -103,6 +102,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     const socket = io(SOCKET_URL, {
       auth: { token },
+      autoConnect: false,
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: Infinity,
@@ -110,21 +110,22 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       reconnectionDelayMax: 10000,
     });
     socketRef.current = socket;
+    const connectTimer = window.setTimeout(() => socket.connect(), 0);
 
     socket.on('connect', () => setConnected(true));
     socket.on('disconnect', () => setConnected(false));
 
-    // ── LabelGrid real-time events ────────────────────────────────────────────
-    socket.on('labelgrid:status', (data: any) => {
-      setLabelgridStatus(data);
+    // ── ToneGrid real-time events ────────────────────────────────────────────
+    socket.on('distribeats:status', (data: any) => {
+      setDistribeatsStatus(data);
     });
 
-    socket.on('labelgrid:release_updated', (data: LabelGridReleaseUpdate) => {
+    socket.on('distribeats:release_updated', (data: DistribeatsReleaseUpdate) => {
       // Dispatch a custom DOM event so any mounted component can react.
-      window.dispatchEvent(new CustomEvent('hbe:labelgrid_release_updated', { detail: data }));
+      window.dispatchEvent(new CustomEvent('hbe:distribeats_release_updated', { detail: data }));
     });
 
-    socket.on('labelgrid:sync_progress', (data: LabelGridSyncProgress) => {
+    socket.on('distribeats:sync_progress', (data: DistribeatsSyncProgress) => {
       setSyncProgress(data);
       // Clear progress 3 s after a bulk operation completes.
       if (data.phase === 'completed') {
@@ -136,19 +137,20 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     });
 
-    socket.on('labelgrid:webhook_received', (data: LabelGridWebhookReceived) => {
+    socket.on('distribeats:webhook_received', (data: DistribeatsWebhookReceived) => {
       setWebhookFeed(prev => [data, ...prev].slice(0, 50));
-      // Map LabelGrid webhook events to human-readable toast messages.
+      // Map Distribeats webhook events to human-readable toast messages.
       const msg: Record<string, string> = {
-        'release.review.status_changed': `Release "${data.title}" review status changed`,
-        'delivery.completed': `"${data.title}" delivered to a new store 🎉`,
-        'delivery.failed': `"${data.title}" delivery failed — check the release`,
-        'takedown.completed': `"${data.title}" taken down from all stores`,
-        'audio.transcode.completed': `Audio transcoding complete for "${data.title}"`,
-        'distribution.outlet.status_changed': `"${data.title}" outlet status updated`,
+        'release.submitted': `Release "${data.title}" submitted for review`,
+        'release.screening_passed': `Screening passed for "${data.title}"`,
+        'release.approved': `Release "${data.title}" approved & DDEX compiled 🎉`,
+        'release.rejected': `Release "${data.title}" rejected — check the release`,
+        'release.delivered': `"${data.title}" delivered to stores`,
+        'release.store_live': `"${data.title}" is now live in stores 🎉`,
+        'release.takedown_completed': `"${data.title}" taken down from stores`,
       };
-      const message = msg[data.event] || `LabelGrid event: ${data.event}`;
-      if (data.event.includes('failed') || data.event.includes('error')) {
+      const message = msg[data.event] || `Distribeats event: ${data.event}`;
+      if (data.event.includes('rejected') || data.event.includes('failed') || data.event.includes('error')) {
         toast.error(message);
       } else {
         toast.success(message, { duration: 6000, icon: '🎵' });
@@ -156,6 +158,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     });
 
     return () => {
+      window.clearTimeout(connectTimer);
       socket.removeAllListeners();
       socket.disconnect();
       socketRef.current = null;
@@ -172,7 +175,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   return (
-    <SocketContext.Provider value={{ socket: socketRef.current, connected, joinRelease, leaveRelease, labelgridStatus, webhookFeed, syncProgress }}>
+    <SocketContext.Provider value={{ socket: socketRef.current, connected, joinRelease, leaveRelease, distribeatsStatus, webhookFeed, syncProgress }}>
       {children}
     </SocketContext.Provider>
   );

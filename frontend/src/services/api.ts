@@ -1,6 +1,7 @@
 import axios from 'axios';
 
 const GET_CACHE_TTL = 30_000;
+const GET_CACHE_MAX_ENTRIES = 200;
 const getCache = new Map<string, { expiresAt: number; response: any }>();
 
 export const clearApiCache = () => getCache.clear();
@@ -21,6 +22,9 @@ const uploadOrigin = (() => {
 const resolveServerUploads = (value: unknown): unknown => {
   if (typeof value === 'string') return value.startsWith('/uploads/') ? `${uploadOrigin}${value}` : value;
   if (Array.isArray(value)) return value.map(resolveServerUploads);
+  // Binary downloads must pass through unchanged (Object.entries(new Blob())
+  // is empty and would otherwise turn CSV/PDF exports into an empty object).
+  if (value instanceof Blob || value instanceof FormData) return value;
   if (value && typeof value === 'object') {
     return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, item]) => [key, resolveServerUploads(item)]));
   }
@@ -36,7 +40,10 @@ api.interceptors.request.use((config) => {
     const cacheKey = `${token || 'guest'}:${config.url}:${JSON.stringify(config.params || {})}`;
     const cached = getCache.get(cacheKey);
     if (cached && cached.expiresAt > Date.now()) {
-      config.adapter = async () => cached.response;
+      config.adapter = async () => ({
+        ...cached.response,
+        config: { ...cached.response.config, __hbeServedFromCache: true },
+      });
     } else {
       getCache.delete(cacheKey);
       (config as any).__hbeCacheKey = cacheKey;
@@ -54,7 +61,14 @@ api.interceptors.response.use(
   (response) => {
     response.data = resolveServerUploads(response.data);
     const cacheKey = (response.config as any).__hbeCacheKey;
-    if (cacheKey) getCache.set(cacheKey, { expiresAt: Date.now() + GET_CACHE_TTL, response });
+    if (cacheKey && !(response.config as any).__hbeServedFromCache) {
+      // Bound memory usage for long-running browser sessions.
+      if (getCache.size >= GET_CACHE_MAX_ENTRIES) {
+        const oldestKey = getCache.keys().next().value;
+        if (oldestKey) getCache.delete(oldestKey);
+      }
+      getCache.set(cacheKey, { expiresAt: Date.now() + GET_CACHE_TTL, response });
+    }
     return response;
   },
   (error) => {
@@ -223,19 +237,24 @@ export const distributionApi = {
   create: (data: FormData) => api.post('/distribution', data, { headers: { 'Content-Type': 'multipart/form-data' } }),
   update: (id: string, data: FormData) => api.put(`/distribution/${id}`, data, { headers: { 'Content-Type': 'multipart/form-data' } }),
   submit: (id: string) => api.post(`/distribution/${id}/submit`),
+  distribute: (id: string) => api.post(`/distribution/${id}/distribute`),
+  takedown: (id: string, reason: string) => api.post(`/distribution/${id}/takedown`, { reason }),
   sync: (id: string) => api.post(`/distribution/${id}/sync`),
+  getDdex: (id: string, params?: { format?: 'xml' | 'json'; version?: '3.8.2' | '4.2' }) =>
+    api.get(`/distribution/${id}/ddex`, { params, responseType: params?.format === 'json' ? 'json' : 'blob' }),
   getRoyaltySummary: (params?: object) => api.get('/distribution/royalties/summary', { params }),
   exportRoyalties: () => api.get('/distribution/royalties/export', { responseType: 'blob' }),
-  getLabelGridRoyalties: (params?: object) => api.get('/distribution/labelgrid/royalties', { params }),
-  getLabelGridAnalytics: (params?: object) => api.get('/distribution/labelgrid/analytics', { params }),
 };
 
-export const labelgridApi = {
-  getStatus: () => api.get('/labelgrid/connection-status'),
-  testConnection: () => api.get('/labelgrid/connection-status'),
-  syncArtists: () => api.post('/labelgrid/sync/artists'),
-  syncReleases: () => api.post('/labelgrid/sync/releases'),
-  syncArtist: (id: string) => api.post(`/labelgrid/artists/${id}/sync`),
+export const distribeatsApi = {
+  getStatus: () => api.get('/distribeats/connection-status'),
+  testConnection: () => api.get('/distribeats/connection-status'),
+  getCatalogue: () => api.get('/distribeats/catalogue'),
+  listReleases: (params?: object) => api.get('/distribeats/releases', { params }),
+  listArtists: (params?: object) => api.get('/distribeats/artists', { params }),
+  syncReleases: () => api.post('/distribeats/sync/releases'),
+  syncArtists: () => api.post('/distribeats/sync/artists'),
+  sendInboundEvent: (type: string, data?: object) => api.post('/distribeats/webhooks/inbound', { type, data }),
 };
 
 // Contracts

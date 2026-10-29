@@ -6,10 +6,12 @@ The concise administrator workflow guide is [docs/HBE_Admin_Dashboard_Quick_Guid
 
 ## Local start
 
-1. Copy `backend/.env.example` to `backend/.env` and configure MongoDB/JWT values.
-2. Run `npm install` and `npm run dev` in `backend`.
+1. Copy `backend/.env.example` to `backend/.env` and configure MySQL/JWT values.
+2. Run `npm install`, `npm run db:migrate`, and `npm run dev` in `backend`.
 3. Run `npm install` and `npm run dev` in `frontend`.
 
 Use `node scripts/seedDemo.js` from `backend` to rebuild the tracked demo dataset with functional local fixtures. For an existing demo database, `npm run demo:repair` repairs only records listed in `_demomarkers` and creates the missing PDF, JPEG, WAV, and CSV files.
 
 Production password recovery requires `FRONTEND_URL` and `PASSWORD_RESET_WEBHOOK_URL`; see `backend/.env.example` and Appendix B of the manual.
+
+See [docs/MYSQL_MIGRATION.md](docs/MYSQL_MIGRATION.md) for source-data transfer, verification, production cutover, and rollback.

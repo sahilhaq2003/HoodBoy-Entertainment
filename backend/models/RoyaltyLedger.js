@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require('../lib/mysql-orm');
 
 const royaltyEntrySchema = new mongoose.Schema({
   artist: { type: mongoose.Schema.Types.ObjectId, ref: 'Artist', required: true },

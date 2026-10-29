@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require('../lib/mysql-orm');
 
 const interactionSchema = new mongoose.Schema({
   type: { type: String, enum: ['call', 'email', 'meeting', 'message', 'event', 'other'], required: true },

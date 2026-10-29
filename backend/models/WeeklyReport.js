@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require('../lib/mysql-orm');
 
 const weeklyReportSchema = new mongoose.Schema({
   weekStart: { type: Date, required: true },

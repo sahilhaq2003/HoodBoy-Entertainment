@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require('../lib/mysql-orm');
 
 const contributorSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
@@ -20,11 +20,18 @@ const distributionTrackSchema = new mongoose.Schema({
   trackNumber: { type: Number, min: 1 },
   discNumber: { type: Number, min: 1, default: 1 },
   compositionType: { type: String, enum: ['original_composition', 'cover_song', 'public_domain'], default: 'original_composition' },
+  copyrightType: { type: String, enum: ['Original', 'Licensed'], default: 'Original' },
+  instrumental: { type: Boolean, default: false },
+  rightsProofUrl: { type: String, default: '' },
+  writers: [{ type: String, trim: true }],
+  composers: [{ type: String, trim: true }],
+  producers: [{ type: String, trim: true }],
+  mixingEngineers: [{ type: String, trim: true }],
+  masteringEngineers: [{ type: String, trim: true }],
   audioAiUsage: { type: String, enum: ['none', 'some', 'material', 'all'], default: 'none' },
   compositionAiUsage: { type: String, enum: ['none', 'some', 'material', 'all'], default: 'none' },
   commercialSamples: { type: String, enum: ['no', 'exclusive', 'non_exclusive'], default: 'no' },
-  labelgridTrackId: { type: String, default: '' },
-  labelgridUploadAttemptId: { type: String, default: '' },
+  distribeatsTrackId: { type: String, default: '' },
   uploadStatus: { type: String, enum: ['preparing', 'uploading', 'processing', 'uploaded', 'failed'], default: 'preparing' },
   // QC Fields
   sampleStatus: { type: String, enum: ['no', 'yes_cleared', 'yes_clearance_required', 'unsure'], default: 'no' },
@@ -44,6 +51,15 @@ const distributionReleaseSchema = new mongoose.Schema({
   songwriters: [{ type: String, trim: true }],
   composers: [{ type: String, trim: true }],
   genre: { type: String, required: true },
+  subGenre: { type: String, default: '' },
+  mixingEngineers: [{ type: String, trim: true }],
+  masteringEngineers: [{ type: String, trim: true }],
+  spotifyArtistUrl: { type: String, default: '' },
+  aiDocumentUrl: { type: String, default: '' },
+  attestations: {
+    age: { type: Boolean, default: false },
+    rights: { type: Boolean, default: false },
+  },
   language: { type: String, default: 'English' },
   releaseDate: { type: Date, required: true },
   explicit: { type: Boolean, default: false },
@@ -62,14 +78,14 @@ const distributionReleaseSchema = new mongoose.Schema({
     enum: ['draft', 'submitted', 'processing', 'approved', 'delivered', 'live', 'rejected', 'takedown_requested', 'removed', 'error'],
     default: 'draft',
   },
-  provider: { type: String, default: 'labelgrid' },
+  provider: { type: String, default: 'distribeats' },
   providerReleaseId: { type: String, default: '' },
-  labelgridReleaseId: { type: String, default: '', index: true },
+  distribeatsReleaseId: { type: String, default: '', index: true },
   
   // QC Fields
   qcStatus: {
     type: String,
-    enum: ['pending_qc', 'qc_processing', 'action_required', 'manual_review', 'qc_passed', 'qc_failed', 'ready_for_labelgrid'],
+    enum: ['pending_qc', 'qc_processing', 'action_required', 'manual_review', 'qc_passed', 'qc_failed', 'ready_for_distribution'],
     default: 'pending_qc'
   },
   rightsStatus: {
@@ -85,7 +101,7 @@ const distributionReleaseSchema = new mongoose.Schema({
     performedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     timestamp: { type: Date, default: Date.now }
   }],
-  labelgridRawStatus: { type: String, default: '' },
+  distribeatsRawStatus: { type: String, default: '' },
   catalogNumber: { type: String, default: '', trim: true },
   publishingCopyright: { type: String, default: '' },
   artworkAiUsage: { type: String, enum: ['none', 'some', 'material', 'all'], default: 'none' },
@@ -109,6 +125,8 @@ const distributionReleaseSchema = new mongoose.Schema({
 
 distributionReleaseSchema.index({ artist: 1, createdAt: -1 });
 distributionReleaseSchema.index({ status: 1, releaseDate: 1 });
+distributionReleaseSchema.index({ syncStatus: 1, lastSyncedAt: 1 });
+distributionReleaseSchema.index({ createdAt: -1 });
 distributionReleaseSchema.index({ title: 'text', upc: 'text', providerReleaseId: 'text' });
 
 module.exports = mongoose.model('DistributionRelease', distributionReleaseSchema);

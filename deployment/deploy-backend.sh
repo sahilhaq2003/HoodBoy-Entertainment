@@ -27,6 +27,7 @@ ln -sfn "$STORAGE_DIR" "$BACKEND_DIR/uploads"
 
 cd "$BACKEND_DIR"
 npm ci --omit=dev
+npm run db:migrate
 command -v pm2 >/dev/null 2>&1 || npm install --global pm2@latest
 pm2 startOrReload ecosystem.config.cjs --env production
 pm2 save

@@ -13,4 +13,5 @@ coverage/
 *.pfx
 
 *.log
+backend/migration-report.json
 .tools/

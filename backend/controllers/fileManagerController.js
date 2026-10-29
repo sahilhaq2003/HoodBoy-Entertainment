@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require('../lib/mysql-orm');
 const path = require('path');
 const fs = require('fs');
 const Folder = require('../models/Folder');

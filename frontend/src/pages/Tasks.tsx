@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   CheckSquare, Plus, Search, Clock, AlertTriangle, Users, Calendar,
   ChevronRight, ChevronDown, X, RefreshCw, ArrowRight, Target, Shield,
@@ -674,7 +675,7 @@ const Tasks: React.FC = () => {
           onDragEnd={handleDragEnd}
           onDragCancel={handleDragCancel}
         >
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 overflow-x-auto">
+          <div className="scrollbar-hidden grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 overflow-x-auto">
             {COLUMNS.map(col => {
               const colTasks = (kanban[col.key] || []).filter(t => {
                 const ms = !search || t.title.toLowerCase().includes(search.toLowerCase());
@@ -685,13 +686,16 @@ const Tasks: React.FC = () => {
             })}
           </div>
 
-          <DragOverlay dropAnimation={null}>
-            {activeTask && (
-              <div className="p-3 rounded-xl bg-white border border-indigo-300 shadow-2xl rotate-2 opacity-95 pointer-events-none w-56">
-                <TaskCardBody task={activeTask} />
-              </div>
-            )}
-          </DragOverlay>
+          {createPortal(
+            <DragOverlay dropAnimation={null} zIndex={1000}>
+              {activeTask && (
+                <div className="w-56 pointer-events-none rounded-xl border border-indigo-300 bg-white p-3 opacity-95 shadow-2xl dark:border-indigo-500 dark:bg-gray-900">
+                  <TaskCardBody task={activeTask} />
+                </div>
+              )}
+            </DragOverlay>,
+            document.body,
+          )}
         </DndContext>
       )}
 

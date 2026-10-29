@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require('../lib/mysql-orm');
 
 const documentSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -119,11 +119,7 @@ const artistSchema = new mongoose.Schema({
   totalRevenue: { type: Number, default: 0 },
   royaltyRate: { type: Number, default: 15 },
 
-  // LabelGrid integration (kept separate from the artist's business profile)
-  labelgridArtistId: { type: String, default: '', index: true },
-  labelgridSyncStatus: { type: String, enum: ['not_synced', 'syncing', 'synced', 'error'], default: 'not_synced' },
-  labelgridLastSyncedAt: { type: Date },
-  labelgridSyncError: { type: String, default: '' },
+  distribeatsArtistId: { type: String, default: '', index: true },
 }, { timestamps: true });
 
 // Virtual for display name

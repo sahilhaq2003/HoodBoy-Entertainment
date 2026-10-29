@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require('../lib/mysql-orm');
 const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({

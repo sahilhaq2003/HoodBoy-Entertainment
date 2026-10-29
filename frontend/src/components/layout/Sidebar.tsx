@@ -169,12 +169,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   return (
     <>
       <aside className="hidden lg:block h-full shrink-0">{sidebarContent}</aside>
-      {isOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-          <div className="absolute inset-y-0 left-0 w-[264px] shadow-2xl">{sidebarContent}</div>
-        </div>
-      )}
+      <div
+        className={`mobile-sidebar-shell fixed inset-0 z-50 lg:hidden ${isOpen ? 'mobile-sidebar-open' : ''}`}
+        aria-hidden={!isOpen}
+      >
+        <div className="mobile-sidebar-backdrop absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+        <div className="mobile-sidebar-drawer absolute inset-y-0 left-0 w-[264px] shadow-2xl">{sidebarContent}</div>
+      </div>
     </>
   );
 };

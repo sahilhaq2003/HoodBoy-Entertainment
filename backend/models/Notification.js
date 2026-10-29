@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require('../lib/mysql-orm');
 const notificationSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   type: { type: String, enum: ['task_deadline', 'task_assigned', 'task_update', 'task_comment', 'approval_needed', 'payment_due', 'contract_expiry', 'release_scheduled', 'campaign_update', 'mention', 'system'], required: true },

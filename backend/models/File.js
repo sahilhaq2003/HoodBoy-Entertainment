@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require('../lib/mysql-orm');
 
 const fileSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },

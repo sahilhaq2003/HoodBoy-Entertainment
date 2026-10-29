@@ -1,7 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
-const mongoose = require('mongoose');
+const orm = require('../lib/mysql-orm');
+const connectDB = require('../config/db');
 
 require('dotenv').config({ path: require('node:path').join(__dirname, '..', '.env') });
 
@@ -16,16 +17,18 @@ const runId = `AUTOMATED_TEST_${crypto.randomUUID()}`;
 const createdIds = { artists: [], finances: [], royalties: [], ownerships: [], metadata: [], files: [] };
 const sourceTotal = (value) => ({ streaming: value, publishing: 0, mechanical: 0, performance: 0, sync: 0, merchandise: 0, other: 0 });
 let testArtist;
+const hasDb = ['DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASSWORD'].every(key => process.env[key]);
+const dbtest = hasDb ? test : test.skip;
 
 test.before(async () => {
-  if (!process.env.MONGODB_URI) throw new Error('MONGODB_URI is required for integration tests');
-  await mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 10000 });
-  await mongoose.connection.db.admin().ping();
+  if (!hasDb) return;
+  await connectDB();
   testArtist = await Artist.create({ legalName: `${runId} Legal`, artistName: `${runId} Artist`, email: `${runId.toLowerCase()}@example.test`, status: 'active' });
   createdIds.artists.push(testArtist._id);
 });
 
 test.after(async () => {
+  if (!hasDb) return;
   await Promise.all([
     Artist.deleteMany({ _id: { $in: createdIds.artists } }),
     Finance.deleteMany({ _id: { $in: createdIds.finances } }),
@@ -34,17 +37,17 @@ test.after(async () => {
     SongMetadata.deleteMany({ _id: { $in: createdIds.metadata } }),
     File.deleteMany({ _id: { $in: createdIds.files } }),
   ]);
-  await mongoose.disconnect();
+  await orm.disconnect();
 });
 
-test('MongoDB artist CRUD persists and updates an isolated test artist', async () => {
+dbtest('MySQL artist CRUD persists and updates an isolated test artist', async () => {
   assert.equal(testArtist.name, `${runId} Legal`);
   assert.equal(testArtist.stageName, `${runId} Artist`);
   const updated = await Artist.findByIdAndUpdate(testArtist._id, { genre: 'Hip Hop' }, { returnDocument: 'after' });
   assert.equal(updated.genre, 'Hip Hop');
 });
 
-test('MongoDB finance records derive accounting period fields and reject invalid amounts', async () => {
+dbtest('MySQL finance records derive accounting period fields and reject invalid amounts', async () => {
   const finance = await Finance.create({ type: 'income', category: 'streaming_revenue', amount: 125.5, artist: testArtist._id, description: runId, date: new Date('2026-07-15') });
   createdIds.finances.push(finance._id);
   assert.equal(finance.month, 7);
@@ -52,7 +55,7 @@ test('MongoDB finance records derive accounting period fields and reject invalid
   await assert.rejects(Finance.create({ type: 'expense', category: 'marketing_advertising', amount: 0, description: runId }), /greater than zero/);
 });
 
-test('MongoDB royalty ledger persists validated accounting data', async () => {
+dbtest('MySQL royalty ledger persists validated accounting data', async () => {
   const royalty = await RoyaltyLedger.create({
     artist: testArtist._id, period: runId, periodStart: new Date('2026-07-01'), periodEnd: new Date('2026-07-31'),
     grossIncome: 200, incomeBySource: sourceTotal(200), artistPercentage: 60, labelPercentage: 40,
@@ -65,7 +68,7 @@ test('MongoDB royalty ledger persists validated accounting data', async () => {
   }));
 });
 
-test('MongoDB stores document relationships without requiring physical file access', async () => {
+dbtest('MySQL stores relational links without requiring physical file access', async () => {
   const royalty = await RoyaltyLedger.create({
     artist: testArtist._id, period: `${runId}_file`, periodStart: new Date('2026-08-01'), periodEnd: new Date('2026-08-31'),
     grossIncome: 100, incomeBySource: sourceTotal(100), artistPercentage: 60, labelPercentage: 40,

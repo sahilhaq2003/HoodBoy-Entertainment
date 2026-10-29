@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require('../lib/mysql-orm');
 
 const DEFAULT_PRODUCTION_WORKFLOW = [
   { step: 'beat_selected', label: 'Beat Selected', order: 1 },

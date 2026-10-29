@@ -206,7 +206,7 @@ exports.processReleaseQc = async (releaseId) => {
     if (typeof emitRelease === 'function') {
         // emitRelease(release); 
         // Need to require correctly, maybe just standard global emit
-        global.io?.to(`release:${release._id}`).emit('labelgrid:release_updated', {
+        global.io?.to(`release:${release._id}`).emit('distribeats:release_updated', {
           releaseId: String(release._id),
           qcStatus: release.qcStatus,
           status: release.status

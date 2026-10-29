@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require('../lib/mysql-orm');
 
 const lnkUpEpisodeSchema = new mongoose.Schema({
   title: { type: String, required: true, trim: true },
