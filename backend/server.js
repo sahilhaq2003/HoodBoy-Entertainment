@@ -132,7 +132,9 @@ const listen = () => httpServer.listen(PORT, HOST, () => {
 
 const start = async () => {
   try {
-    await connectDB();
+    const sequelize = await connectDB();
+    const { ensureSchema } = require('./lib/ensureSchema');
+    await ensureSchema(sequelize);
     return listen();
   } catch (error) {
     console.error(`MySQL startup failed: ${error.message}`);

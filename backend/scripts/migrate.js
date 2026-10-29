@@ -1,5 +1,6 @@
 require('dotenv').config({ path: require('node:path').join(__dirname, '..', '.env') });
 const connectDB = require('../config/db');
+const { ensureSchema } = require('../lib/ensureSchema');
 
 const migrations = [
   require('../migrations/001_initial_mysql_schema'),
@@ -40,6 +41,8 @@ async function main() {
     await sequelize.query('INSERT INTO schema_migrations (name, appliedAt) VALUES (?, UTC_TIMESTAMP(3))', { replacements: [migration.name] });
     console.log(`Applied ${migration.name}`);
   }
+  await ensureSchema(sequelize);
+  console.log('Verified all MySQL tables and columns are up to date (preserving existing data).');
 }
 
 main().catch(error => { console.error(error); process.exitCode = 1; }).finally(async () => connectDB.getSequelize()?.close());

@@ -28,6 +28,7 @@ npm run build
 
 cd "$BACKEND_DIR"
 npm ci --omit=dev
+npm run db:migrate
 pm2 startOrReload ecosystem.config.cjs --env production
 pm2 save
 
