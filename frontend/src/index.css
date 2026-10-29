@@ -803,6 +803,21 @@ body { background: var(--hbe-bg); }
   -webkit-backdrop-filter: blur(8px);
 }
 
+.app-shell [class*='fixed'][class*='inset-0'][class*='z-50'][class*='flex']:not(.mobile-sidebar-shell) {
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.app-shell [class*='fixed'][class*='inset-0'][class*='z-50'][class*='flex']:not(.mobile-sidebar-shell) > div:not([class*='inset-0']) {
+  max-height: calc(100dvh - 2rem);
+  margin-top: auto;
+  margin-bottom: auto;
+}
+
+.app-shell [class*='fixed'][class*='inset-0'][class*='z-50'][class*='flex']:not(.mobile-sidebar-shell) > div:not([class*='inset-0']):not([class*='flex-col']) {
+  overflow-y: auto;
+}
+
 /* ───────────────────────── Login ───────────────────────────── */
 .login-shell {
   position: relative;
@@ -907,20 +922,14 @@ body { background: var(--hbe-bg); }
 @keyframes route-page-enter {
   from {
     opacity: 0;
-    transform: translateY(10px) scale(0.997);
-    filter: blur(2px);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
-    filter: blur(0);
   }
 }
 
 .route-page-enter {
-  animation: route-page-enter 360ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
-  transform-origin: top center;
-  will-change: transform, opacity, filter;
+  animation: route-page-enter 260ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes hbe-rise {
