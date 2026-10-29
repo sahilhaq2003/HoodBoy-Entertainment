@@ -19,23 +19,30 @@ const log = (event, details = {}) => console.info(JSON.stringify({ service: 'dis
 
 const getCatalogue = () => cached('catalogue', 15 * 60_000, () => client.get('/catalogue', undefined, { requireAuth: false }));
 
-const connectionStatus = () => cached('connection', 30_000, async () => {
+const checkConnection = async () => {
   const base = {
     provider: 'distribeats', configured: client.isConfigured(), baseUrl: client.baseUrl || DEFAULT_BASE_URL,
     environment: process.env.DISTRIBEATS_API_KEY?.startsWith('db_live_') ? 'live' : 'test',
     credentialHint: process.env.DISTRIBEATS_API_KEY ? `••••••••${process.env.DISTRIBEATS_API_KEY.slice(-4)}` : '',
+    checkedAt: new Date().toISOString(),
   };
   if (!client.isConfigured()) return { ...base, status: 'not_configured', message: 'Set DISTRIBEATS_API_KEY in the backend environment.' };
+  const started = Date.now();
   try {
     const [catalogue] = await Promise.all([
       getCatalogue(),
-      client.get('/releases', { limit: 1 }),
+      client.get('/releases', { limit: 1 }, { retries: 0, timeout: 15000 }),
     ]);
-    return { ...base, status: 'connected', message: 'Connected to Distribeats', catalogueVersion: catalogue?.version };
+    return { ...base, status: 'connected', latencyMs: Date.now() - started, message: 'Connected to Distribeats', catalogueVersion: catalogue?.version };
   } catch (error) {
-    return { ...base, status: error.status === 401 || error.status === 403 ? 'authentication_error' : 'api_unavailable', message: error.message };
+    return { ...base, latencyMs: Date.now() - started, status: error.status === 401 || error.status === 403 ? 'authentication_error' : 'api_unavailable', message: error.message };
   }
-});
+};
+
+const connectionStatus = (force = false) => {
+  if (force) cache.delete('connection');
+  return cached('connection', 30_000, checkConnection);
+};
 
 const uploadBytes = async (releaseId, fileId, bytes, contentType, targetUrl) => {
   const uploadPath = targetUrl || `/releases/${releaseId}/upload/${encodeURIComponent(fileId)}`;

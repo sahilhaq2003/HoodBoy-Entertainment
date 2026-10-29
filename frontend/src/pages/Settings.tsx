@@ -70,15 +70,26 @@ const Settings: React.FC = () => {
     try { setDistribeats((await distribeatsApi.getStatus()).data.data); }
     catch (e: any) { setDistribeats({ status: 'connection_error', message: e.response?.data?.message || 'Unable to check Distribeats' }); }
   };
-  useEffect(() => { if (activeSection === 'integrations') loadDistribeats(); }, [activeSection]);
+  useEffect(() => {
+    if (activeSection !== 'integrations') return;
+    loadDistribeats();
+    const timer = window.setInterval(loadDistribeats, 30000);
+    return () => window.clearInterval(timer);
+  }, [activeSection]);
 
   const runDistribeats = async (action: 'test' | 'artists' | 'releases') => {
     setDistribeatsBusy(action);
     try {
       if (action === 'releases') await distribeatsApi.syncReleases();
       else if (action === 'artists') await distribeatsApi.syncArtists();
-      else await distribeatsApi.testConnection();
-      toast.success(action === 'test' ? 'Distribeats connection checked' : action === 'artists' ? 'Distribeats artists synchronized' : 'Distribeats releases synchronized');
+      else {
+        const result = (await distribeatsApi.testConnection()).data.data;
+        setDistribeats(result);
+        if (result.status === 'connected') toast.success(`Distribeats connected (${result.latencyMs} ms, ${result.environment} key)`);
+        else toast.error(result.message || 'Distribeats connection failed');
+        return;
+      }
+      toast.success(action === 'artists' ? 'Distribeats artists synchronized' : 'Distribeats releases synchronized');
       await loadDistribeats();
     } catch (e: any) { toast.error(e.response?.data?.message || 'Distribeats action failed'); }
     finally { setDistribeatsBusy(''); }
@@ -418,7 +429,8 @@ const Settings: React.FC = () => {
                 { key: 'distributor' as const, label: 'Distributor dashboard' },
               ].map(item => <div key={item.key}><label className="block text-xs font-medium text-gray-500 mb-1.5 dark:text-gray-400">{item.label}</label><div className="flex gap-2"><input type="url" value={integrationLinks[item.key] || ''} onChange={e => setIntegrationLinks(prev => ({ ...prev, [item.key]: e.target.value }))} placeholder="https://..." className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />{/^https?:\/\//i.test(integrationLinks[item.key] || '') && <a href={integrationLinks[item.key]} target="_blank" rel="noreferrer" className="p-2 border rounded-lg text-indigo-600 dark:border-gray-600" title="Open link"><ExternalLink size={17} /></a>}</div></div>)}</div>
               {user?.role === 'admin' && <div className="mt-7 border-t border-gray-200 pt-6 dark:border-gray-700">
-                <div className="flex items-center justify-between gap-3"><div><h3 className="font-bold text-gray-900 dark:text-gray-100">Distribeats</h3><p className="text-xs text-gray-500">Server-side distribution API connection</p></div><span className={`rounded-full px-3 py-1 text-xs font-bold ${distribeats?.status === 'connected' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{String(distribeats?.status || 'loading').replaceAll('_', ' ')}</span></div>
+                <div className="flex items-center justify-between gap-3"><div><h3 className="font-bold text-gray-900 dark:text-gray-100">Distribeats</h3><p className="text-xs text-gray-500">Server-side distribution API connection</p></div><span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold ${distribeats?.status === 'connected' ? 'bg-emerald-100 text-emerald-700' : distribeats ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}><span className={`h-2 w-2 rounded-full ${distribeats?.status === 'connected' ? 'bg-emerald-500 animate-pulse' : distribeats ? 'bg-red-500' : 'bg-amber-500'}`} />{distribeats?.status === 'connected' ? 'Live · Healthy' : String(distribeats?.status || 'checking').replaceAll('_', ' ')}</span></div>
+                <dl className="mt-4 grid grid-cols-2 gap-3 text-xs sm:grid-cols-4"><div><dt className="text-gray-500">Key mode</dt><dd className="mt-1 font-semibold uppercase dark:text-gray-200">{distribeats?.environment || '—'}</dd></div><div><dt className="text-gray-500">Response time</dt><dd className="mt-1 font-semibold dark:text-gray-200">{distribeats?.latencyMs != null ? `${distribeats.latencyMs} ms` : '—'}</dd></div><div><dt className="text-gray-500">Last checked</dt><dd className="mt-1 font-semibold dark:text-gray-200">{distribeats?.checkedAt ? new Date(distribeats.checkedAt).toLocaleTimeString() : '—'}</dd></div><div><dt className="text-gray-500">API URL</dt><dd className="mt-1 break-all font-semibold dark:text-gray-200">{distribeats?.baseUrl || '—'}</dd></div></dl>
                 <dl className="mt-4 grid grid-cols-2 gap-3 text-xs sm:grid-cols-4"><div><dt className="text-gray-500">API URL</dt><dd className="mt-1 break-all font-semibold dark:text-gray-200">{distribeats?.baseUrl || '—'}</dd></div><div><dt className="text-gray-500">API token</dt><dd className="mt-1 font-semibold dark:text-gray-200">{distribeats?.credentialHint || 'Not configured'}</dd></div><div><dt className="text-gray-500">Synced artists</dt><dd className="mt-1 font-semibold dark:text-gray-200">{distribeats?.syncedArtists ?? '—'}</dd></div><div><dt className="text-gray-500">Synced releases / errors</dt><dd className="mt-1 font-semibold dark:text-gray-200">{distribeats?.syncedReleases ?? '—'} / {distribeats?.syncErrors ?? '—'}</dd></div><div><dt className="text-gray-500">Last successful sync</dt><dd className="mt-1 font-semibold dark:text-gray-200">{distribeats?.lastSuccessfulSync ? new Date(distribeats.lastSuccessfulSync).toLocaleString() : 'Never'}</dd></div><div><dt className="text-gray-500">Last failed sync</dt><dd className="mt-1 font-semibold dark:text-gray-200">{distribeats?.lastFailedSync ? new Date(distribeats.lastFailedSync).toLocaleString() : 'None'}</dd></div><div><dt className="text-gray-500">Webhook</dt><dd className="mt-1 font-semibold dark:text-gray-200">{distribeats?.webhookStatus?.replaceAll('_', ' ') || '—'}</dd></div></dl>
                 {distribeats?.message && <p className="mt-3 text-xs text-gray-500">{distribeats.message}</p>}
                 <div className="mt-4 flex flex-wrap gap-2">{[['test','Test Connection'],['artists','Sync Artists'],['releases','Sync Releases']].map(([key,label]) => <button key={key} type="button" disabled={Boolean(distribeatsBusy)} onClick={() => runDistribeats(key as 'test'|'artists'|'releases')} className="rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold disabled:opacity-50 dark:border-gray-600 dark:text-gray-200">{distribeatsBusy === key ? 'Working…' : label}</button>)}</div>

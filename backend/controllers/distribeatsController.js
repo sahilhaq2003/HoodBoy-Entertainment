@@ -15,10 +15,10 @@ const emitRelease = release => {
   emit('distribeats:release_updated', data);
 };
 
-exports.status = async (_req, res) => {
+exports.status = async (req, res) => {
   try {
     const [connection, releaseCount, artistCount, errorCount, latest, latestError] = await Promise.all([
-      service.connectionStatus(),
+      service.connectionStatus(req.query.refresh === '1'),
       DistributionRelease.countDocuments({ distribeatsReleaseId: { $ne: '' } }),
       Artist.countDocuments({ distribeatsArtistId: { $ne: '' } }),
       DistributionRelease.countDocuments({ syncStatus: 'error' }),

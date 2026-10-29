@@ -248,7 +248,7 @@ export const distributionApi = {
 
 export const distribeatsApi = {
   getStatus: () => api.get('/distribeats/connection-status'),
-  testConnection: () => api.get('/distribeats/connection-status'),
+  testConnection: () => api.get('/distribeats/connection-status', { params: { refresh: 1 } }),
   getCatalogue: () => api.get('/distribeats/catalogue'),
   listReleases: (params?: object) => api.get('/distribeats/releases', { params }),
   listArtists: (params?: object) => api.get('/distribeats/artists', { params }),
