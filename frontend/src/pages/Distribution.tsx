@@ -1252,8 +1252,8 @@ const Distribution: React.FC = () => {
                 <td className="py-3 capitalize font-bold text-amber-500">{(r.qcStatus || 'pending_qc').replace('_', ' ')}</td>
                 <td className="py-3">
                   <div className="flex gap-2">
-                    <button onClick={async () => { const token = localStorage.getItem('hbe_token') || sessionStorage.getItem('hbe_token'); await fetch(`/api/distribution/${r._id}/qc`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ qcStatus: 'ready_for_distribution', rightsStatus: 'approved' }) }); load(); toast.success('Approved'); }} className="rounded bg-emerald-500/20 text-emerald-500 px-3 py-1 text-xs font-bold hover:bg-emerald-500/30">Approve</button>
-                    <button onClick={async () => { const token = localStorage.getItem('hbe_token') || sessionStorage.getItem('hbe_token'); await fetch(`/api/distribution/${r._id}/qc`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ qcStatus: 'qc_failed', rightsStatus: 'rejected' }) }); load(); toast.error('Rejected'); }} className="rounded bg-red-500/20 text-red-500 px-3 py-1 text-xs font-bold hover:bg-red-500/30">Reject</button>
+                    <button onClick={async () => { await distributionApi.updateQc(r._id, { qcStatus: 'ready_for_distribution', rightsStatus: 'approved' }); load(); toast.success('Approved'); }} className="rounded bg-emerald-500/20 text-emerald-500 px-3 py-1 text-xs font-bold hover:bg-emerald-500/30">Approve</button>
+                    <button onClick={async () => { await distributionApi.updateQc(r._id, { qcStatus: 'qc_failed', rightsStatus: 'rejected' }); load(); toast.error('Rejected'); }} className="rounded bg-red-500/20 text-red-500 px-3 py-1 text-xs font-bold hover:bg-red-500/30">Reject</button>
                   </div>
                 </td>
               </tr>

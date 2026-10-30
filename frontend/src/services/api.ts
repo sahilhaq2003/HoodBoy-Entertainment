@@ -257,6 +257,7 @@ export const distributionApi = {
   importSong: (songId: string) => api.get(`/distribution/import-song/${songId}`),
   validate: (id: string) => api.post(`/distribution/${id}/validate`),
   validateDraft: (payload: object) => api.post('/distribution/validate-draft', payload),
+  updateQc: (id: string, data: { qcStatus: string; rightsStatus?: string; qcFeedback?: string }) => api.put(`/distribution/${id}/qc`, data),
   create: (data: FormData) => api.post('/distribution', data, { headers: { 'Content-Type': 'multipart/form-data' } }),
   update: (id: string, data: FormData) => api.put(`/distribution/${id}`, data, { headers: { 'Content-Type': 'multipart/form-data' } }),
   submit: (id: string) => api.post(`/distribution/${id}/submit`),
