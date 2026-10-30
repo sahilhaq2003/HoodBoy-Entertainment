@@ -4,10 +4,11 @@ import {
   ArrowLeft, Edit, Music, DollarSign, TrendingUp, MapPin, Phone,
   Mail, Globe, AtSign, Video, MessageCircle, Music2, FileText, CheckCircle,
   XCircle, Clock, Send, Trash2, ExternalLink, User, Calendar,
-  Star, Camera, Shield, CreditCard, Building2,
+  Star, Camera, Shield, CreditCard, Building2, RefreshCw, Disc3,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { artistsApi } from '../services/api';
+import { artistsApi, distribeatsApi } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 import OnboardingProgress from '../components/onboarding/OnboardingProgress';
 import StatusBadge from '../components/ui/StatusBadge';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
@@ -18,6 +19,7 @@ import type { Artist } from '../types';
 const ArtistProfile: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [artist, setArtist] = useState<Artist | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -27,6 +29,7 @@ const ArtistProfile: React.FC = () => {
   const [uploadingImage, setUploadingImage] = useState<string | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [createdLogin, setCreatedLogin] = useState<{ _id: string; name: string; email: string; tempPassword: string } | null>(null);
+  const [syncingDistribeats, setSyncingDistribeats] = useState(false);
   const profileInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
@@ -105,6 +108,17 @@ const ArtistProfile: React.FC = () => {
       toast.error(e.response?.data?.message || 'Upload failed');
     }
     setUploadingImage(null);
+  };
+
+  const syncDistribeatsArtist = async () => {
+    if (!artist) return;
+    setSyncingDistribeats(true);
+    try {
+      const response = await distribeatsApi.syncArtist(artist._id);
+      setArtist(response.data.data);
+      toast.success('Artist linked to Distribeats');
+    } catch (e: any) { toast.error(e.response?.data?.message || 'Distribeats artist sync failed'); }
+    finally { setSyncingDistribeats(false); }
   };
 
   if (loading) {
@@ -444,6 +458,11 @@ const ArtistProfile: React.FC = () => {
 
         {/* Sidebar */}
         <div className="space-y-6">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 dark:bg-gray-800 dark:border-gray-700">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200"><Disc3 size={15}/>Distribeats artist</h3>
+            <p className="mt-2 break-all font-mono text-xs text-gray-500 dark:text-gray-400">{artist.distribeatsArtistId || 'Not linked'}</p>
+            {user?.role === 'admin' && <button onClick={syncDistribeatsArtist} disabled={syncingDistribeats} className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-indigo-200 px-3 py-2 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 disabled:opacity-50 dark:border-indigo-800 dark:text-indigo-400 dark:hover:bg-indigo-500/10"><RefreshCw size={13} className={syncingDistribeats ? 'animate-spin' : ''}/>{syncingDistribeats ? 'Syncing…' : artist.distribeatsArtistId ? 'Refresh provider link' : 'Find in Distribeats'}</button>}
+          </div>
           {/* Stats */}
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 dark:bg-gray-800 dark:border-gray-700">
             <h3 className="text-sm font-semibold text-gray-500 mb-3 dark:text-gray-400">Performance</h3>

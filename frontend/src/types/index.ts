@@ -108,6 +108,7 @@ export interface Artist {
   totalStreams?: number;
   totalRevenue?: number;
   royaltyRate?: number;
+  distribeatsArtistId?: string;
   createdAt: string;
 }
 

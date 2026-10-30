@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Radio, Plus, Calendar, CheckCircle, Clock, AlertTriangle,
   ChevronDown, X, Search, RefreshCw, Users, Music, ArrowRight, Target,
@@ -166,9 +167,7 @@ const Releases: React.FC = () => {
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage the full release lifecycle</p>
         </div>
-        <button onClick={openCreate} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 flex items-center gap-2">
-          <Plus size={15} /> Schedule Release
-        </button>
+        <div className="flex flex-wrap gap-2"><Link to="/distribution" className="px-4 py-2 border border-indigo-200 text-indigo-600 rounded-lg text-sm font-semibold hover:bg-indigo-50 flex items-center gap-2 dark:border-indigo-800 dark:text-indigo-400 dark:hover:bg-indigo-500/10"><Radio size={15}/>Open Distribution API</Link><button onClick={openCreate} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 flex items-center gap-2"><Plus size={15} /> Schedule Release</button></div>
       </div>
 
       {/* Tabs */}

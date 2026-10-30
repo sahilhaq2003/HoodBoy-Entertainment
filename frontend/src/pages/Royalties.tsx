@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import {
   DollarSign,
   Plus,
@@ -24,6 +25,7 @@ import toast from 'react-hot-toast';
 import { royaltiesApi, artistsApi } from '../services/api';
 import { formatCurrency, formatDate, getStatusClass, formatStatus } from '../utils/helpers';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
+import { useAuth } from '../contexts/AuthContext';
 import type { RoyaltyEntry, Artist } from '../types';
 
 interface IncomeBySource {
@@ -49,6 +51,7 @@ const defaultIncomeBySource: IncomeBySource = {
 const statusOptions = ['draft', 'calculated', 'approved', 'paid', 'disputed'] as const;
 
 const Royalties: React.FC = () => {
+  const { user } = useAuth();
   const [entries, setEntries] = useState<RoyaltyEntry[]>([]);
   const [artists, setArtists] = useState<Artist[]>([]);
   const [loading, setLoading] = useState(true);
@@ -307,6 +310,8 @@ const Royalties: React.FC = () => {
           New Entry
         </button>
       </div>
+
+      <div className="flex flex-col gap-3 rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm dark:border-sky-900 dark:bg-sky-950/30 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold text-sky-900 dark:text-sky-200">Distribution reporting boundary</p><p className="mt-1 text-xs text-sky-700 dark:text-sky-400">This ledger handles royalty calculations and payments. Distribeats’ public API currently provides releases, artists, DDEX and webhooks, but not royalty reports.</p></div><Link to={user?.role === 'admin' ? '/distribution?tab=provider' : '/distribution'} className="shrink-0 rounded-lg border border-sky-300 px-3 py-2 text-xs font-semibold text-sky-700 hover:bg-sky-100 dark:border-sky-800 dark:text-sky-300">{user?.role === 'admin' ? 'Open provider catalogue' : 'Open distribution records'}</Link></div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map((kpi) => (

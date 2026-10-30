@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -6,9 +7,9 @@ import {
 import {
   Activity, AlertCircle, DollarSign, FileText, Radio, TrendingUp, Users,
   Clock, FolderOpen, Megaphone, Calendar, CheckCircle2, AlertTriangle,
-  Target, Zap, FileWarning, TrendingDown,
+  Target, Zap, FileWarning, TrendingDown, RefreshCw, Webhook, Wifi, WifiOff,
 } from 'lucide-react';
-import { dashboardApi } from '../services/api';
+import { dashboardApi, distribeatsApi } from '../services/api';
 import { formatCurrency, formatDate, formatNumber } from '../utils/helpers';
 import DashboardHero from '../components/ui/DashboardHero';
 import StatCard from '../components/ui/StatCard';
@@ -29,12 +30,21 @@ const CustomPieTooltip = ({ active, payload }: any) => {
 
 const AdminDashboard: React.FC = () => {
   const [data, setData] = useState<any>(null);
+  const [distributionHealth, setDistributionHealth] = useState<any>(null);
+  const [recentWebhooks, setRecentWebhooks] = useState<any[]>([]);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    dashboardApi.getRoleDashboard()
-      .then(response => setData(response.data.data))
-      .catch(err => setError(err.response?.data?.message || 'Failed to load dashboard'));
+    Promise.allSettled([
+      dashboardApi.getRoleDashboard(),
+      distribeatsApi.getStatus(),
+      distribeatsApi.getWebhookEvents({ limit: 5 }),
+    ]).then(([dashboard, status, webhooks]) => {
+      if (dashboard.status === 'fulfilled') setData(dashboard.value.data.data);
+      else setError((dashboard.reason as any)?.response?.data?.message || 'Failed to load dashboard');
+      if (status.status === 'fulfilled') setDistributionHealth(status.value.data.data);
+      if (webhooks.status === 'fulfilled') setRecentWebhooks(webhooks.value.data.data.events || []);
+    });
   }, []);
 
   if (error) return (
@@ -111,6 +121,35 @@ const AdminDashboard: React.FC = () => {
       />
 
       {/* Row 1 — KPI Stat Cards */}
+      <section className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
+        <div className="rounded-2xl border border-[var(--hbe-border-soft)] bg-[var(--hbe-panel)] p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <span className={`grid h-9 w-9 place-items-center rounded-xl ${distributionHealth?.status === 'connected' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}`}>
+                {distributionHealth?.status === 'connected' ? <Wifi size={17}/> : <WifiOff size={17}/>}
+              </span>
+              <div><h2 className="text-sm font-bold text-[var(--hbe-text)]">Distribeats integration</h2><p className="text-[10px] text-[var(--hbe-muted)]">API and webhook operational health</p></div>
+            </div>
+            <Link to="/settings?section=integrations" className="text-xs font-semibold text-[var(--hbe-accent)]">Configure</Link>
+          </div>
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              ['API', distributionHealth?.status === 'connected' ? 'Connected' : String(distributionHealth?.status || 'Unavailable').replaceAll('_', ' ')],
+              ['Webhook', String(distributionHealth?.webhookStatus || 'unknown').replaceAll('_', ' ')],
+              ['Releases', distributionHealth?.syncedReleases ?? '—'],
+              ['Sync errors', distributionHealth?.syncErrors ?? '—'],
+            ].map(([label, value]) => <div key={label} className="rounded-xl bg-[var(--hbe-fill-soft)] p-3"><p className="text-[9px] uppercase tracking-wider text-[var(--hbe-muted)]">{label}</p><p className="mt-1 truncate text-xs font-bold capitalize text-[var(--hbe-text)]">{value}</p></div>)}
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2"><Link to="/distribution" className="rounded-lg bg-violet-600 px-3 py-2 text-xs font-bold text-white">Open distribution</Link><Link to="/settings?section=integrations" className="rounded-lg border border-[var(--hbe-border-soft)] px-3 py-2 text-xs font-semibold text-[var(--hbe-text)]"><RefreshCw size={12} className="mr-1 inline"/>Manage sync</Link></div>
+        </div>
+        <div className="rounded-2xl border border-[var(--hbe-border-soft)] bg-[var(--hbe-panel)] p-5">
+          <div className="flex items-center justify-between"><div><h2 className="flex items-center gap-2 text-sm font-bold text-[var(--hbe-text)]"><Webhook size={15}/>Recent webhooks</h2><p className="mt-1 text-[10px] text-[var(--hbe-muted)]">Latest verified provider deliveries</p></div><Link to="/distribution?tab=webhooks" className="text-xs font-semibold text-[var(--hbe-accent)]">View history</Link></div>
+          <div className="mt-4 space-y-2">
+            {recentWebhooks.length ? recentWebhooks.map(item => <div key={item._id} className="flex items-center justify-between gap-3 rounded-xl bg-[var(--hbe-fill-soft)] px-3 py-2.5"><div className="min-w-0"><p className="truncate text-xs font-semibold text-[var(--hbe-text)]">{item.event}</p><p className="truncate text-[10px] text-[var(--hbe-muted)]">{item.releaseTitle || item.remoteReleaseId || item.message || 'Provider event'}</p></div><span className={`shrink-0 rounded-full px-2 py-1 text-[9px] font-bold capitalize ${item.status === 'processed' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}`}>{item.status}</span></div>) : <div className="flex h-24 items-center justify-center text-xs text-[var(--hbe-muted)]">No webhook deliveries recorded yet</div>}
+          </div>
+        </div>
+      </section>
+
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Total revenue"

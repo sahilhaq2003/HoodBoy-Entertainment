@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { AlertTriangle, BarChart3, Download, Music2, Plus, RefreshCw, Search, Send, Upload, Wifi, WifiOff } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { artistsApi, distributionApi } from '../services/api';
+import { artistsApi, distribeatsApi, distributionApi } from '../services/api';
 import type { Artist, DistributionRelease } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket, type DistribeatsReleaseUpdate } from '../contexts/SocketContext';
@@ -19,8 +19,10 @@ const emptyTrack = (): TrackDraft => ({ title: '', isrc: '', explicit: false, la
 
 const Distribution: React.FC = () => {
   const { user, canAccess } = useAuth();
-  const { connected, joinRelease, leaveRelease, syncProgress } = useSocket();
-  const [tab, setTab] = useState<'catalog' | 'new' | 'royalties' | 'qc'>('catalog');
+  const [searchParams] = useSearchParams();
+  const { connected, joinRelease, leaveRelease, syncProgress, webhookFeed } = useSocket();
+  const requestedTab = searchParams.get('tab');
+  const [tab, setTab] = useState<'catalog' | 'provider' | 'new' | 'royalties' | 'qc' | 'webhooks'>(requestedTab === 'webhooks' && user?.role === 'admin' ? 'webhooks' : requestedTab === 'provider' && user?.role === 'admin' ? 'provider' : 'catalog');
   const [releases, setReleases] = useState<DistributionRelease[]>([]);
   const [artists, setArtists] = useState<Artist[]>([]);
   const [connection, setConnection] = useState<any>(null);
@@ -29,6 +31,11 @@ const Distribution: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [actionBusy, setActionBusy] = useState('');
   const [references, setReferences] = useState<any>(null);
+  const [webhookEvents, setWebhookEvents] = useState<any[]>([]);
+  const [webhookTotal, setWebhookTotal] = useState(0);
+  const [webhooksLoading, setWebhooksLoading] = useState(false);
+  const [remoteReleases, setRemoteReleases] = useState<any[]>([]);
+  const [remoteLoading, setRemoteLoading] = useState(false);
   const [editing, setEditing] = useState<DistributionRelease | null>(null);
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('');
@@ -49,6 +56,33 @@ const Distribution: React.FC = () => {
     finally { setLoading(false); }
   };
   useEffect(() => { load(); }, []);
+
+  const loadWebhookEvents = async () => {
+    if (user?.role !== 'admin') return;
+    setWebhooksLoading(true);
+    try {
+      const response = await distribeatsApi.getWebhookEvents({ limit: 100 });
+      setWebhookEvents(response.data.data.events || []);
+      setWebhookTotal(response.data.data.total || 0);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to load webhook history');
+    } finally { setWebhooksLoading(false); }
+  };
+
+  useEffect(() => { if (tab === 'webhooks') loadWebhookEvents(); }, [tab]);
+  useEffect(() => { if (tab === 'webhooks' && webhookFeed.length) loadWebhookEvents(); }, [webhookFeed.length]);
+
+  const loadRemoteReleases = async () => {
+    if (user?.role !== 'admin') return;
+    setRemoteLoading(true);
+    try {
+      const response = await distribeatsApi.listReleases({ limit: 100 });
+      const payload = response.data.data;
+      setRemoteReleases(Array.isArray(payload) ? payload : payload?.data || payload?.releases || []);
+    } catch (error: any) { toast.error(error.response?.data?.message || 'Failed to load Distribeats catalogue'); }
+    finally { setRemoteLoading(false); }
+  };
+  useEffect(() => { if (tab === 'provider') loadRemoteReleases(); }, [tab]);
 
   // ── Join per-release Socket.IO rooms for live updates ──────────────────────
   useEffect(() => {
@@ -160,7 +194,7 @@ const Distribution: React.FC = () => {
     )}
 
     <div className="flex flex-wrap gap-1 rounded-xl bg-[var(--hbe-fill-soft)] p-1 w-fit">
-      {([...(['catalog', 'royalties', 'new'] as const), ...(user?.role === 'admin' ? ['qc' as const] : [])]).map(key => <button key={key} onClick={() => setTab(key)} className={`rounded-lg px-4 py-2 text-sm font-semibold ${tab === key ? 'bg-[var(--hbe-surface)] text-[var(--hbe-text)] shadow-sm' : 'text-[var(--hbe-muted)]'}`}>{key === 'catalog' ? 'Catalog' : key === 'royalties' ? 'Revenue & Royalties' : key === 'qc' ? 'Admin QC' : 'New Release'}</button>)}
+      {([...(['catalog', 'royalties', 'new'] as const), ...(user?.role === 'admin' ? ['provider' as const, 'qc' as const, 'webhooks' as const] : [])]).map(key => <button key={key} onClick={() => setTab(key)} className={`rounded-lg px-4 py-2 text-sm font-semibold ${tab === key ? 'bg-[var(--hbe-surface)] text-[var(--hbe-text)] shadow-sm' : 'text-[var(--hbe-muted)]'}`}>{key === 'catalog' ? 'Catalog' : key === 'provider' ? 'Provider Catalogue' : key === 'royalties' ? 'Revenue & Royalties' : key === 'qc' ? 'Admin QC' : key === 'webhooks' ? 'Webhook History' : 'New Release'}</button>)}
     </div>
 
     {tab === 'catalog' && <>
@@ -196,7 +230,11 @@ const Distribution: React.FC = () => {
       <div className="space-y-3"><div className="flex justify-between"><h3 className="font-bold text-[var(--hbe-text)]">Tracks</h3><button onClick={()=>setTracks([...tracks,emptyTrack()])} className="text-sm font-semibold text-violet-500">+ Add track</button></div>{tracks.map((t,i)=><div key={i} className="grid gap-3 rounded-xl border border-[var(--hbe-line)] p-4 md:grid-cols-[1fr_1fr_1.4fr_auto]"><input className={input} placeholder="Track title" value={t.title} onChange={e=>setTracks(items=>items.map((item,j)=>j===i?{...item,title:e.target.value}:item))}/><input className={input} placeholder="ISRC (optional)" value={t.isrc} onChange={e=>setTracks(items=>items.map((item,j)=>j===i?{...item,isrc:e.target.value}:item))}/><input type="file" accept="audio/*,.wav,.flac,.aif,.aiff" className={input} onChange={e=>setTracks(items=>items.map((item,j)=>j===i?{...item,audio:e.target.files?.[0]}:item))}/><button disabled={tracks.length===1} onClick={()=>setTracks(items=>items.filter((_,j)=>j!==i))} className="px-2 text-red-500 disabled:opacity-30">×</button></div>)}</div>
       <div className="flex justify-end"><button disabled={saving} onClick={createRelease} className="rounded-xl bg-violet-600 px-5 py-3 text-sm font-bold text-white disabled:opacity-50 flex items-center gap-2"><Upload size={16}/>{saving?'Uploading…':'Save Draft'}</button></div></div>}
 
-    {tab === 'royalties' && <div className="space-y-5"><div className="grid gap-4 sm:grid-cols-3"><div className="rounded-2xl border border-[var(--hbe-line)] bg-[var(--hbe-surface)] p-5"><p className="text-xs text-[var(--hbe-muted)]">Total Revenue</p><p className="mt-2 text-2xl font-bold text-[var(--hbe-text)]">{formatCurrency(royalties?.totalRevenue||0)}</p></div><div className="rounded-2xl border border-[var(--hbe-line)] bg-[var(--hbe-surface)] p-5"><p className="text-xs text-[var(--hbe-muted)]">Artist Earnings</p><p className="mt-2 text-2xl font-bold text-emerald-500">{formatCurrency(royalties?.artistEarnings||0)}</p></div><div className="rounded-2xl border border-[var(--hbe-line)] bg-[var(--hbe-surface)] p-5"><p className="text-xs text-[var(--hbe-muted)]">Statements</p><p className="mt-2 text-2xl font-bold text-[var(--hbe-text)]">{royalties?.entries?.length||0}</p></div></div><div className="flex justify-between"><div><h2 className="font-bold text-[var(--hbe-text)]">Royalty history</h2><p className="text-xs text-[var(--hbe-muted)]">Internal royalty ledger. Distribeats royalty data is available through the secured backend endpoint when connected.</p></div><button onClick={download} className="rounded-xl border border-[var(--hbe-line)] px-4 py-2 text-sm font-semibold text-[var(--hbe-text)] flex items-center gap-2"><Download size={15}/> CSV</button></div><div className="grid gap-4 lg:grid-cols-3">{[['Platform / source',royalties?.byPlatform],['Release',royalties?.byRelease],['Track',royalties?.byTrack]].map(([label,data]:any)=><div key={label} className="rounded-2xl border border-[var(--hbe-line)] bg-[var(--hbe-surface)] p-5"><h3 className="mb-4 text-sm font-bold text-[var(--hbe-text)] flex items-center gap-2"><BarChart3 size={15}/>{label}</h3><div className="space-y-3">{Object.entries(data||{}).map(([name,value]:any)=><div key={name} className="flex justify-between text-sm"><span className="capitalize text-[var(--hbe-muted)]">{name.replace(/_/g,' ')}</span><strong className="text-[var(--hbe-text)]">{formatCurrency(value)}</strong></div>)}{Object.keys(data||{}).length===0&&<p className="text-xs text-[var(--hbe-muted)]">No reporting data yet</p>}</div></div>)}</div></div>}
+    {tab === 'royalties' && <div className="space-y-5"><div className="grid gap-4 sm:grid-cols-3"><div className="rounded-2xl border border-[var(--hbe-line)] bg-[var(--hbe-surface)] p-5"><p className="text-xs text-[var(--hbe-muted)]">Total Revenue</p><p className="mt-2 text-2xl font-bold text-[var(--hbe-text)]">{formatCurrency(royalties?.totalRevenue||0)}</p></div><div className="rounded-2xl border border-[var(--hbe-line)] bg-[var(--hbe-surface)] p-5"><p className="text-xs text-[var(--hbe-muted)]">Artist Earnings</p><p className="mt-2 text-2xl font-bold text-emerald-500">{formatCurrency(royalties?.artistEarnings||0)}</p></div><div className="rounded-2xl border border-[var(--hbe-line)] bg-[var(--hbe-surface)] p-5"><p className="text-xs text-[var(--hbe-muted)]">Statements</p><p className="mt-2 text-2xl font-bold text-[var(--hbe-text)]">{royalties?.entries?.length||0}</p></div></div><div className="flex justify-between gap-4"><div><h2 className="font-bold text-[var(--hbe-text)]">Royalty history</h2><p className="text-xs text-[var(--hbe-muted)]">Internal royalty ledger. The current Distribeats public API supports releases, artists, DDEX and webhooks, but does not expose royalty reports; import approved statements into the ledger before reconciliation.</p></div><button onClick={download} className="shrink-0 rounded-xl border border-[var(--hbe-line)] px-4 py-2 text-sm font-semibold text-[var(--hbe-text)] flex items-center gap-2"><Download size={15}/> CSV</button></div><div className="grid gap-4 lg:grid-cols-3">{[['Platform / source',royalties?.byPlatform],['Release',royalties?.byRelease],['Track',royalties?.byTrack]].map(([label,data]:any)=><div key={label} className="rounded-2xl border border-[var(--hbe-line)] bg-[var(--hbe-surface)] p-5"><h3 className="mb-4 text-sm font-bold text-[var(--hbe-text)] flex items-center gap-2"><BarChart3 size={15}/>{label}</h3><div className="space-y-3">{Object.entries(data||{}).map(([name,value]:any)=><div key={name} className="flex justify-between text-sm"><span className="capitalize text-[var(--hbe-muted)]">{name.replace(/_/g,' ')}</span><strong className="text-[var(--hbe-text)]">{formatCurrency(value)}</strong></div>)}{Object.keys(data||{}).length===0&&<p className="text-xs text-[var(--hbe-muted)]">No reporting data yet</p>}</div></div>)}</div></div>}
+
+    {tab === 'provider' && user?.role === 'admin' && <div className="space-y-4 rounded-2xl border border-[var(--hbe-line)] bg-[var(--hbe-surface)] p-5"><div className="flex items-center justify-between gap-4"><div><h2 className="text-lg font-bold text-[var(--hbe-text)]">Distribeats provider catalogue</h2><p className="text-xs text-[var(--hbe-muted)]">Live API view for reconciling remote releases with local records.</p></div><button onClick={loadRemoteReleases} disabled={remoteLoading} className="rounded-xl border border-[var(--hbe-line)] px-3 py-2 text-xs font-semibold text-[var(--hbe-text)] disabled:opacity-50"><RefreshCw size={13} className={`mr-1 inline ${remoteLoading ? 'animate-spin' : ''}`}/>Refresh</button></div><div className="overflow-x-auto"><table className="w-full min-w-[720px] text-left text-sm"><thead className="border-b border-[var(--hbe-divide)] text-xs uppercase text-[var(--hbe-muted)]"><tr><th className="pb-3">Release</th><th className="pb-3">Provider ID</th><th className="pb-3">UPC</th><th className="pb-3">Status</th><th className="pb-3">Local record</th></tr></thead><tbody className="divide-y divide-[var(--hbe-divide)]">{remoteReleases.map(remote => { const remoteId = String(remote.id || remote.release_id || ''); const local = releases.find(item => item.distribeatsReleaseId === remoteId || item.providerReleaseId === remoteId); return <tr key={remoteId || remote.title}><td className="py-3 font-semibold text-[var(--hbe-text)]">{remote.title || remote.name || 'Untitled release'}</td><td className="py-3 font-mono text-xs text-[var(--hbe-muted)]">{remoteId || '—'}</td><td className="py-3 text-[var(--hbe-text-soft)]">{remote.upc || '—'}</td><td className="py-3 capitalize text-[var(--hbe-text-soft)]">{String(remote.status || 'unknown').replaceAll('_', ' ')}</td><td className="py-3">{local ? <Link to={`/distribution/${local._id}`} className="font-semibold text-violet-500">Open local release</Link> : <span className="text-xs font-semibold text-amber-500">Not linked locally</span>}</td></tr>})}</tbody></table>{!remoteLoading && remoteReleases.length === 0 && <p className="py-10 text-center text-sm text-[var(--hbe-muted)]">No remote releases returned by Distribeats.</p>}</div></div>}
+
+    {tab === 'webhooks' && user?.role === 'admin' && <div className="space-y-4 rounded-2xl border border-[var(--hbe-line)] bg-[var(--hbe-surface)] p-5"><div className="flex items-center justify-between gap-4"><div><h2 className="text-lg font-bold text-[var(--hbe-text)]">Distribeats webhook history</h2><p className="text-xs text-[var(--hbe-muted)]">Persistent delivery audit · {webhookTotal} event{webhookTotal === 1 ? '' : 's'}</p></div><button onClick={loadWebhookEvents} disabled={webhooksLoading} className="rounded-xl border border-[var(--hbe-line)] px-3 py-2 text-xs font-semibold text-[var(--hbe-text)] disabled:opacity-50"><RefreshCw size={13} className={`mr-1 inline ${webhooksLoading ? 'animate-spin' : ''}`}/>Refresh</button></div><div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-sm"><thead className="border-b border-[var(--hbe-divide)] text-xs uppercase text-[var(--hbe-muted)]"><tr><th className="pb-3">Received</th><th className="pb-3">Event</th><th className="pb-3">Release</th><th className="pb-3">Remote status</th><th className="pb-3">Result</th><th className="pb-3">Delivery ID</th></tr></thead><tbody className="divide-y divide-[var(--hbe-divide)]">{webhookEvents.map(item => <tr key={item._id}><td className="py-3 text-xs text-[var(--hbe-muted)]">{new Date(item.receivedAt || item.createdAt).toLocaleString()}</td><td className="py-3 font-semibold text-[var(--hbe-text)]">{item.event}</td><td className="py-3 text-[var(--hbe-text-soft)]">{item.releaseTitle || item.remoteReleaseId || '—'}</td><td className="py-3 capitalize text-[var(--hbe-muted)]">{item.remoteStatus || '—'}</td><td className="py-3"><span className={`rounded-full px-2 py-1 text-xs font-bold capitalize ${item.status === 'processed' ? 'bg-emerald-500/10 text-emerald-500' : item.status === 'duplicate' ? 'bg-sky-500/10 text-sky-500' : 'bg-amber-500/10 text-amber-500'}`}>{item.status}</span></td><td className="py-3 font-mono text-xs text-[var(--hbe-muted)]">{item.deliveryId || '—'}</td></tr>)}</tbody></table>{!webhooksLoading && webhookEvents.length === 0 && <p className="py-10 text-center text-sm text-[var(--hbe-muted)]">No verified webhook deliveries have been received yet.</p>}</div></div>}
     
     {tab === 'qc' && user?.role === 'admin' && (
       <div className="rounded-2xl border border-[var(--hbe-line)] bg-[var(--hbe-surface)] p-5 space-y-4">

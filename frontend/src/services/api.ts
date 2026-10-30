@@ -252,8 +252,10 @@ export const distribeatsApi = {
   getCatalogue: () => api.get('/distribeats/catalogue'),
   listReleases: (params?: object) => api.get('/distribeats/releases', { params }),
   listArtists: (params?: object) => api.get('/distribeats/artists', { params }),
+  getWebhookEvents: (params?: object) => api.get('/distribeats/webhook-events', { params }),
   syncReleases: () => api.post('/distribeats/sync/releases'),
   syncArtists: () => api.post('/distribeats/sync/artists'),
+  syncArtist: (id: string) => api.post(`/distribeats/sync/artists/${id}`),
   sendInboundEvent: (type: string, data?: object) => api.post('/distribeats/webhooks/inbound', { type, data }),
 };
 

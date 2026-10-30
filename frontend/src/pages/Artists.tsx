@@ -6,8 +6,9 @@ import {
   RefreshCw, Grid3X3, List, Disc3, Loader2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { artistsApi } from '../services/api';
+import { artistsApi, distribeatsApi } from '../services/api';
 import type { Artist, OnboardingStats } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 import StatusBadge from '../components/ui/StatusBadge';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import ArtistCard from '../components/artists/ArtistCard';
@@ -15,6 +16,7 @@ import { formatCurrency, formatNumber, getInitials, getAvatarColor } from '../ut
 
 const Artists: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [artists, setArtists] = useState<Artist[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -26,6 +28,7 @@ const Artists: React.FC = () => {
   });
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [syncingArtists, setSyncingArtists] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -61,6 +64,17 @@ const Artists: React.FC = () => {
       toast.error(e.response?.data?.message || 'Failed to delete artist');
     }
     setDeleting(false);
+  };
+
+  const syncProviderArtists = async () => {
+    setSyncingArtists(true);
+    try {
+      const response = await distribeatsApi.syncArtists();
+      const matched = (response.data.data || []).filter((item: any) => item.matched).length;
+      toast.success(`${matched} artist${matched === 1 ? '' : 's'} linked to Distribeats`);
+      await load();
+    } catch (e: any) { toast.error(e.response?.data?.message || 'Artist sync failed'); }
+    finally { setSyncingArtists(false); }
   };
 
   const stats = [
@@ -108,8 +122,8 @@ const Artists: React.FC = () => {
         </div>
         <div className="flex items-center gap-2">
           <Disc3 size={14} className="text-gray-400" />
-          <span className="text-xs text-gray-500">Not Started</span>
-          <span className="text-xs font-semibold text-gray-900">{onboardingStats.not_started}</span>
+          <span className="text-xs text-gray-500">Distribeats linked</span>
+          <span className="text-xs font-semibold text-gray-900">{artists.filter(artist => artist.distribeatsArtistId).length}/{artists.length}</span>
         </div>
       </div>
 
@@ -164,6 +178,8 @@ const Artists: React.FC = () => {
           <RefreshCw size={14} />
         </button>
 
+        {user?.role === 'admin' && <button onClick={syncProviderArtists} disabled={syncingArtists} className="px-4 py-2 bg-white text-indigo-600 font-semibold rounded-lg text-sm border border-indigo-200 hover:bg-indigo-50 disabled:opacity-50 transition-all flex items-center gap-2"><RefreshCw size={14} className={syncingArtists ? 'animate-spin' : ''}/>{syncingArtists ? 'Syncing…' : 'Sync Distribeats'}</button>}
+
         <button onClick={() => navigate('/artists/new')} className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-sm transition-all duration-200 shadow-sm hover:shadow-md flex items-center gap-2">
           <UserPlus size={14} />
           Onboard Artist
@@ -204,6 +220,7 @@ const Artists: React.FC = () => {
                   <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-5 py-3 bg-gray-50">Genre</th>
                   <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-5 py-3 bg-gray-50">Status</th>
                   <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-5 py-3 bg-gray-50">Onboarding</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-5 py-3 bg-gray-50">Distribeats</th>
                   <th className="text-right text-xs font-semibold text-gray-500 uppercase tracking-wider px-5 py-3 bg-gray-50">Streams</th>
                   <th className="text-right text-xs font-semibold text-gray-500 uppercase tracking-wider px-5 py-3 bg-gray-50">Revenue</th>
                 </tr>
@@ -237,6 +254,7 @@ const Artists: React.FC = () => {
                           {artist.onboardingStatus?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
                         </span>
                       </td>
+                      <td className="px-5 py-3"><span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold ${artist.distribeatsArtistId ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-gray-100 text-gray-500 border border-gray-200'}`}>{artist.distribeatsArtistId ? 'Linked' : 'Not linked'}</span></td>
                       <td className="px-5 py-3 text-sm text-gray-900 text-right font-medium">{formatNumber(artist.totalStreams || 0)}</td>
                       <td className="px-5 py-3 text-sm text-gray-900 text-right font-medium">{formatCurrency(artist.totalRevenue || 0)}</td>
                     </tr>

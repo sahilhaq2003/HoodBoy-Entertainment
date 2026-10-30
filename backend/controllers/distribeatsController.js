@@ -1,5 +1,6 @@
 const DistributionRelease = require('../models/DistributionRelease');
 const Artist = require('../models/Artist');
+const DistribeatsWebhookEvent = require('../models/DistribeatsWebhookEvent');
 const service = require('../services/distribeats/distribeatsService');
 const { verifyWebhook } = require('../services/distribeats/distribeatsWebhook');
 
@@ -36,10 +37,33 @@ exports.status = async (req, res) => {
       lastSuccessfulSync: latest?.lastSyncedAt,
       lastFailedSync: latestError?.updatedAt,
       webhookStatus: process.env.DISTRIBEATS_WEBHOOK_SECRET ? 'configured' : 'not_configured',
+      webhookUrl: `${String(process.env.PUBLIC_API_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '')}/api/webhooks/distribeats`,
+      configuration: {
+        apiKey: Boolean(process.env.DISTRIBEATS_API_KEY),
+        webhookSecret: Boolean(process.env.DISTRIBEATS_WEBHOOK_SECRET),
+        labelName: Boolean(process.env.DISTRIBEATS_LABEL_NAME),
+      },
+      capabilities: {
+        releases: true, artists: true, ddex: true, webhooks: true, royalties: false,
+      },
     };
     emit('distribeats:status', payload);
     res.json({ success: true, data: payload });
   } catch (error) { res.status(error.status || 502).json({ success: false, message: error.message, code: error.code }); }
+};
+
+exports.webhookEvents = async (req, res) => {
+  try {
+    const limit = Math.min(100, Math.max(1, Number.parseInt(req.query.limit || '50', 10)));
+    const filter = {};
+    if (req.query.status) filter.status = req.query.status;
+    if (req.query.event) filter.event = req.query.event;
+    const [events, total] = await Promise.all([
+      DistribeatsWebhookEvent.find(filter).sort({ receivedAt: -1 }).limit(limit).lean(),
+      DistribeatsWebhookEvent.countDocuments(filter),
+    ]);
+    res.json({ success: true, data: { events, total } });
+  } catch (error) { res.status(500).json({ success: false, message: error.message }); }
 };
 
 exports.catalogue = async (_req, res) => {
@@ -94,6 +118,19 @@ exports.syncArtists = async (_req, res) => {
   } catch (error) { res.status(error.status || 502).json({ success: false, message: error.message, code: error.code }); }
 };
 
+exports.syncArtist = async (req, res) => {
+  try {
+    const artist = await Artist.findById(req.params.id);
+    if (!artist) return res.status(404).json({ success: false, message: 'Artist not found' });
+    const matched = await service.findArtist(artist);
+    if (!matched?.id) return res.status(404).json({ success: false, message: 'No matching artist was found in Distribeats' });
+    artist.distribeatsArtistId = String(matched.id);
+    await artist.save();
+    emit('distribeats:artist_updated', { artistId: String(artist._id), distribeatsArtistId: artist.distribeatsArtistId, name: artist.stageName || artist.artistName || artist.name });
+    res.json({ success: true, data: artist, remote: matched });
+  } catch (error) { res.status(error.status || 502).json({ success: false, message: error.message, code: error.code }); }
+};
+
 exports.inboundEvent = async (req, res) => {
   try {
     if (!req.body?.type) return res.status(422).json({ success: false, message: 'Event type is required' });
@@ -116,6 +153,7 @@ exports.syncReleases = async (_req, res) => {
 };
 
 exports.webhook = async (req, res) => {
+  let audit = null;
   try {
     const payload = verifyWebhook(req.body, {
       signature: req.get('X-DistriBeats-Signature'),
@@ -124,10 +162,20 @@ exports.webhook = async (req, res) => {
     const event = req.get('X-DistriBeats-Event') || payload.type || '';
     const deliveryId = req.get('X-DistriBeats-Delivery-Id') || payload.id;
     const remote = payload.data?.release;
-    if (!remote?.id) return res.status(202).json({ received: true });
+    audit = { deliveryId, event: event || 'unknown', remoteReleaseId: remote?.id ? String(remote.id) : '', remoteStatus: remote?.status || '' };
+    if (!remote?.id) {
+      await DistribeatsWebhookEvent.create({ deliveryId, event: event || 'unknown', status: 'ignored', message: 'No release was included in the event.' });
+      return res.status(202).json({ received: true });
+    }
     const release = await DistributionRelease.findOne({ distribeatsReleaseId: String(remote.id) });
-    if (!release) return res.status(202).json({ received: true });
-    if (deliveryId && release.webhookEventKeys?.includes(deliveryId)) return res.status(200).json({ received: true, duplicate: true });
+    if (!release) {
+      await DistribeatsWebhookEvent.create({ deliveryId, event: event || 'unknown', status: 'ignored', remoteReleaseId: String(remote.id), remoteStatus: remote.status || '', message: 'No matching local release.' });
+      return res.status(202).json({ received: true });
+    }
+    if (deliveryId && release.webhookEventKeys?.includes(deliveryId)) {
+      await DistribeatsWebhookEvent.create({ deliveryId, event: event || 'unknown', status: 'duplicate', release: release._id, releaseTitle: release.title, remoteReleaseId: String(remote.id), remoteStatus: remote.status || '' });
+      return res.status(200).json({ received: true, duplicate: true });
+    }
     if (deliveryId) release.webhookEventKeys.push(deliveryId);
     release.distribeatsRawStatus = remote.status || release.distribeatsRawStatus;
     release.status = service.normalizeStatus(remote.status);
@@ -142,8 +190,15 @@ exports.webhook = async (req, res) => {
     } else {
       await release.save();
     }
+    await DistribeatsWebhookEvent.create({
+      deliveryId, event: event || 'unknown', status: 'processed', release: release._id,
+      releaseTitle: release.title, remoteReleaseId: String(remote.id), remoteStatus: remote.status || '',
+    });
     emitRelease(release);
     emit('distribeats:webhook_received', { event, releaseId: String(release._id), title: release.title, at: new Date() });
     res.status(200).json({ received: true });
-  } catch (error) { res.status(error.status || 401).json({ received: false, message: error.message }); }
+  } catch (error) {
+    if (audit) await DistribeatsWebhookEvent.create({ ...audit, status: 'failed', message: error.message }).catch(() => {});
+    res.status(error.status || 401).json({ received: false, message: error.message });
+  }
 };

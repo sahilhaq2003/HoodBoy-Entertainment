@@ -7,8 +7,10 @@ router.get('/connection-status', controller.status);
 router.get('/catalogue', controller.catalogue);
 router.get('/releases', controller.listRemoteReleases);
 router.get('/artists', controller.listRemoteArtists);
+router.get('/webhook-events', controller.webhookEvents);
 router.post('/sync/releases', controller.syncReleases);
 router.post('/sync/artists', controller.syncArtists);
+router.post('/sync/artists/:id', controller.syncArtist);
 router.post('/webhooks/inbound', controller.inboundEvent);
 
 module.exports = router;
