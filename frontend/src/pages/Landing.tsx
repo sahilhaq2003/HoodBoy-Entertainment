@@ -20,6 +20,67 @@ const AMBIENT_CHORDS: number[][] = [
 
 const CHIME_NOTES = [523.25, 587.33, 659.25, 783.99, 880.0, 1046.5]; // C5 pentatonic
 
+/**
+ * Generates an in-memory seamless calm ambient WAV blob URL so <audio autoPlay loop>
+ * can begin playing immediately on page load in browsers that allow media element autoplay.
+ */
+function buildCalmLoopBlobUrl(): string {
+  const sampleRate = 22050;
+  const durationSec = 16; // 4 chords x 4 seconds each, seamless loop
+  const numSamples = sampleRate * durationSec;
+  const numChannels = 2;
+  const dataSize = numSamples * numChannels * 2;
+  const buf = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buf);
+  const writeStr = (off: number, s: string) => {
+    for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i));
+  };
+  writeStr(0, 'RIFF');
+  view.setUint32(4, 36 + dataSize, true);
+  writeStr(8, 'WAVE');
+  writeStr(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * numChannels * 2, true);
+  view.setUint16(32, numChannels * 2, true);
+  view.setUint16(34, 16, true);
+  writeStr(36, 'data');
+  view.setUint32(40, dataSize, true);
+
+  const chordLen = sampleRate * 4;
+  for (let i = 0; i < numSamples; i++) {
+    const t = i / sampleRate;
+    const cIdx = Math.floor(i / chordLen) % AMBIENT_CHORDS.length;
+    const posInChord = (i % chordLen) / chordLen; // 0..1
+    // Smooth sine-squared envelope per chord so transitions are silky smooth
+    const env = 0.25 + 0.75 * Math.sin(Math.PI * posInChord) ** 2;
+    const chord = AMBIENT_CHORDS[cIdx];
+
+    let left = 0;
+    let right = 0;
+    for (let n = 0; n < chord.length; n++) {
+      const f = chord[n];
+      const w = n === 0 ? 0.32 : 0.16;
+      left += Math.sin(2 * Math.PI * f * t) * w;
+      right += Math.sin(2 * Math.PI * (f * 1.002) * t + 0.4) * w;
+    }
+    // Gentle high chime note every 2 seconds
+    const chimePos = (t % 2) / 2;
+    const chimeFreq = CHIME_NOTES[(cIdx * 2 + Math.floor(t / 2)) % CHIME_NOTES.length];
+    const chimeEnv = Math.exp(-chimePos * 5.5) * Math.min(1, chimePos * 35) * 0.08;
+    const chime = Math.sin(2 * Math.PI * chimeFreq * t) * chimeEnv;
+
+    const lSample = Math.max(-1, Math.min(1, (left * env * 0.35 + chime)));
+    const rSample = Math.max(-1, Math.min(1, (right * env * 0.35 + chime)));
+    const offset = 44 + i * 4;
+    view.setInt16(offset, Math.round(lSample * 28000), true);
+    view.setInt16(offset + 2, Math.round(rSample * 28000), true);
+  }
+  return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+}
+
 interface CalmSynthController {
   start: () => Promise<boolean>;
   setMuted: (muted: boolean) => void;
@@ -33,7 +94,7 @@ function createCalmAmbientSynth(): CalmSynthController {
   let chimeTimer: number | null = null;
   let chordIndex = 0;
   let isMuted = false;
-  let running = false;
+  let loopsStarted = false;
 
   const playPadChord = (freqs: number[]) => {
     if (!ctx || !masterGain || ctx.state !== 'running') return;
@@ -65,7 +126,7 @@ function createCalmAmbientSynth(): CalmSynthController {
       osc1.type = idx === 0 ? 'sine' : 'triangle';
       osc2.type = 'sine';
       osc1.frequency.setValueAtTime(freq, now);
-      osc2.frequency.setValueAtTime(freq * 1.003, now); // gentle warm chorus detune
+      osc2.frequency.setValueAtTime(freq * 1.003, now);
 
       voiceGain.gain.value = idx === 0 ? 0.28 : 0.16;
       osc1.connect(voiceGain);
@@ -106,9 +167,9 @@ function createCalmAmbientSynth(): CalmSynthController {
     osc.stop(now + 3.7);
   };
 
-  const startLoops = () => {
-    if (running) return;
-    running = true;
+  const ensureLoops = () => {
+    if (loopsStarted) return;
+    loopsStarted = true;
     playPadChord(AMBIENT_CHORDS[chordIndex]);
     chordIndex = (chordIndex + 1) % AMBIENT_CHORDS.length;
 
@@ -130,9 +191,8 @@ function createCalmAmbientSynth(): CalmSynthController {
         if (!ctx) {
           ctx = new AudioCtx();
           masterGain = ctx.createGain();
-          masterGain.gain.setValueAtTime(0.0001, ctx.currentTime);
+          masterGain.gain.setValueAtTime(isMuted ? 0.0001 : 0.42, ctx.currentTime);
 
-          // Subtle stereo feedback delay for warm studio space
           const delay = ctx.createDelay(2.0);
           delay.delayTime.value = 0.42;
           const feedback = ctx.createGain();
@@ -149,18 +209,20 @@ function createCalmAmbientSynth(): CalmSynthController {
           delayFilter.connect(ctx.destination);
         }
 
+        ensureLoops();
         if (ctx.state === 'suspended') {
           await ctx.resume();
         }
-        if (ctx.state !== 'running') return false;
-
-        if (masterGain && !isMuted) {
-          masterGain.gain.cancelScheduledValues(ctx.currentTime);
-          masterGain.gain.setValueAtTime(Math.max(0.0001, masterGain.gain.value), ctx.currentTime);
-          masterGain.gain.linearRampToValueAtTime(0.45, ctx.currentTime + 1.2);
+        if (ctx.state === 'running') {
+          if (masterGain && !isMuted) {
+            masterGain.gain.cancelScheduledValues(ctx.currentTime);
+            masterGain.gain.setValueAtTime(Math.max(0.0001, masterGain.gain.value), ctx.currentTime);
+            masterGain.gain.linearRampToValueAtTime(0.45, ctx.currentTime + 0.8);
+          }
+          playPadChord(AMBIENT_CHORDS[chordIndex]);
+          return true;
         }
-        startLoops();
-        return true;
+        return false;
       } catch {
         return false;
       }
@@ -172,14 +234,14 @@ function createCalmAmbientSynth(): CalmSynthController {
       masterGain.gain.cancelScheduledValues(now);
       masterGain.gain.setValueAtTime(Math.max(0.0001, masterGain.gain.value), now);
       if (muted) {
-        masterGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.4);
+        masterGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
       } else {
         if (ctx.state === 'suspended') ctx.resume().catch(() => {});
-        masterGain.gain.linearRampToValueAtTime(0.45, now + 0.8);
+        masterGain.gain.linearRampToValueAtTime(0.45, now + 0.6);
       }
     },
     stop: () => {
-      running = false;
+      loopsStarted = false;
       if (chordTimer) window.clearInterval(chordTimer);
       if (chimeTimer) window.clearInterval(chimeTimer);
       chordTimer = null;
@@ -195,59 +257,99 @@ function createCalmAmbientSynth(): CalmSynthController {
 
 const Landing: React.FC = () => {
   const [active, setActive] = useState(0);
-  const [audioPlaying, setAudioPlaying] = useState(false);
-  const [userMuted, setUserMuted] = useState(false);
+  // Default is PLAYING mode (On / unmuted)
+  const [isPlayingMode, setIsPlayingMode] = useState(true);
   const synthRef = useRef<CalmSynthController | null>(null);
+  const audioElRef = useRef<HTMLAudioElement | null>(null);
+  const isPlayingModeRef = useRef(true);
 
   const move = (direction: number) => setActive((current) => (current + direction + stories.length) % stories.length);
 
   useEffect(() => {
     const synth = createCalmAmbientSynth();
     synthRef.current = synth;
-    let unlocked = false;
 
-    const tryAutoStart = async () => {
-      if (unlocked) return;
-      const started = await synth.start();
-      if (started) {
-        unlocked = true;
-        setAudioPlaying(true);
+    // Create an in-memory <audio autoPlay loop> fallback so browsers that permit HTMLMediaElement
+    // autoplay start playing immediately on page open, and switch seamlessly to the Web Audio synth.
+    const blobUrl = buildCalmLoopBlobUrl();
+    const audioEl = new Audio(blobUrl);
+    audioEl.loop = true;
+    audioEl.volume = 0.45;
+    audioEl.autoplay = true;
+    audioElRef.current = audioEl;
+
+    let webAudioActive = false;
+
+    const tryStartAudio = async () => {
+      if (!isPlayingModeRef.current) return;
+      if (!webAudioActive) {
+        const started = await synth.start();
+        if (started) {
+          webAudioActive = true;
+          audioEl.pause();
+          return;
+        }
+      }
+      if (audioEl.paused && isPlayingModeRef.current) {
+        audioEl.play().catch(() => {});
       }
     };
 
-    // Attempt immediate playback on mount; if browser autoplay policy requires a gesture,
-    // automatically start on the very first click, key press, or touch on the home page.
-    tryAutoStart();
-    const onFirstGesture = () => {
-      if (!unlocked) tryAutoStart();
+    tryStartAudio();
+
+    const unlockEvents = ['pointerdown', 'pointermove', 'mousemove', 'wheel', 'touchstart', 'keydown', 'click'];
+    const onUnlock = () => {
+      if (!isPlayingModeRef.current) return;
+      if (!webAudioActive) {
+        synth.start().then((ok) => {
+          if (ok) {
+            webAudioActive = true;
+            audioEl.pause();
+          } else if (audioEl.paused) {
+            audioEl.play().catch(() => {});
+          }
+        });
+      }
     };
-    window.addEventListener('pointerdown', onFirstGesture, { passive: true });
-    window.addEventListener('keydown', onFirstGesture, { passive: true });
-    window.addEventListener('touchstart', onFirstGesture, { passive: true });
+
+    unlockEvents.forEach((evt) => window.addEventListener(evt, onUnlock, { passive: true }));
 
     return () => {
-      window.removeEventListener('pointerdown', onFirstGesture);
-      window.removeEventListener('keydown', onFirstGesture);
-      window.removeEventListener('touchstart', onFirstGesture);
+      unlockEvents.forEach((evt) => window.removeEventListener(evt, onUnlock));
+      audioEl.pause();
+      audioElRef.current = null;
+      URL.revokeObjectURL(blobUrl);
       synth.stop();
     };
   }, []);
 
   const toggleCalmAudio = async () => {
+    const nextPlaying = !isPlayingMode;
+    isPlayingModeRef.current = nextPlaying;
+    setIsPlayingMode(nextPlaying);
+
     const synth = synthRef.current;
-    if (!synth) return;
-    if (!audioPlaying) {
-      const ok = await synth.start();
-      if (ok) {
+    const audioEl = audioElRef.current;
+
+    if (nextPlaying) {
+      if (synth) {
         synth.setMuted(false);
-        setUserMuted(false);
-        setAudioPlaying(true);
+        const ok = await synth.start();
+        if (ok) {
+          audioEl?.pause();
+          return;
+        }
       }
-      return;
+      if (audioEl) {
+        audioEl.muted = false;
+        audioEl.play().catch(() => {});
+      }
+    } else {
+      synth?.setMuted(true);
+      if (audioEl) {
+        audioEl.pause();
+      }
     }
-    const nextMuted = !userMuted;
-    synth.setMuted(nextMuted);
-    setUserMuted(nextMuted);
   };
 
   useEffect(() => {
@@ -267,7 +369,6 @@ const Landing: React.FC = () => {
 
   const story = stories[active];
   const StoryIcon = story.icon;
-  const isAudible = audioPlaying && !userMuted;
 
   return (
     <main className="grow-landing">
@@ -284,13 +385,13 @@ const Landing: React.FC = () => {
             <button
               type="button"
               onClick={toggleCalmAudio}
-              className={`grow-audio-toggle ${isAudible ? 'is-playing' : ''}`}
-              aria-label={isAudible ? 'Mute AI calm studio music' : 'Play AI calm studio music'}
-              title={isAudible ? 'Mute AI Calm Music' : 'Play AI Calm Music'}
+              className={`grow-audio-toggle ${isPlayingMode ? 'is-playing' : ''}`}
+              aria-label={isPlayingMode ? 'Mute AI calm studio music' : 'Play AI calm studio music'}
+              title={isPlayingMode ? 'Mute AI Calm Music' : 'Play AI Calm Music'}
             >
-              {isAudible ? <Volume2 size={14} /> : <VolumeX size={14} />}
-              <span>{isAudible ? 'AI Calm Music · On' : 'AI Calm Music · Off'}</span>
-              {isAudible && (
+              {isPlayingMode ? <Volume2 size={14} /> : <VolumeX size={14} />}
+              <span>{isPlayingMode ? 'AI Calm Music · Playing' : 'AI Calm Music · Muted'}</span>
+              {isPlayingMode && (
                 <span className="grow-audio-bars" aria-hidden="true">
                   <i /><i /><i />
                 </span>
