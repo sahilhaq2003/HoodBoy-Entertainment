@@ -22,12 +22,16 @@ class DistribeatsClient {
 
   async request(path, { method = 'GET', query, body, headers = {}, retries = 2, idempotencyKey, timeout = 30000, requireAuth = true } = {}) {
     if (requireAuth && !this.isConfigured()) throw new DistribeatsError('Distribeats API key is not configured or has an invalid prefix.', { code: 'DISTRIBEATS_NOT_CONFIGURED', status: 503 });
+    // Fail closed: a live key is refused (before any network call) unless the server explicitly enables production.
+    if (requireAuth) require('./distribeatsPolicy').assertKeyAllowed(this.token);
     const url = new URL(/^https?:\/\//i.test(path) ? path : `${this.baseUrl}/${String(path).replace(/^\//, '')}`);
     Object.entries(query || {}).forEach(([key, value]) => {
       if (value === undefined || value === null || value === '') return;
       url.searchParams.set(key, String(value));
     });
-    const requestHeaders = { Accept: 'application/json', ...(this.isConfigured() ? { Authorization: `Bearer ${this.token}` } : {}), ...headers };
+    // Public calls (e.g. GET /catalogue) never carry a key that policy would refuse for authenticated calls.
+    const keyUsable = this.isConfigured() && (requireAuth || (this.token.startsWith('db_test_') || require('./distribeatsPolicy').isLiveAllowed()));
+    const requestHeaders = { Accept: 'application/json', ...(keyUsable ? { Authorization: `Bearer ${this.token}` } : {}), ...headers };
     if (idempotencyKey) requestHeaders['Idempotency-Key'] = idempotencyKey;
     let requestBody = body;
     if (body !== undefined && body !== null && !Buffer.isBuffer(body)) {

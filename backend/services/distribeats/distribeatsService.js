@@ -2,6 +2,10 @@ const fs = require('fs/promises');
 const path = require('path');
 const { DistribeatsClient, DistribeatsError, DEFAULT_BASE_URL } = require('./distribeatsClient');
 const { mapRelease, normalizeStatus, displayName } = require('./distribeatsMapper');
+const policy = require('./distribeatsPolicy');
+const { validateRelease, validateMappedPayload } = require('./distribeatsValidation');
+const { planParts, MAX_PART } = require('../../lib/mediaValidation');
+const { ISO_TERRITORIES } = require('../../lib/isoTerritories');
 
 const client = new DistribeatsClient();
 const cache = new Map();
@@ -17,23 +21,38 @@ const localFile = url => path.join(__dirname, '..', '..', String(url || '').repl
 const mimeType = filename => ({ '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.wav': 'audio/wav', '.flac': 'audio/flac' })[path.extname(String(filename || '')).toLowerCase()] || 'application/octet-stream';
 const log = (event, details = {}) => console.info(JSON.stringify({ service: 'distribeats', event, at: new Date().toISOString(), ...details }));
 
-const getCatalogue = () => cached('catalogue', 15 * 60_000, () => client.get('/catalogue', undefined, { requireAuth: false }));
+// The catalogue is public and rarely changes. Serve the last good copy if a refresh fails so validation stays available.
+let lastGoodCatalogue = null;
+const fetchCatalogue = async () => {
+  const fresh = await client.get('/catalogue', undefined, { requireAuth: false });
+  lastGoodCatalogue = fresh;
+  return fresh;
+};
+const getCatalogue = () => cached('catalogue', 15 * 60_000, () => fetchCatalogue().catch(error => {
+  if (lastGoodCatalogue) return lastGoodCatalogue;
+  throw error;
+}));
 
 const checkConnection = async () => {
+  const mode = policy.describeMode(client.token);
   const base = {
     provider: 'distribeats', configured: client.isConfigured(), baseUrl: client.baseUrl || DEFAULT_BASE_URL,
-    environment: process.env.DISTRIBEATS_API_KEY?.startsWith('db_live_') ? 'live' : 'test',
-    credentialHint: process.env.DISTRIBEATS_API_KEY ? `••••••••${process.env.DISTRIBEATS_API_KEY.slice(-4)}` : '',
+    environment: mode.keyMode === 'live' ? 'live' : 'test',
+    testMode: mode.testMode, liveAllowed: mode.liveAllowed, liveBlocked: mode.liveBlocked,
+    credentialHint: client.token ? `••••••••${client.token.slice(-4)}` : '',
     checkedAt: new Date().toISOString(),
   };
   if (!client.isConfigured()) return { ...base, status: 'not_configured', message: 'Set DISTRIBEATS_API_KEY in the backend environment.' };
+  if (mode.liveBlocked) {
+    return { ...base, status: 'live_key_blocked', message: 'A live (db_live_) key is configured but this server is in TEST mode. Use a db_test_ key; no request was sent.' };
+  }
   const started = Date.now();
   try {
     const [catalogue] = await Promise.all([
       getCatalogue(),
       client.get('/releases', { limit: 1 }, { retries: 0, timeout: 15000 }),
     ]);
-    return { ...base, status: 'connected', latencyMs: Date.now() - started, message: 'Connected to Distribeats', catalogueVersion: catalogue?.version };
+    return { ...base, status: 'connected', latencyMs: Date.now() - started, message: mode.testMode ? 'Connected to Distribeats (TEST mode)' : 'Connected to Distribeats', catalogueVersion: catalogue?.version };
   } catch (error) {
     return { ...base, latencyMs: Date.now() - started, status: error.status === 401 || error.status === 403 ? 'authentication_error' : 'api_unavailable', message: error.message };
   }
@@ -44,52 +63,50 @@ const connectionStatus = (force = false) => {
   return cached('connection', 30_000, checkConnection);
 };
 
-const uploadBytes = async (releaseId, fileId, bytes, contentType, targetUrl) => {
+const SINGLE_REQUEST_LIMIT = 95 * 1024 * 1024; // provider: single PUT limited to 95 MiB (99,614,720 bytes)
+
+/**
+ * Upload one file to the provider. Streams from disk: files over 95 MiB use the documented multipart flow
+ * (POST ?uploads -> PUT ?uploadId&partNumber -> POST complete). The assembled size can never exceed maxBytes
+ * (the provider's own master limit; chunking does not bypass it).
+ */
+const uploadFile = async (releaseId, fileId, filePath, contentType, targetUrl, { maxBytes = policy.DEFAULT_MAX_AUDIO_BYTES, http = client } = {}) => {
   const uploadPath = targetUrl || `/releases/${releaseId}/upload/${encodeURIComponent(fileId)}`;
-  if (bytes.length <= 95 * 1024 * 1024) return client.put(uploadPath, bytes, { headers: { 'Content-Type': contentType }, timeout: 240000, retries: 1 });
-  if (bytes.length > 150_000_000) throw new DistribeatsError('Audio exceeds the Distribeats 150 MB assembled-file limit.', { code: 'DISTRIBEATS_FILE_TOO_LARGE', status: 413 });
+  const { size } = await fs.stat(filePath);
+  if (size <= 0) throw new DistribeatsError('The file to upload is empty.', { code: 'DISTRIBEATS_FILE_EMPTY', status: 422 });
+  if (size > maxBytes) throw new DistribeatsError(`File is ${size.toLocaleString('en-US')} bytes; the DistriBeats limit is ${maxBytes.toLocaleString('en-US')} bytes.`, { code: 'DISTRIBEATS_FILE_TOO_LARGE', status: 413 });
+  const headers = { 'Content-Type': contentType };
+  if (size <= SINGLE_REQUEST_LIMIT) return http.put(uploadPath, await fs.readFile(filePath), { headers, timeout: 240000, retries: 1 });
   const sep = uploadPath.includes('?') ? '&' : '?';
-  const started = await client.post(`${uploadPath}${sep}uploads`, undefined, { headers: { 'Content-Type': contentType }, timeout: 60000 });
-  const partSize = Number(started?.partSize) || 52_428_800;
+  const started = await http.post(`${uploadPath}${sep}uploads`, undefined, { headers, timeout: 60000 });
   const parts = [];
+  const handle = await fs.open(filePath, 'r');
   try {
-    for (let offset = 0, partNumber = 1; offset < bytes.length; offset += partSize, partNumber += 1) {
-      const result = await client.put(`${uploadPath}${sep}uploadId=${encodeURIComponent(started.uploadId)}&partNumber=${partNumber}`, bytes.subarray(offset, Math.min(offset + partSize, bytes.length)), { headers: { 'Content-Type': contentType }, timeout: 240000, retries: 1 });
-      parts.push({ partNumber, etag: result.etag });
+    for (const part of planParts(size, started?.partSize)) {
+      const chunk = Buffer.alloc(part.end - part.start);
+      await handle.read(chunk, 0, chunk.length, part.start);
+      const result = await http.put(`${uploadPath}${sep}uploadId=${encodeURIComponent(started.uploadId)}&partNumber=${part.partNumber}`, chunk, { headers, timeout: 240000, retries: 1 });
+      parts.push({ partNumber: part.partNumber, etag: result.etag });
     }
-    return await client.post(`${uploadPath}${sep}uploadId=${encodeURIComponent(started.uploadId)}`, { parts }, { timeout: 60000 });
+    return await http.post(`${uploadPath}${sep}uploadId=${encodeURIComponent(started.uploadId)}`, { parts }, { timeout: 60000 });
   } catch (error) {
-    await client.delete(`${uploadPath}${sep}uploadId=${encodeURIComponent(started.uploadId)}`).catch(() => {});
+    await http.delete(`${uploadPath}${sep}uploadId=${encodeURIComponent(started.uploadId)}`).catch(() => {});
     throw error;
-  }
+  } finally { await handle.close(); }
 };
 
-const validateMappedPayload = payload => {
-  const errors = [];
-  for (const field of ['title', 'displayArtist', 'genre', 'subGenre', 'language', 'releaseDate', 'pLine', 'cLine']) if (!payload[field]) errors.push(`${field} is required by Distribeats`);
-  if (!payload.stores?.length) errors.push('Select at least one Distribeats store');
-  if (!payload.attestations?.age || !payload.attestations?.rights) errors.push('Age and rights attestations must both be accepted');
-  if (payload.releaseType === 'Single' && payload.tracks?.length === 1 && payload.tracks[0].title !== payload.title) {
-    errors.push('For a Single release, the track title must equal the release title');
-  }
-  const hasAiTrack = payload.tracks.some(track => track.aiUsage === 'Partial' || track.aiUsage === 'Full');
-  if (hasAiTrack && !/^https:\/\/.*\.pdf(?:\?|$)/i.test(String(payload.aiDocumentUrl || ''))) {
-    errors.push('An HTTPS PDF aiDocumentUrl is required when any track uses Partial or Full AI');
-  }
-  if (hasAiTrack && payload.stores?.includes('YouTube Content ID')) {
-    errors.push('YouTube Content ID cannot be selected when any track uses AI');
-  }
-  payload.tracks.forEach((track, index) => {
-    for (const field of ['composers', 'producers', 'mixingEngineers', 'masteringEngineers']) if (!track[field]) errors.push(`Track ${index + 1}: ${field} is required`);
-    if (!track.instrumental && track.language !== 'Instrumental' && !track.writers) errors.push(`Track ${index + 1}: writers is required unless instrumental`);
-    if ((track.compositionType === 'Cover' || track.copyrightType === 'Licensed') && !track.rightsProofUrl) {
-      errors.push(`Track ${index + 1}: rightsProofUrl is required for Cover or Licensed tracks`);
-    }
-  });
-  if (errors.length) throw new DistribeatsError('Release metadata does not meet Distribeats requirements.', { code: 'DISTRIBEATS_VALIDATION_ERROR', status: 422, details: { errors } });
-};
+const validationFailure = errors => new DistribeatsError('Release metadata does not meet DistriBeats requirements.', { code: 'DISTRIBEATS_VALIDATION_ERROR', status: 422, details: { errors } });
 
 const submitRelease = async (release, artist) => {
+  // Fail closed BEFORE any state change or network call: missing/invalid key -> 503, live key under TEST policy -> 403.
+  policy.assertKeyAllowed(client.token);
+  const catalogue = await getCatalogue();
+  const audioMax = policy.maxAudioBytes(catalogue);
+  const coverMax = policy.maxCoverBytes();
+  if (!release.distribeatsReleaseId) {
+    const report = validateRelease(release, { catalogue, mode: 'submit', maxAudioBytes: audioMax });
+    if (!report.ready) throw validationFailure(report.errors);
+  }
   release.syncStatus = 'syncing';
   release.lastSyncError = '';
   await release.save();
@@ -104,7 +121,8 @@ const submitRelease = async (release, artist) => {
     let remote;
     if (!release.distribeatsReleaseId) {
       const payload = mapRelease(release, artist);
-      validateMappedPayload(payload);
+      const mappedErrors = validateMappedPayload(payload, catalogue);
+      if (mappedErrors.length) throw validationFailure(mappedErrors);
       remote = await client.post('/releases', payload, { idempotencyKey: `hbe-release-${release._id}` });
       const remoteId = remote?.id || remote?.release_id;
       if (!remoteId) throw new DistribeatsError('Distribeats did not return a release id.', { code: 'DISTRIBEATS_RELEASE_ID_MISSING' });
@@ -122,7 +140,7 @@ const submitRelease = async (release, artist) => {
     if (release.coverArtUrl && release.uploadState?.artwork !== 'uploaded') {
       release.uploadState.artwork = 'uploading'; await release.save();
       const coverTarget = uploadUrls.cover || `/releases/${release.distribeatsReleaseId}/upload/cover`;
-      await uploadBytes(release.distribeatsReleaseId, 'cover', await fs.readFile(localFile(release.coverArtUrl)), mimeType(release.coverArtFileName || release.coverArtUrl), coverTarget);
+      await uploadFile(release.distribeatsReleaseId, 'cover', localFile(release.coverArtUrl), mimeType(release.coverArtFileName || release.coverArtUrl), coverTarget, { maxBytes: coverMax });
       release.uploadState.artwork = 'uploaded'; await release.save();
     }
     const remoteTracks = remote?.tracks || [];
@@ -135,7 +153,7 @@ const submitRelease = async (release, artist) => {
       if (track.audioUrl && track.uploadStatus !== 'uploaded') {
         track.uploadStatus = 'uploading'; await release.save();
         const trackTarget = uploadUrls[trackId] || `/releases/${release.distribeatsReleaseId}/upload/${encodeURIComponent(trackId)}`;
-        await uploadBytes(release.distribeatsReleaseId, trackId, await fs.readFile(localFile(track.audioUrl)), mimeType(track.audioFileName || track.audioUrl), trackTarget);
+        await uploadFile(release.distribeatsReleaseId, trackId, localFile(track.audioUrl), mimeType(track.audioFileName || track.audioUrl), trackTarget, { maxBytes: audioMax });
         track.uploadStatus = 'uploaded'; await release.save();
       }
     }
@@ -147,12 +165,12 @@ const submitRelease = async (release, artist) => {
         const missing = submitErr.details.missing;
         const retryUrls = submitErr.details.uploadUrls || uploadUrls;
         if (missing.includes('cover') && release.coverArtUrl) {
-          await uploadBytes(release.distribeatsReleaseId, 'cover', await fs.readFile(localFile(release.coverArtUrl)), mimeType(release.coverArtFileName || release.coverArtUrl), retryUrls.cover);
+          await uploadFile(release.distribeatsReleaseId, 'cover', localFile(release.coverArtUrl), mimeType(release.coverArtFileName || release.coverArtUrl), retryUrls.cover, { maxBytes: coverMax });
         }
         for (let index = 0; index < release.tracks.length; index += 1) {
           const track = release.tracks[index];
           if (track.distribeatsTrackId && missing.includes(track.distribeatsTrackId) && track.audioUrl) {
-            await uploadBytes(release.distribeatsReleaseId, track.distribeatsTrackId, await fs.readFile(localFile(track.audioUrl)), mimeType(track.audioFileName || track.audioUrl), retryUrls[track.distribeatsTrackId]);
+            await uploadFile(release.distribeatsReleaseId, track.distribeatsTrackId, localFile(track.audioUrl), mimeType(track.audioFileName || track.audioUrl), retryUrls[track.distribeatsTrackId], { maxBytes: audioMax });
           }
         }
         submitted = await client.post(`/releases/${release.distribeatsReleaseId}/submit`);
@@ -208,11 +226,24 @@ const requestTakedown = async (release, reason) => {
 
 const getReferenceData = async () => {
   const catalogue = await getCatalogue();
+  const unavailable = new Set((catalogue.unavailableStores || []).map(String));
   return {
     ...catalogue,
-    outlets: (catalogue.stores || []).map(store => typeof store === 'string' ? { name: store, slug: store } : store),
-    territories: catalogue.territories || [],
+    // Selectable stores exclude provider-flagged unavailable ones; the catalogue stays the source of truth.
+    stores: (catalogue.stores || []).filter(store => !unavailable.has(String(store))),
+    outlets: (catalogue.stores || []).filter(store => !unavailable.has(String(store))).map(store => ({ name: store, slug: store })),
+    // The provider publishes no territory list: ISO 3166-1 alpha-2 codes are validated locally.
+    territories: ISO_TERRITORIES,
     languages: catalogue.languages || [],
+    policy: {
+      ...policy.describeMode(client.token),
+      leadTime: policy.leadTimeConfig(),
+      earliestReleaseDate: policy.earliestReleaseDate().toISOString().slice(0, 10),
+      maxAudioBytes: policy.maxAudioBytes(catalogue),
+      maxCoverBytes: policy.maxCoverBytes(),
+      artwork: policy.ARTWORK_SPEC,
+      audioFormats: ['WAV', 'FLAC'],
+    },
   };
 };
 
@@ -241,5 +272,5 @@ const findArtist = async artist => {
 module.exports = {
   client, connectionStatus, submitRelease, syncReleaseStatus, requestTakedown,
   getReferenceData, getCatalogue, findArtist, getReleaseDdex, listRemoteReleases,
-  listRemoteArtists, sendInboundWebhook, normalizeStatus,
+  listRemoteArtists, sendInboundWebhook, normalizeStatus, uploadFile,
 };

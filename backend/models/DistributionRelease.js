@@ -19,7 +19,7 @@ const distributionTrackSchema = new mongoose.Schema({
   durationSeconds: { type: Number, min: 0, default: 0 },
   trackNumber: { type: Number, min: 1 },
   discNumber: { type: Number, min: 1, default: 1 },
-  compositionType: { type: String, enum: ['original_composition', 'cover_song', 'public_domain'], default: 'original_composition' },
+  compositionType: { type: String, enum: ['Original', 'Cover', 'original_composition', 'cover_song', 'public_domain'], default: 'Original' },
   copyrightType: { type: String, enum: ['Original', 'Licensed'], default: 'Original' },
   instrumental: { type: Boolean, default: false },
   rightsProofUrl: { type: String, default: '' },
@@ -28,6 +28,16 @@ const distributionTrackSchema = new mongoose.Schema({
   producers: [{ type: String, trim: true }],
   mixingEngineers: [{ type: String, trim: true }],
   masteringEngineers: [{ type: String, trim: true }],
+  // DistriBeats-documented per-track values (GET /catalogue: aiUsage, performerRoles).
+  aiUsage: { type: String, enum: ['None', 'Partial', 'Full'], default: 'None' },
+  iswc: { type: String, trim: true, uppercase: true, default: '' },
+  previewStart: { type: String, default: '' },
+  featuredArtists: [{ type: String, trim: true }],
+  performers: [{ name: { type: String, trim: true }, role: { type: String, trim: true } }],
+  // Catalog track this was imported from. The source Song record is never modified.
+  sourceSong: { type: mongoose.Schema.Types.ObjectId, ref: 'Song' },
+  audioSizeBytes: { type: Number, min: 0, default: 0 },
+  // Legacy AI fields kept so older drafts still load; aiUsage above is what is sent to DistriBeats.
   audioAiUsage: { type: String, enum: ['none', 'some', 'material', 'all'], default: 'none' },
   compositionAiUsage: { type: String, enum: ['none', 'some', 'material', 'all'], default: 'none' },
   commercialSamples: { type: String, enum: ['no', 'exclusive', 'non_exclusive'], default: 'no' },
@@ -67,8 +77,12 @@ const distributionReleaseSchema = new mongoose.Schema({
   copyright: { type: String, required: true },
   territories: [{ type: String, trim: true, uppercase: true }],
   excludedTerritories: [{ type: String, trim: true, uppercase: true }],
+  // true = worldwide (minus excludedTerritories); false = only the listed territories.
+  worldwide: { type: Boolean, default: true },
+  originalReleaseDate: { type: Date },
   coverArtUrl: { type: String, default: '' },
   coverArtFileName: { type: String, default: '' },
+  coverArtMeta: { type: mongoose.Schema.Types.Mixed },
   tracks: {
     type: [distributionTrackSchema],
     validate: { validator: value => Array.isArray(value) && value.length > 0, message: 'At least one track is required' },
