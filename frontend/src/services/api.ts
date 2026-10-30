@@ -1,10 +1,16 @@
 import axios from 'axios';
 
-const GET_CACHE_TTL = 30_000;
+const GET_CACHE_TTL = 120_000;
 const GET_CACHE_MAX_ENTRIES = 200;
 const getCache = new Map<string, { expiresAt: number; response: any }>();
+const inFlightGets = new Map<string, Promise<any>>();
+let cacheGeneration = 0;
 
-export const clearApiCache = () => getCache.clear();
+export const clearApiCache = () => {
+  cacheGeneration += 1;
+  getCache.clear();
+  inFlightGets.clear();
+};
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api',
@@ -47,6 +53,20 @@ api.interceptors.request.use((config) => {
     } else {
       getCache.delete(cacheKey);
       (config as any).__hbeCacheKey = cacheKey;
+      (config as any).__hbeCacheGeneration = cacheGeneration;
+      const defaultAdapter = axios.getAdapter(config.adapter || api.defaults.adapter);
+      config.adapter = async (adapterConfig) => {
+        const activeRequest = inFlightGets.get(cacheKey);
+        if (activeRequest) {
+          const sharedResponse = await activeRequest;
+          return { ...sharedResponse, config: adapterConfig };
+        }
+        const request = defaultAdapter(adapterConfig).finally(() => {
+          if (inFlightGets.get(cacheKey) === request) inFlightGets.delete(cacheKey);
+        });
+        inFlightGets.set(cacheKey, request);
+        return request;
+      };
     }
   } else {
     // A successful write may affect several screens, so never serve old data
@@ -61,7 +81,7 @@ api.interceptors.response.use(
   (response) => {
     response.data = resolveServerUploads(response.data);
     const cacheKey = (response.config as any).__hbeCacheKey;
-    if (cacheKey && !(response.config as any).__hbeServedFromCache) {
+    if (cacheKey && !(response.config as any).__hbeServedFromCache && (response.config as any).__hbeCacheGeneration === cacheGeneration) {
       // Bound memory usage for long-running browser sessions.
       if (getCache.size >= GET_CACHE_MAX_ENTRIES) {
         const oldestKey = getCache.keys().next().value;

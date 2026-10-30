@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Music, Radio, FileText, DollarSign,
@@ -8,6 +8,7 @@ import {
   Tv, UserCog,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { preloadRoute, preloadRoutes } from '../../utils/routePreload';
 
 const iconMap: Record<string, React.ReactNode> = {
   '/': <LayoutDashboard size={17} />,
@@ -93,6 +94,15 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
   const meta = roleMeta[user?.role || ''] || roleMeta.manager;
 
+  // Download authorized route chunks while the browser is idle. Hosted asset
+  // requests have much higher latency than local development, so this makes
+  // later sidebar navigation use the browser cache instead of waiting on click.
+  useEffect(() => {
+    const paths = nav.map(item => item.path);
+    const timer = window.setTimeout(() => { void preloadRoutes(paths); }, 1200);
+    return () => window.clearTimeout(timer);
+  }, [nav]);
+
   const sidebarContent = (
     <div className="sidebar-panel h-full flex flex-col w-[264px] flex-shrink-0">
       {/* Logo */}
@@ -124,6 +134,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                     key={item.path}
                     to={item.path}
                     onClick={onClose}
+                    onMouseEnter={() => { void preloadRoute(item.path); }}
+                    onFocus={() => { void preloadRoute(item.path); }}
+                    onTouchStart={() => { void preloadRoute(item.path); }}
                     className={`nav-item ${isActive ? 'nav-item-active' : ''}`}
                   >
                     <span className="nav-icon flex-shrink-0">{iconMap[item.path] || <Home size={17} />}</span>
