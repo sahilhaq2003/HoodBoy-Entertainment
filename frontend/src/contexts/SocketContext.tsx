@@ -8,6 +8,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import toast from 'react-hot-toast';
+import { useAuth } from './AuthContext';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 export interface DistribeatsReleaseUpdate {
@@ -96,6 +97,7 @@ const resolveSocketUrl = (): string => {
 const SOCKET_URL = resolveSocketUrl();
 
 export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { token } = useAuth();
   const socketRef = useRef<Socket | null>(null);
   const [connected, setConnected] = useState(false);
   const [distribeatsStatus, setDistribeatsStatus] = useState<any>(null);
@@ -104,14 +106,13 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Re-connect / disconnect whenever the JWT token changes (login / logout).
   useEffect(() => {
-    const token =
-      localStorage.getItem('hbe_token') ||
-      sessionStorage.getItem('hbe_token');
-
     if (!token) {
       socketRef.current?.disconnect();
       socketRef.current = null;
       setConnected(false);
+      setDistribeatsStatus(null);
+      setWebhookFeed([]);
+      setSyncProgress(null);
       return;
     }
 
@@ -182,7 +183,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       socketRef.current = null;
       setConnected(false);
     };
-  }, []);
+  }, [token]);
 
   const joinRelease = useCallback((releaseId: string) => {
     socketRef.current?.emit('join:release', releaseId);

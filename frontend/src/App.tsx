@@ -188,8 +188,8 @@ const App: React.FC = () => {
     <BrowserRouter>
       <ErrorBoundary>
       <ThemeProvider>
-        <SocketProvider>
         <AuthProvider>
+          <SocketProvider>
           <AppRoutes />
           <Toaster
             position="top-right"
@@ -206,8 +206,8 @@ const App: React.FC = () => {
               error: { iconTheme: { primary: '#DC2626', secondary: '#111214' } },
             }}
           />
+          </SocketProvider>
         </AuthProvider>
-      </SocketProvider>
       </ThemeProvider>
       </ErrorBoundary>
     </BrowserRouter>
