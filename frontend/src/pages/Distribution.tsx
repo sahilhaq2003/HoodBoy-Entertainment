@@ -79,14 +79,57 @@ const defaultEarliestDate = () => {
 const splitCsv = (value: string) => value.split(',').map(s => s.trim()).filter(Boolean);
 const joinCsv = (value?: string[] | string) => Array.isArray(value) ? value.filter(Boolean).join(', ') : String(value || '');
 
-const inspectCoverFile = (file: File): Promise<{ width: number; height: number } | null> =>
+const loadCoverImage = (file: File): Promise<HTMLImageElement | null> =>
   new Promise(resolve => {
     const url = URL.createObjectURL(file);
     const img = new Image();
-    img.onload = () => { URL.revokeObjectURL(url); resolve({ width: img.naturalWidth, height: img.naturalHeight }); };
+    img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
     img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
     img.src = url;
   });
+
+const canvasToFile = (canvas: HTMLCanvasElement, fileName: string, mime: string, quality?: number): Promise<File | null> =>
+  new Promise(resolve => {
+    canvas.toBlob(blob => {
+      if (!blob) return resolve(null);
+      resolve(new File([blob], fileName, { type: mime, lastModified: Date.now() }));
+    }, mime, quality);
+  });
+
+const buildSampleWavFile = (title = 'sample-track', durationSeconds = 3): File => {
+  const sampleRate = 44100;
+  const numChannels = 2;
+  const bitsPerSample = 16;
+  const numSamples = sampleRate * durationSeconds;
+  const dataSize = numSamples * numChannels * (bitsPerSample / 8);
+  const buffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buffer);
+  const writeStr = (offset: number, str: string) => {
+    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+  };
+  writeStr(0, 'RIFF');
+  view.setUint32(4, 36 + dataSize, true);
+  writeStr(8, 'WAVE');
+  writeStr(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * numChannels * 2, true);
+  view.setUint16(32, numChannels * 2, true);
+  view.setUint16(34, bitsPerSample, true);
+  writeStr(36, 'data');
+  view.setUint32(40, dataSize, true);
+  for (let i = 0; i < numSamples; i++) {
+    const envelope = Math.min(1, i / 2000, (numSamples - i) / 2000);
+    const sample = Math.round(Math.sin((2 * Math.PI * 440 * i) / sampleRate) * 7500 * envelope);
+    const offset = 44 + i * 4;
+    view.setInt16(offset, sample, true);
+    view.setInt16(offset + 2, sample, true);
+  }
+  const safeSlug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'sample-track';
+  return new File([buffer], `${safeSlug}-master.wav`, { type: 'audio/wav', lastModified: Date.now() });
+};
 
 const Distribution: React.FC = () => {
   const { user, canAccess } = useAuth();
@@ -399,22 +442,103 @@ const Distribution: React.FC = () => {
 
   const handleCoverSelect = async (file?: File) => {
     if (!file) { setCover(undefined); return; }
-    const ext = file.name.toLowerCase().split('.').pop() || '';
-    if (!['jpg', 'jpeg', 'png'].includes(ext) || !['image/jpeg', 'image/png'].includes(file.type)) {
-      toast.error('Cover artwork must be a JPG or PNG image.');
-      setFieldErrors(prev => ({ ...prev, cover: 'Artwork must be JPG or PNG.' }));
+    const img = await loadCoverImage(file);
+    if (!img || !img.naturalWidth || !img.naturalHeight) {
+      toast.error('Selected file is not a readable image.');
+      setFieldErrors(prev => ({ ...prev, cover: 'Cover artwork must be a readable JPG or PNG image.' }));
       return;
     }
-    const dims = await inspectCoverFile(file);
-    if (!dims || dims.width !== 3000 || dims.height !== 3000) {
-      const got = dims ? `${dims.width}×${dims.height} px` : 'unreadable image';
-      toast.error(`Cover artwork must be exactly 3000×3000 px (selected: ${got}).`);
-      setFieldErrors(prev => ({ ...prev, cover: `Cover artwork must be 3000×3000 px (received ${got}).` }));
+    const origW = img.naturalWidth;
+    const origH = img.naturalHeight;
+    const ext = file.name.toLowerCase().split('.').pop() || '';
+    const isAlreadyExactSpec =
+      origW === 3000 &&
+      origH === 3000 &&
+      ['jpg', 'jpeg', 'png'].includes(ext) &&
+      ['image/jpeg', 'image/png'].includes(file.type) &&
+      file.size <= 24 * 1024 * 1024;
+
+    if (isAlreadyExactSpec) {
+      setFieldErrors(prev => { const next = { ...prev }; delete next.cover; return next; });
+      setCover(file);
+      setCoverPreviewInfo(`${file.name} (3000×3000 px RGB, ${(file.size / 1048576).toFixed(2)} MiB)`);
+      return;
+    }
+
+    // Auto-adjust any uploaded image to DistriBeats' required 3000×3000 px RGB JPG/PNG specification (center-crop cover fit)
+    const canvas = document.createElement('canvas');
+    canvas.width = 3000;
+    canvas.height = 3000;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      toast.error('Could not initialize image canvas for 3000×3000 conversion.');
+      return;
+    }
+    ctx.fillStyle = '#09090b';
+    ctx.fillRect(0, 0, 3000, 3000);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    const scale = Math.max(3000 / origW, 3000 / origH);
+    const drawW = origW * scale;
+    const drawH = origH * scale;
+    const offsetX = (3000 - drawW) / 2;
+    const offsetY = (3000 - drawH) / 2;
+    ctx.drawImage(img, offsetX, offsetY, drawW, drawH);
+
+    const baseName = file.name.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9-_]+/g, '-') || 'cover';
+    const adjustedFile = await canvasToFile(canvas, `${baseName}-3000x3000.jpg`, 'image/jpeg', 0.94);
+    if (!adjustedFile) {
+      toast.error('Failed to auto-adjust cover image to 3000×3000 px.');
       return;
     }
     setFieldErrors(prev => { const next = { ...prev }; delete next.cover; return next; });
-    setCover(file);
-    setCoverPreviewInfo(`${file.name} (${dims.width}×${dims.height} px, ${(file.size / 1048576).toFixed(2)} MiB)`);
+    setCover(adjustedFile);
+    setCoverPreviewInfo(
+      `Auto-adjusted ${origW}×${origH} px → 3000×3000 px RGB (${adjustedFile.name}, ${(adjustedFile.size / 1048576).toFixed(2)} MiB)`
+    );
+    toast.success(`Cover image auto-adjusted from ${origW}×${origH} px to 3000×3000 px RGB.`);
+  };
+
+  const generateSampleCover = async () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 3000;
+    canvas.height = 3000;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const grad = ctx.createLinearGradient(0, 0, 3000, 3000);
+    grad.addColorStop(0, '#2e1065');
+    grad.addColorStop(0.5, '#4c1d95');
+    grad.addColorStop(1, '#09090b');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 3000, 3000);
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.beginPath();
+    ctx.arc(2400, 600, 900, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 170px sans-serif';
+    ctx.fillText((form.title || 'TEST RELEASE').slice(0, 24), 220, 1480);
+    ctx.fillStyle = '#c4b5fd';
+    ctx.font = 'bold 110px sans-serif';
+    ctx.fillText((selectedArtistName || 'HoodBoy Entertainment').slice(0, 30), 220, 1660);
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 70px monospace';
+    ctx.fillText('DISTRIBEATS 3000x3000 RGB TEST ARTWORK', 220, 2720);
+
+    const generated = await canvasToFile(canvas, 'sample-cover-3000x3000.jpg', 'image/jpeg', 0.94);
+    if (!generated) return toast.error('Could not generate sample cover.');
+    setFieldErrors(prev => { const next = { ...prev }; delete next.cover; return next; });
+    setCover(generated);
+    setCoverPreviewInfo(`Generated ${generated.name} (3000×3000 px RGB, ${(generated.size / 1048576).toFixed(2)} MiB)`);
+    toast.success('Generated 3000×3000 px RGB cover artwork.');
+  };
+
+  const generateSampleAudioForTrack = (index: number) => {
+    const trackTitle = tracks[index]?.title || form.title || `track-${index + 1}`;
+    const wavFile = buildSampleWavFile(trackTitle, 3);
+    setFieldErrors(prev => { const next = { ...prev }; delete next[`tracks[${index}].audio`]; return next; });
+    setTracks(items => items.map((item, j) => j === index ? { ...item, audio: wavFile, audioFileName: wavFile.name, audioSizeBytes: wavFile.size, durationSeconds: item.durationSeconds || 3 } : item));
+    toast.success(`Attached sample WAV master (${wavFile.name}) to Track ${index + 1}.`);
   };
 
   const handleAudioSelect = (index: number, file?: File) => {
@@ -946,12 +1070,19 @@ const Distribution: React.FC = () => {
             </label>
 
             <div className="md:col-span-2 lg:col-span-3 grid gap-4 md:grid-cols-2">
-              <label className="text-xs font-semibold text-[var(--hbe-muted)]">
-                Cover artwork * (JPG or PNG, RGB, exactly 3000×3000 px)
-                <input type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" className={`${fieldErrors.cover ? errInput : input} mt-1`} onChange={e => handleCoverSelect(e.target.files?.[0])}/>
+              <div className="text-xs font-semibold text-[var(--hbe-muted)]">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span>Cover artwork * (auto-adjusts any image to 3000×3000 px RGB)</span>
+                  {isTestMode && (
+                    <button type="button" onClick={generateSampleCover} className="rounded-lg border border-violet-500/40 bg-violet-500/10 px-2.5 py-0.5 text-[11px] font-bold text-violet-400 hover:bg-violet-500/20">
+                      Auto-Generate 3000×3000 Cover
+                    </button>
+                  )}
+                </div>
+                <input type="file" accept="image/*" className={`${fieldErrors.cover ? errInput : input} mt-1`} onChange={e => handleCoverSelect(e.target.files?.[0])}/>
                 {coverPreviewInfo && <span className="mt-1 block text-[11px] text-emerald-500">{coverPreviewInfo}</span>}
                 {fieldErrors.cover && <span className="mt-1 block text-[11px] text-red-500">{fieldErrors.cover}</span>}
-              </label>
+              </div>
               <div className="flex flex-col justify-center gap-2 pt-2">
                 <label className="flex items-center gap-2 text-xs font-semibold text-[var(--hbe-text)]"><input type="checkbox" checked={form.explicit} onChange={e => setForm({ ...form, explicit: e.target.checked })}/> Release contains explicit content</label>
                 <label className="flex items-center gap-2 text-xs font-semibold text-[var(--hbe-text)]"><input type="checkbox" checked={form.attestAge} onChange={e => setForm({ ...form, attestAge: e.target.checked })}/> I confirm the artist meets the minimum age requirement *</label>
@@ -1192,12 +1323,20 @@ const Distribution: React.FC = () => {
 
                 {/* Audio, Preview Start, Duration & Flags */}
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 items-end">
-                  <label className="text-xs font-semibold text-[var(--hbe-muted)] sm:col-span-2">
-                    Master audio file (WAV or FLAC only, up to {(maxAudioBytes / 1_000_000).toFixed(0)} MB) *
+                  <div className="text-xs font-semibold text-[var(--hbe-muted)] sm:col-span-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span>Master audio file (WAV or FLAC only, up to {(maxAudioBytes / 1_000_000).toFixed(0)} MB) *</span>
+                      {isTestMode && (
+                        <button type="button" onClick={() => generateSampleAudioForTrack(i)} className="rounded-lg border border-violet-500/40 bg-violet-500/10 px-2.5 py-0.5 text-[11px] font-bold text-violet-400 hover:bg-violet-500/20">
+                          Generate Sample WAV
+                        </button>
+                      )}
+                    </div>
                     <input type="file" accept=".wav,.flac,audio/wav,audio/x-wav,audio/flac,audio/x-flac" className={`${fieldErrors[`${p}.audio`] ? errInput : input} mt-1`} onChange={e => handleAudioSelect(i, e.target.files?.[0])}/>
+                    {t.audio && <span className="mt-1 block text-[11px] text-emerald-500">Selected audio: {t.audio.name} ({(t.audio.size / 1024).toFixed(0)} KB)</span>}
                     {t.audioUrl && !t.audio && <span className="mt-1 block text-[11px] text-emerald-500">Saved audio preserved: {t.audioFileName || t.audioUrl}</span>}
                     {fieldErrors[`${p}.audio`] && <span className="mt-1 block text-[11px] text-red-500">{fieldErrors[`${p}.audio`]}</span>}
-                  </label>
+                  </div>
                   <label className="text-xs font-semibold text-[var(--hbe-muted)]">
                     Preview start (m:ss, optional)
                     <input className={`${fieldErrors[`${p}.previewStart`] ? errInput : input} mt-1`} value={t.previewStart} onChange={e => updateTrack(i, { previewStart: e.target.value })} placeholder="0:45"/>
