@@ -6,7 +6,7 @@ import {
 import {
   DollarSign, TrendingUp, TrendingDown, Plus, ArrowUpRight, ArrowDownRight,
   Filter, PieChart as PieChartIcon, Calculator, Wallet, FileText, Download,
-  Edit2, Trash2, Calendar, BarChart3,
+  Edit2, Trash2, Calendar, BarChart3, FileSpreadsheet, Loader2, ShieldCheck,
 } from 'lucide-react';
 import { financeApi, budgetsApi } from '../services/api';
 import api from '../services/api';
@@ -189,6 +189,7 @@ const FinancePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
+  const [exportingReport, setExportingReport] = useState<'pdf' | 'excel' | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'transaction' | 'budget' | 'item'; id: string } | null>(null);
 
   const [finances, setFinances] = useState<FinanceRecord[]>([]);
@@ -332,6 +333,35 @@ const FinancePage: React.FC = () => {
       api.get('/tax-calendar').then((res: any) => setTaxEvents(res.data?.data || [])).catch(e => { console.error(e); toast.error('Failed to load tax events'); });
     }
   }, [activeTab]);
+
+  const handleReportDownload = async (format: 'pdf' | 'excel') => {
+    if (!summary || exportingReport) return;
+    setExportingReport(format);
+    try {
+      const [transactionsRes, budgetsRes] = await Promise.all([
+        financeApi.getAll({ year, limit: 10000 }),
+        budgetsApi.getAll({ year }),
+      ]);
+      const reportData = {
+        year,
+        summary,
+        categories: categoryBreakdown,
+        cashFlow,
+        transactions: transactionsRes.data.data || [],
+        budgets: budgetsRes.data.data || [],
+        categoryLabel: (category: string) => CATEGORY_LABELS[category] || category.replace(/_/g, ' '),
+      };
+      const { downloadFinancePdf, downloadFinanceExcel } = await import('../utils/financeReportExport');
+      if (format === 'pdf') await downloadFinancePdf(reportData);
+      else await downloadFinanceExcel(reportData);
+      toast.success(`${format === 'pdf' ? 'PDF' : 'Excel'} report generated and downloaded`);
+    } catch (error) {
+      console.error(error);
+      toast.error(`Could not generate the ${format === 'pdf' ? 'PDF' : 'Excel'} report`);
+    } finally {
+      setExportingReport(null);
+    }
+  };
 
   const handleSaveTransaction = async () => {
     try {
@@ -1005,7 +1035,62 @@ const FinancePage: React.FC = () => {
       {/* ============ REPORTS TAB ============ */}
       {!loading && activeTab === 'reports' && summary && (
         <div className="space-y-6">
-          <h2 className="text-lg font-bold text-gray-900">Financial Reports — {year}</h2>
+          <div className="relative overflow-hidden rounded-2xl bg-slate-950 px-6 py-6 text-white shadow-xl sm:px-8">
+            <div className="absolute -right-14 -top-20 h-52 w-52 rounded-full bg-violet-500/25 blur-2xl" />
+            <div className="absolute bottom-0 right-32 h-24 w-24 rounded-full bg-emerald-400/10 blur-xl" />
+            <div className="relative flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
+              <div className="max-w-2xl">
+                <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-violet-300">
+                  <ShieldCheck size={15} /> Management reporting center
+                </div>
+                <h2 className="text-2xl font-bold tracking-tight">{year} Financial Performance Report</h2>
+                <p className="mt-2 text-sm leading-6 text-slate-300">Generate board-ready reports automatically from the latest transactions, budgets, category performance, and artist revenue records.</p>
+                <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-400">
+                  <span>{totalFinances.toLocaleString()} recorded transactions</span>
+                  <span>{budgets.length} report budgets</span>
+                  <span>Live data at download time</span>
+                </div>
+              </div>
+              <div className="grid min-w-full gap-3 sm:grid-cols-2 xl:min-w-[430px]">
+                <button
+                  onClick={() => handleReportDownload('pdf')}
+                  disabled={exportingReport !== null}
+                  className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-left transition hover:bg-white/15 disabled:cursor-wait disabled:opacity-60"
+                >
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-red-500/20 text-red-300">
+                    {exportingReport === 'pdf' ? <Loader2 size={20} className="animate-spin" /> : <FileText size={20} />}
+                  </span>
+                  <span><span className="block text-sm font-bold">Download PDF</span><span className="mt-0.5 block text-[11px] text-slate-400">Branded board report</span></span>
+                </button>
+                <button
+                  onClick={() => handleReportDownload('excel')}
+                  disabled={exportingReport !== null}
+                  className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-left transition hover:bg-white/15 disabled:cursor-wait disabled:opacity-60"
+                >
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-emerald-500/20 text-emerald-300">
+                    {exportingReport === 'excel' ? <Loader2 size={20} className="animate-spin" /> : <FileSpreadsheet size={20} />}
+                  </span>
+                  <span><span className="block text-sm font-bold">Download Excel</span><span className="mt-0.5 block text-[11px] text-slate-400">Five analysis sheets</span></span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {[
+              { label: 'Annual revenue', value: formatCurrency(summary.totalRevenue), detail: 'Recognized income', color: 'text-emerald-600', bar: 'bg-emerald-500' },
+              { label: 'Annual expenses', value: formatCurrency(summary.totalExpenses), detail: 'Recorded expenditure', color: 'text-red-600', bar: 'bg-red-500' },
+              { label: 'Net result', value: formatCurrency(summary.profit), detail: summary.profit >= 0 ? 'Profitable year' : 'Operating loss', color: summary.profit >= 0 ? 'text-violet-600' : 'text-red-600', bar: summary.profit >= 0 ? 'bg-violet-500' : 'bg-red-500' },
+              { label: 'Net margin', value: `${summary.totalRevenue ? ((summary.profit / summary.totalRevenue) * 100).toFixed(1) : '0.0'}%`, detail: `${summary.pendingCount} pending payments`, color: 'text-slate-700', bar: 'bg-slate-500' },
+            ].map(card => (
+              <div key={card.label} className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className={`mb-4 h-1.5 w-12 rounded-full ${card.bar}`} />
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">{card.label}</p>
+                <p className={`mt-2 text-xl font-bold ${card.color}`}>{card.value}</p>
+                <p className="mt-1 text-xs text-gray-400">{card.detail}</p>
+              </div>
+            ))}
+          </div>
 
           {/* Quarterly summary */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

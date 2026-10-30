@@ -231,9 +231,40 @@ export interface WeeklyReport {
   biggestRisk: string;
   nextActionOwner: string;
   notes: string;
+  automation?: WeeklyReportAutomation;
   createdBy?: User;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface WeeklyReportTaskInsight {
+  _id: string;
+  title: string;
+  status: string;
+  priority: string;
+  category: string;
+  deadline?: string;
+  completedAt?: string;
+  assignee: string;
+  project?: string;
+}
+
+export interface WeeklyReportAutomation {
+  generatedAt: string;
+  metrics: {
+    completed: number; active: number; open: number; blocked: number; approvals: number;
+    dueThisWeek: number; overdue: number; critical: number; completionRate: number;
+    activeProjects: number; atRiskProjects: number; upcomingReleases: number;
+  };
+  completedTasks: WeeklyReportTaskInsight[];
+  openTasks: WeeklyReportTaskInsight[];
+  blockedTasks: WeeklyReportTaskInsight[];
+  approvalTasks: WeeklyReportTaskInsight[];
+  dueTasks: WeeklyReportTaskInsight[];
+  overdueTasks: WeeklyReportTaskInsight[];
+  ownerWorkload: Array<{ owner: string; total: number; overdue: number; blocked: number; critical: number }>;
+  atRiskProjects: Array<{ _id: string; name: string; status: string; priority: string; completionPercentage: number; releaseDate?: string; owner: string; artist?: string }>;
+  upcomingReleases: Array<{ _id: string; title: string; status: string; priority: string; releaseDate: string; owner: string; artist?: string }>;
 }
 
 export interface Finance {
