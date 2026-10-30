@@ -73,9 +73,27 @@ const SocketContext = createContext<SocketContextValue>({
 export const useSocket = () => useContext(SocketContext);
 
 // ── Provider ──────────────────────────────────────────────────────────────────
-const SOCKET_URL = import.meta.env.VITE_API_URL
-  ? new URL(import.meta.env.VITE_API_URL.replace('/api', ''), window.location.origin).origin
-  : window.location.origin.replace(/:\d+$/, ':5000');
+const resolveSocketUrl = (): string => {
+  const configuredSocketUrl = import.meta.env.VITE_SOCKET_URL?.trim();
+  if (configuredSocketUrl) {
+    return new URL(configuredSocketUrl, window.location.origin).origin;
+  }
+
+  const configuredApiUrl = import.meta.env.VITE_API_URL?.trim();
+  if (configuredApiUrl && /^https?:\/\//i.test(configuredApiUrl)) {
+    return new URL(configuredApiUrl).origin;
+  }
+
+  // Relative API URLs use the same public host. Production Nginx proxies
+  // /socket.io/ to the backend, while local development uses port 5000.
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return `${window.location.protocol}//${window.location.hostname}:5000`;
+  }
+
+  return window.location.origin;
+};
+
+const SOCKET_URL = resolveSocketUrl();
 
 export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const socketRef = useRef<Socket | null>(null);

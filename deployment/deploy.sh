@@ -24,6 +24,8 @@ ln -sfn "$STORAGE_DIR" "$BACKEND_DIR/uploads"
 
 cd "$FRONTEND_DIR"
 npm ci
+VITE_API_URL="${VITE_API_URL:-/api}" \
+VITE_SOCKET_URL="${VITE_SOCKET_URL:-https://api.hbe.lol}" \
 npm run build
 
 cd "$BACKEND_DIR"

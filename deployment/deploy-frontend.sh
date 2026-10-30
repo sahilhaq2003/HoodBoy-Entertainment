@@ -14,7 +14,9 @@ git reset --hard origin/main
 
 cd "$FRONTEND_DIR"
 npm ci
-VITE_API_URL="https://api.hbe.lol/api" npm run build
+VITE_API_URL="${VITE_API_URL:-https://api.hbe.lol/api}" \
+VITE_SOCKET_URL="${VITE_SOCKET_URL:-https://api.hbe.lol}" \
+npm run build
 command -v pm2 >/dev/null 2>&1 || npm install --global pm2@latest
 pm2 startOrReload ecosystem.config.cjs --env production
 pm2 save
