@@ -24,6 +24,24 @@ The frontend deployment embeds `https://api.hbe.lol/api` as its public API URL.
 The backend environment should allow `https://hbe.lol` and
 `https://www.hbe.lol` through CORS.
 
+## Upload settings
+
+The backend deployment verifies that `backend/uploads` points to persistent,
+writable storage before restarting the application. For the `api.hbe.lol`
+CloudPanel site, add these directives to the Nginx vhost so uploads reach the
+application instead of failing at the proxy:
+
+```nginx
+client_max_body_size 512m;
+proxy_request_buffering off;
+proxy_send_timeout 600s;
+proxy_read_timeout 600s;
+```
+
+The complete reference vhost is in `deployment/nginx/api.hbe.lol.conf`.
+`FILE_UPLOAD_MAX_MB` may lower the application limit; it must not be greater
+than the Nginx body limit after allowing for multipart overhead.
+
 `deployment/setup-server.sh` is for a plain VPS. Do not run it on CloudPanel,
 because CloudPanel manages Nginx and system configuration.
 

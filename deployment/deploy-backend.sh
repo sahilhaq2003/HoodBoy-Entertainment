@@ -25,6 +25,17 @@ if [[ -e "$BACKEND_DIR/uploads" && ! -L "$BACKEND_DIR/uploads" ]]; then
 fi
 ln -sfn "$STORAGE_DIR" "$BACKEND_DIR/uploads"
 
+if [[ ! -L "$BACKEND_DIR/uploads" || ! -d "$BACKEND_DIR/uploads" ]]; then
+  echo "Persistent upload storage link is unavailable: $BACKEND_DIR/uploads -> $STORAGE_DIR" >&2
+  exit 1
+fi
+UPLOAD_PROBE="$BACKEND_DIR/uploads/.hbe-write-test-$$"
+if ! (umask 077 && : > "$UPLOAD_PROBE"); then
+  echo "Persistent upload storage is not writable by $(id -un): $STORAGE_DIR" >&2
+  exit 1
+fi
+rm -f "$UPLOAD_PROBE"
+
 cd "$BACKEND_DIR"
 npm ci --omit=dev
 npm run db:migrate

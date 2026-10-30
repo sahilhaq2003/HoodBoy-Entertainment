@@ -479,6 +479,8 @@ export const activityApi = {
 // Settings
 export const settingsApi = {
   updateProfile: (data: object) => api.put('/auth/profile', data),
+  uploadAvatar: (data: FormData) => api.post('/auth/profile/avatar', data, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  removeAvatar: () => api.delete('/auth/profile/avatar'),
   changePassword: (data: object) => api.put('/auth/password', data),
 };
 

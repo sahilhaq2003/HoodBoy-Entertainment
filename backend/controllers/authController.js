@@ -1,6 +1,15 @@
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const fs = require('node:fs');
+const path = require('node:path');
 const User = require('../models/User');
+
+const removePreviousAvatar = async (avatarUrl) => {
+  if (!avatarUrl || !String(avatarUrl).startsWith('/uploads/images/')) return;
+  const imageRoot = path.resolve(__dirname, '..', 'uploads', 'images');
+  const candidate = path.resolve(imageRoot, path.basename(String(avatarUrl)));
+  if (candidate.startsWith(`${imageRoot}${path.sep}`)) await fs.promises.unlink(candidate).catch(() => {});
+};
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE });
@@ -151,6 +160,38 @@ const updateProfile = async (req, res) => {
   }
 };
 
+const uploadAvatar = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: 'No image uploaded' });
+    if (!String(req.file.mimetype || '').startsWith('image/')) {
+      await fs.promises.unlink(req.file.path).catch(() => {});
+      return res.status(400).json({ success: false, message: 'Profile photo must be a supported image file' });
+    }
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    const previousAvatar = user.avatar;
+    user.avatar = `/uploads/images/${req.file.filename}`;
+    await user.save();
+    await removePreviousAvatar(previousAvatar);
+    res.json({ success: true, user });
+  } catch (error) {
+    if (req.file?.path) await fs.promises.unlink(req.file.path).catch(() => {});
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+const removeAvatar = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    const previousAvatar = user.avatar;
+    user.avatar = '';
+    await user.save();
+    await removePreviousAvatar(previousAvatar);
+    res.json({ success: true, user });
+  } catch (error) { res.status(400).json({ success: false, message: error.message }); }
+};
+
 const changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
@@ -268,7 +309,7 @@ const resetPassword = async (req, res) => {
 module.exports = {
   login, getMe, updateProfile, changePassword,
   verifyTwoFactorLogin, setupTwoFactor, confirmTwoFactor, disableTwoFactor,
-  requestPasswordReset, resetPassword,
+  requestPasswordReset, resetPassword, uploadAvatar, removeAvatar,
 };
 // Exported for deterministic authentication tests; not exposed as an HTTP route.
 module.exports._totp = totp;

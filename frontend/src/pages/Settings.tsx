@@ -35,7 +35,14 @@ const Settings: React.FC = () => {
   const [phone, setPhone] = useState(user?.phone || '');
   const [department, setDepartment] = useState(user?.department || '');
   const [avatar, setAvatar] = useState(user?.avatar || '');
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarRemoved, setAvatarRemoved] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const avatarPreviewUrlRef = useRef<string | null>(null);
+
+  useEffect(() => () => {
+    if (avatarPreviewUrlRef.current) URL.revokeObjectURL(avatarPreviewUrlRef.current);
+  }, []);
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -118,9 +125,16 @@ const Settings: React.FC = () => {
         canvas.width = Math.max(1, Math.round(image.width * scale));
         canvas.height = Math.max(1, Math.round(image.height * scale));
         canvas.getContext('2d')?.drawImage(image, 0, 0, canvas.width, canvas.height);
-        // A small profile thumbnail keeps login/session payloads fast even when
-        // the original camera image was several megabytes.
-        setAvatar(canvas.toDataURL('image/webp', 0.82));
+        canvas.toBlob(blob => {
+          if (!blob) return toast.error('Could not process this image');
+          if (avatarPreviewUrlRef.current) URL.revokeObjectURL(avatarPreviewUrlRef.current);
+          const previewUrl = URL.createObjectURL(blob);
+          avatarPreviewUrlRef.current = previewUrl;
+          const safeName = file.name.replace(/\.[^.]+$/, '') || 'avatar';
+          setAvatarFile(new File([blob], `${safeName}.webp`, { type: 'image/webp' }));
+          setAvatarRemoved(false);
+          setAvatar(previewUrl);
+        }, 'image/webp', 0.82);
       };
       image.onerror = () => toast.error('Could not process this image');
       image.src = reader.result as string;
@@ -131,8 +145,23 @@ const Settings: React.FC = () => {
   const handleSaveProfile = async () => {
     setSaving(true);
     try {
-      const res = await settingsApi.updateProfile({ name: fullName, phone, department, avatar });
-      updateUser(res.data.user);
+      const profileResponse = await settingsApi.updateProfile({ name: fullName, phone, department });
+      let savedUser = profileResponse.data.user;
+      if (avatarFile) {
+        const formData = new FormData();
+        formData.append('file', avatarFile);
+        savedUser = (await settingsApi.uploadAvatar(formData)).data.user;
+      } else if (avatarRemoved) {
+        savedUser = (await settingsApi.removeAvatar()).data.user;
+      }
+      setAvatar(savedUser.avatar || '');
+      setAvatarFile(null);
+      setAvatarRemoved(false);
+      if (avatarPreviewUrlRef.current) {
+        URL.revokeObjectURL(avatarPreviewUrlRef.current);
+        avatarPreviewUrlRef.current = null;
+      }
+      updateUser(savedUser);
       toast.success('Profile updated successfully');
     } catch (e: any) {
       toast.error(e.response?.data?.message || 'Failed to update profile');
@@ -266,7 +295,7 @@ const Settings: React.FC = () => {
                   )}
                   {avatar && (
                     <button
-                      onClick={() => setAvatar('')}
+                      onClick={() => { setAvatar(''); setAvatarFile(null); setAvatarRemoved(true); if (avatarPreviewUrlRef.current) { URL.revokeObjectURL(avatarPreviewUrlRef.current); avatarPreviewUrlRef.current = null; } }}
                       title="Remove photo"
                       className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-gray-700 hover:bg-red-600 text-white flex items-center justify-center border border-white transition-colors"
                     >
