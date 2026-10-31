@@ -112,6 +112,21 @@ test('DistriBeats artist matching discovers deeply nested live profile shapes', 
   })?.id, 'artist_live_hbe_jodi');
 });
 
+test('DistriBeats artist matching links accepted roster memberships by uid and email', () => {
+  const page = {
+    data: [{
+      uid: 'firebase_artist_hbe_jodi',
+      email: 'frankiesdavis@gmail.com',
+      role: 'artist',
+    }],
+    has_more: false,
+  };
+  assert.equal(findArtistInPage(page, {
+    artistName: 'HBE JODI',
+    email: 'frankiesdavis@gmail.com',
+  })?.id, 'firebase_artist_hbe_jodi');
+});
+
 const futureDate = (daysAhead = 14) => {
   const d = new Date();
   d.setUTCDate(d.getUTCDate() + daysAhead);

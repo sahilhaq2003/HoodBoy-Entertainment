@@ -261,7 +261,8 @@ const sendInboundWebhook = (type, data = {}) => client.post('/webhooks/inbound',
 const normalizeArtistIdentity = value => String(value || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase();
 
 const remoteArtistId = artist => artist?.id || artist?.artistId || artist?.artist_id || artist?._id ||
-  artist?.profileId || artist?.profile_id || artist?.uuid || artist?.userId || artist?.user_id || '';
+  artist?.profileId || artist?.profile_id || artist?.uuid || artist?.uid || artist?.userId || artist?.user_id ||
+  artist?.memberId || artist?.member_id || artist?.membershipId || artist?.membership_id || '';
 
 const remoteArtistCandidates = page => {
   const candidates = [];
