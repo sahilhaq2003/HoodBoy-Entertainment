@@ -122,8 +122,15 @@ exports.syncArtist = async (req, res) => {
   try {
     const artist = await Artist.findById(req.params.id);
     if (!artist) return res.status(404).json({ success: false, message: 'Artist not found' });
-    const matched = await service.findArtist(artist);
-    if (!matched?.id) return res.status(404).json({ success: false, message: 'No matching artist was found in Distribeats' });
+    const diagnostics = {};
+    const matched = await service.findArtist(artist, { diagnostics });
+    if (!matched?.id) {
+      const localName = artist.artistName || artist.stageName || artist.name || 'this artist';
+      const message = diagnostics.remoteCount > 0
+        ? `DistriBeats returned ${diagnostics.remoteCount} artist profile(s), but none matched ${localName} or ${artist.email || 'the local email'}.`
+        : 'DistriBeats returned no artist profiles. Verify that the live API key belongs to this workspace and includes artists:read.';
+      return res.status(404).json({ success: false, message, diagnostics });
+    }
     artist.distribeatsArtistId = String(matched.id);
     await artist.save();
     emit('distribeats:artist_updated', { artistId: String(artist._id), distribeatsArtistId: artist.distribeatsArtistId, name: artist.stageName || artist.artistName || artist.name });

@@ -5,7 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 
 const { DistribeatsClient } = require('../services/distribeats/distribeatsClient');
-const { uploadFile, findArtistInPage } = require('../services/distribeats/distribeatsService');
+const { uploadFile, findArtistInPage, remoteArtistCandidates } = require('../services/distribeats/distribeatsService');
 const { mapRelease } = require('../services/distribeats/distribeatsMapper');
 const { validateRelease, validateMappedPayload } = require('../services/distribeats/distribeatsValidation');
 const { parseReleaseBody, mergeDraft } = require('../services/distribeats/distributionDraft');
@@ -90,6 +90,26 @@ test('DistriBeats artist matching supports roster profile fields and nested API 
 test('DistriBeats artist matching does not link an unrelated roster entry', () => {
   const page = { data: [{ id: 'artist_other', artistName: 'Another Artist', email: 'other@example.com' }] };
   assert.equal(findArtistInPage(page, { artistName: 'HBE JODI', email: 'frankiesdavis@gmail.com' }), null);
+});
+
+test('DistriBeats artist matching discovers deeply nested live profile shapes', () => {
+  const page = {
+    object: 'list',
+    results: [{
+      membership: {
+        artist_profile: {
+          uuid: 'artist_live_hbe_jodi',
+          public_title: 'HBE JODI',
+          contact: { primary_email: 'frankiesdavis@gmail.com' },
+        },
+      },
+    }],
+  };
+  assert.equal(remoteArtistCandidates(page).length, 1);
+  assert.equal(findArtistInPage(page, {
+    artistName: 'HBE JODI',
+    email: 'frankiesdavis@gmail.com',
+  })?.id, 'artist_live_hbe_jodi');
 });
 
 const futureDate = (daysAhead = 14) => {

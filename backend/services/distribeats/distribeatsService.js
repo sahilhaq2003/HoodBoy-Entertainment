@@ -260,20 +260,46 @@ const sendInboundWebhook = (type, data = {}) => client.post('/webhooks/inbound',
 
 const normalizeArtistIdentity = value => String(value || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase();
 
-const remoteArtistsFromPage = page => {
-  const containers = [
-    page,
-    page?.data,
-    page?.artists,
-    page?.items,
-    page?.data?.data,
-    page?.data?.artists,
-    page?.data?.items,
-  ];
-  return containers.find(Array.isArray) || [];
+const remoteArtistId = artist => artist?.id || artist?.artistId || artist?.artist_id || artist?._id ||
+  artist?.profileId || artist?.profile_id || artist?.uuid || artist?.userId || artist?.user_id || '';
+
+const remoteArtistCandidates = page => {
+  const candidates = [];
+  const seen = new Set();
+  const visit = (value, depth = 0) => {
+    if (!value || typeof value !== 'object' || depth > 7 || seen.has(value)) return;
+    seen.add(value);
+    if (!Array.isArray(value) && remoteArtistId(value)) candidates.push(value);
+    if (Array.isArray(value)) value.forEach(item => visit(item, depth + 1));
+    else Object.values(value).forEach(item => visit(item, depth + 1));
+  };
+  visit(page);
+  return candidates;
 };
 
-const remoteArtistId = artist => artist?.id || artist?.artistId || artist?.artist_id || artist?._id || '';
+const identityValues = artist => {
+  const values = [];
+  const seen = new Set();
+  const visit = (value, key = '', depth = 0) => {
+    if (value === null || value === undefined || depth > 5) return;
+    if (typeof value === 'string') {
+      if (!/(?:^|_)(?:id|uuid)$/i.test(key) && !/url|status|plan|state|object/i.test(key)) {
+        const normalized = normalizeArtistIdentity(value);
+        if (normalized) values.push(normalized);
+      }
+      return;
+    }
+    if (typeof value !== 'object' || seen.has(value)) return;
+    seen.add(value);
+    Object.entries(value).forEach(([childKey, childValue]) => visit(childValue, childKey, depth + 1));
+  };
+  visit(artist);
+  return values;
+};
+
+const remoteArtistLabel = artist => artist?.artistName || artist?.artist_name || artist?.stageName ||
+  artist?.stage_name || artist?.displayName || artist?.display_name || artist?.displayArtist ||
+  artist?.name || artist?.title || artist?.profile?.artistName || artist?.profile?.stageName || '';
 
 const findArtistInPage = (page, localArtist) => {
   const localNames = new Set([
@@ -284,35 +310,29 @@ const findArtistInPage = (page, localArtist) => {
   ].map(normalizeArtistIdentity).filter(Boolean));
   const localEmail = normalizeArtistIdentity(localArtist?.email);
 
-  for (const remoteArtist of remoteArtistsFromPage(page)) {
+  for (const remoteArtist of remoteArtistCandidates(page)) {
     const id = remoteArtistId(remoteArtist);
-    if (!id) continue;
-    const remoteNames = [
-      remoteArtist?.name,
-      remoteArtist?.artistName,
-      remoteArtist?.artist_name,
-      remoteArtist?.stageName,
-      remoteArtist?.stage_name,
-      remoteArtist?.displayName,
-      remoteArtist?.displayArtist,
-      remoteArtist?.profile?.artistName,
-      remoteArtist?.profile?.stageName,
-      remoteArtist?.user?.artistName,
-    ].map(normalizeArtistIdentity).filter(Boolean);
-    const remoteEmail = normalizeArtistIdentity(
-      remoteArtist?.email || remoteArtist?.profile?.email || remoteArtist?.user?.email
-    );
-    const emailMatches = Boolean(localEmail && remoteEmail && localEmail === remoteEmail);
-    const nameMatches = remoteNames.some(name => localNames.has(name));
+    const remoteValues = identityValues(remoteArtist);
+    const emailMatches = Boolean(localEmail && remoteValues.includes(localEmail));
+    const nameMatches = remoteValues.some(value => localNames.has(value));
     if (emailMatches || nameMatches) return { ...remoteArtist, id: String(id) };
   }
   return null;
 };
 
-const findArtist = async artist => {
+const findArtist = async (artist, { diagnostics } = {}) => {
   let cursor;
   do {
     const page = await client.get('/artists', { limit: 100, starting_after: cursor });
+    const candidates = remoteArtistCandidates(page);
+    if (diagnostics) {
+      diagnostics.pages = (diagnostics.pages || 0) + 1;
+      diagnostics.remoteCount = (diagnostics.remoteCount || 0) + candidates.length;
+      diagnostics.remoteLabels = [...new Set([
+        ...(diagnostics.remoteLabels || []),
+        ...candidates.map(remoteArtistLabel).filter(Boolean),
+      ])].slice(0, 10);
+    }
     const match = findArtistInPage(page, artist);
     if (match) return match;
     const pagination = page?.data && !Array.isArray(page.data) ? page.data : page;
@@ -326,6 +346,6 @@ const findArtist = async artist => {
 
 module.exports = {
   client, connectionStatus, submitRelease, syncReleaseStatus, requestTakedown,
-  getReferenceData, getCatalogue, findArtist, findArtistInPage, getReleaseDdex, listRemoteReleases,
+  getReferenceData, getCatalogue, findArtist, findArtistInPage, remoteArtistCandidates, getReleaseDdex, listRemoteReleases,
   listRemoteArtists, sendInboundWebhook, normalizeStatus, uploadFile,
 };
