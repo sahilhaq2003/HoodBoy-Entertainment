@@ -1,7 +1,7 @@
 const fs = require('fs/promises');
 const path = require('path');
 const { DistribeatsClient, DistribeatsError, DEFAULT_BASE_URL } = require('./distribeatsClient');
-const { mapRelease, normalizeStatus, displayName } = require('./distribeatsMapper');
+const { mapRelease, normalizeStatus } = require('./distribeatsMapper');
 const policy = require('./distribeatsPolicy');
 const { validateRelease, validateMappedPayload } = require('./distribeatsValidation');
 const { planParts, MAX_PART } = require('../../lib/mediaValidation');
@@ -258,19 +258,74 @@ const listRemoteReleases = (query = {}) => client.get('/releases', query);
 const listRemoteArtists = (query = {}) => client.get('/artists', query);
 const sendInboundWebhook = (type, data = {}) => client.post('/webhooks/inbound', { type, data });
 
+const normalizeArtistIdentity = value => String(value || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase();
+
+const remoteArtistsFromPage = page => {
+  const containers = [
+    page,
+    page?.data,
+    page?.artists,
+    page?.items,
+    page?.data?.data,
+    page?.data?.artists,
+    page?.data?.items,
+  ];
+  return containers.find(Array.isArray) || [];
+};
+
+const remoteArtistId = artist => artist?.id || artist?.artistId || artist?.artist_id || artist?._id || '';
+
+const findArtistInPage = (page, localArtist) => {
+  const localNames = new Set([
+    localArtist?.artistName,
+    localArtist?.stageName,
+    localArtist?.legalName,
+    localArtist?.name,
+  ].map(normalizeArtistIdentity).filter(Boolean));
+  const localEmail = normalizeArtistIdentity(localArtist?.email);
+
+  for (const remoteArtist of remoteArtistsFromPage(page)) {
+    const id = remoteArtistId(remoteArtist);
+    if (!id) continue;
+    const remoteNames = [
+      remoteArtist?.name,
+      remoteArtist?.artistName,
+      remoteArtist?.artist_name,
+      remoteArtist?.stageName,
+      remoteArtist?.stage_name,
+      remoteArtist?.displayName,
+      remoteArtist?.displayArtist,
+      remoteArtist?.profile?.artistName,
+      remoteArtist?.profile?.stageName,
+      remoteArtist?.user?.artistName,
+    ].map(normalizeArtistIdentity).filter(Boolean);
+    const remoteEmail = normalizeArtistIdentity(
+      remoteArtist?.email || remoteArtist?.profile?.email || remoteArtist?.user?.email
+    );
+    const emailMatches = Boolean(localEmail && remoteEmail && localEmail === remoteEmail);
+    const nameMatches = remoteNames.some(name => localNames.has(name));
+    if (emailMatches || nameMatches) return { ...remoteArtist, id: String(id) };
+  }
+  return null;
+};
+
 const findArtist = async artist => {
   let cursor;
   do {
     const page = await client.get('/artists', { limit: 100, starting_after: cursor });
-    const match = (page.data || []).find(item => String(item.name || item.displayArtist || '').toLowerCase() === displayName(artist).toLowerCase());
+    const match = findArtistInPage(page, artist);
     if (match) return match;
-    cursor = page.has_more ? page.next_cursor : null;
+    const pagination = page?.data && !Array.isArray(page.data) ? page.data : page;
+    const hasMore = pagination?.has_more ?? pagination?.hasMore ?? page?.has_more ?? page?.hasMore;
+    cursor = hasMore
+      ? (pagination?.next_cursor || pagination?.nextCursor || page?.next_cursor || page?.nextCursor || null)
+      : null;
   } while (cursor);
   return null;
 };
 
 module.exports = {
   client, connectionStatus, submitRelease, syncReleaseStatus, requestTakedown,
-  getReferenceData, getCatalogue, findArtist, getReleaseDdex, listRemoteReleases,
+  getReferenceData, getCatalogue, findArtist, findArtistInPage, getReleaseDdex, listRemoteReleases,
   listRemoteArtists, sendInboundWebhook, normalizeStatus, uploadFile,
 };

@@ -5,7 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 
 const { DistribeatsClient } = require('../services/distribeats/distribeatsClient');
-const { uploadFile } = require('../services/distribeats/distribeatsService');
+const { uploadFile, findArtistInPage } = require('../services/distribeats/distribeatsService');
 const { mapRelease } = require('../services/distribeats/distribeatsMapper');
 const { validateRelease, validateMappedPayload } = require('../services/distribeats/distribeatsValidation');
 const { parseReleaseBody, mergeDraft } = require('../services/distribeats/distributionDraft');
@@ -57,6 +57,40 @@ const CATALOGUE = {
   recordingRights: ['Original', 'Licensed'],
   masterLimitBytes: 150000000,
 };
+
+test('DistriBeats artist matching supports roster profile fields and nested API pages', () => {
+  const localArtist = {
+    artistName: 'HBE JODI',
+    legalName: 'Frankie Davis',
+    email: 'frankiesdavis@gmail.com',
+  };
+  const page = {
+    data: {
+      artists: [{
+        artistId: 'artist_hbe_jodi',
+        profile: {
+          artistName: 'HBE  JODI',
+          email: 'FRANKIESDAVIS@GMAIL.COM',
+        },
+      }],
+      hasMore: false,
+    },
+  };
+
+  assert.deepEqual(findArtistInPage(page, localArtist), {
+    artistId: 'artist_hbe_jodi',
+    profile: {
+      artistName: 'HBE  JODI',
+      email: 'FRANKIESDAVIS@GMAIL.COM',
+    },
+    id: 'artist_hbe_jodi',
+  });
+});
+
+test('DistriBeats artist matching does not link an unrelated roster entry', () => {
+  const page = { data: [{ id: 'artist_other', artistName: 'Another Artist', email: 'other@example.com' }] };
+  assert.equal(findArtistInPage(page, { artistName: 'HBE JODI', email: 'frankiesdavis@gmail.com' }), null);
+});
 
 const futureDate = (daysAhead = 14) => {
   const d = new Date();
