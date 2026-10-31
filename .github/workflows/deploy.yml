@@ -31,7 +31,12 @@ jobs:
           VPS_USER: ${{ secrets.FRONTEND_VPS_USER }}
         run: |
           set -euo pipefail
-          ssh -i ~/.ssh/hbe_frontend -o BatchMode=yes "$VPS_USER@$VPS_HOST" \
+          ssh -i ~/.ssh/hbe_frontend \
+            -o BatchMode=yes \
+            -o ConnectTimeout=30 \
+            -o ServerAliveInterval=15 \
+            -o ServerAliveCountMax=20 \
+            "$VPS_USER@$VPS_HOST" \
             'cd "$HOME/htdocs/hbe.lol" && bash deployment/deploy-frontend.sh'
 
   deploy-backend:
@@ -55,5 +60,10 @@ jobs:
           VPS_USER: ${{ secrets.BACKEND_VPS_USER }}
         run: |
           set -euo pipefail
-          ssh -i ~/.ssh/hbe_backend -o BatchMode=yes "$VPS_USER@$VPS_HOST" \
+          ssh -i ~/.ssh/hbe_backend \
+            -o BatchMode=yes \
+            -o ConnectTimeout=30 \
+            -o ServerAliveInterval=15 \
+            -o ServerAliveCountMax=20 \
+            "$VPS_USER@$VPS_HOST" \
             'cd "$HOME/htdocs/api.hbe.lol" && bash deployment/deploy-backend.sh'
