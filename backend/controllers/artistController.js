@@ -3,64 +3,16 @@ const User = require('../models/User');
 const crypto = require('crypto');
 const { removePreviousArtistImage, removePreviousDocument } = require('../services/legacyUploadCleanup');
 
-const REQUIRED_ONBOARDING_DOCUMENTS = [
-  'artist_agreement',
-  'tax_form',
-  'nda',
-  'image_release',
-  'payment_instructions',
-  'code_of_conduct',
-  'social_media_expectations',
-  'recording_delivery_requirements',
-];
-
-const getOnboardingMissingItems = (artist, requirePackageAcknowledgement = true) => {
+// DistriBeats artist registration only needs the artist name and contact/country
+// details. Everything else in the label profile is optional and can be added later.
+const getOnboardingMissingItems = (artist) => {
   const missing = [];
   const hasText = (value) => typeof value === 'string' && value.trim().length > 0;
 
-  if (!hasText(artist.legalName)) missing.push('Legal name');
   if (!hasText(artist.artistName)) missing.push('Artist name');
   if (!validateEmail(artist.email)) missing.push('Valid email');
   if (!validatePhone(artist.phone)) missing.push('Valid phone number');
-  if (!hasText(artist.address?.street) || !hasText(artist.address?.city) ||
-      !hasText(artist.address?.state) || !hasText(artist.address?.zipCode) ||
-      !hasText(artist.address?.country)) {
-    missing.push('Complete address');
-  }
-  if (!hasText(artist.emergencyContact?.name) || !hasText(artist.emergencyContact?.relationship) ||
-      !validatePhone(artist.emergencyContact?.phone)) {
-    missing.push('Complete emergency contact');
-  }
-  if (!hasText(artist.bio)) missing.push('Biography');
-  if (!artist.image) missing.push('Profile photo');
-
-  const hasSocialLink = ['instagram', 'tiktok', 'youtube', 'spotify', 'twitter']
-    .some(platform => hasText(artist.socialLinks?.[platform]));
-  if (!hasSocialLink) missing.push('At least one social-media account');
-  if (!artist.musicLinks?.some(link => hasText(link))) missing.push('At least one music link');
-  if (!hasText(artist.genre)) missing.push('Genre');
-  if (!hasText(artist.previousReleases)) missing.push('Prior release history (enter "None" if not applicable)');
-  if (!hasText(artist.catalogOwnership)) missing.push('Prior music ownership statement');
-  if (!hasText(artist.proAffiliation)) missing.push('PRO affiliation (select "None" if not applicable)');
-  if (!hasText(artist.publisher?.name)) missing.push('Publisher information (enter "None" if not applicable)');
-
-  if (!hasText(artist.paymentInfo?.method)) {
-    missing.push('Payment method');
-  } else if (['bank_transfer', 'wire'].includes(artist.paymentInfo.method) &&
-      (!hasText(artist.paymentInfo.bankName) || !hasText(artist.paymentInfo.accountNumber))) {
-    missing.push('Bank payment details');
-  } else if (artist.paymentInfo.method === 'paypal' && !validateEmail(artist.paymentInfo.paypalEmail)) {
-    missing.push('Valid PayPal email');
-  }
-
-  const uploadedTypes = new Set((artist.documents || []).map(document => document.type));
-  REQUIRED_ONBOARDING_DOCUMENTS.forEach(type => {
-    if (!uploadedTypes.has(type)) missing.push(`Document: ${type.replace(/_/g, ' ')}`);
-  });
-
-  if (requirePackageAcknowledgement && !artist.onboardingPackage?.acknowledgedAt) {
-    missing.push('HBE onboarding package acknowledgement');
-  }
+  if (!hasText(artist.address?.country)) missing.push('Country');
 
   return missing;
 };
@@ -134,7 +86,6 @@ const createArtist = async (req, res) => {
 
     // Validate required fields
     const errors = [];
-    if (!data.legalName?.trim()) errors.push('Legal name is required');
     if (!data.artistName?.trim()) errors.push('Artist name is required');
     if (!data.email?.trim()) {
       errors.push('Email is required');
@@ -146,6 +97,7 @@ const createArtist = async (req, res) => {
     } else if (!validatePhone(data.phone)) {
       errors.push('Invalid phone number');
     }
+    if (!data.address?.country?.trim()) errors.push('Country is required');
 
     if (errors.length > 0) {
       return res.status(400).json({ success: false, message: errors.join('. ') });
@@ -206,7 +158,6 @@ const updateOnboardingStep = async (req, res) => {
     // Validate step 1 required fields
     if (step === 1 && data) {
       const errors = [];
-      if (!data.legalName?.trim()) errors.push('Legal name is required');
       if (!data.artistName?.trim()) errors.push('Artist name is required');
       if (!data.email?.trim()) {
         errors.push('Email is required');
@@ -218,15 +169,9 @@ const updateOnboardingStep = async (req, res) => {
       } else if (!validatePhone(data.phone)) {
         errors.push('Invalid phone number');
       }
+      if (!data.address?.country?.trim()) errors.push('Country is required');
       if (errors.length > 0) {
         return res.status(400).json({ success: false, message: errors.join('. ') });
-      }
-    }
-
-    // Validate step 2 required fields
-    if (step === 2 && data) {
-      if (!data.genre?.trim()) {
-        return res.status(400).json({ success: false, message: 'Genre is required' });
       }
     }
 

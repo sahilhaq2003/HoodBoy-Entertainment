@@ -116,13 +116,12 @@ const ArtistOnboarding: React.FC = () => {
   const validateStep = (s: number): boolean => {
     const e: ValidationErrors = {};
     if (s === 1) {
-      if (!legalName.trim()) e.legalName = 'Legal name is required';
       if (!artistName.trim()) e.artistName = 'Artist name is required';
       if (!email.trim()) e.email = 'Email is required';
       else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = 'Invalid email format';
       if (!phone.trim()) e.phone = 'Phone number is required';
+      if (!address.country.trim()) e.country = 'Country is required';
     }
-    if (s === 2 && !genre) e.genre = 'Genre is required';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -157,7 +156,7 @@ const ArtistOnboarding: React.FC = () => {
   };
 
   const handleNext = async () => {
-    if (!validateStep(step)) { setTouched({ legalName: true, artistName: true, email: true, phone: true, genre: true }); toast.error('Please fill in all required fields'); return; }
+    if (!validateStep(step)) { setTouched({ artistName: true, email: true, phone: true, country: true }); toast.error('Please fill in all required fields'); return; }
     const saved = await handleSaveStep();
     if (saved && step < 4) setStep(step + 1);
   };
@@ -165,15 +164,6 @@ const ArtistOnboarding: React.FC = () => {
   const handleSubmitForApproval = async () => {
     if (!artist) return;
     setSubmissionMissing([]);
-    if (uploadedCount !== requiredDocs.length) {
-      toast.error('Upload every required onboarding document before submission');
-      setStep(3);
-      return;
-    }
-    if (!packageAcknowledged) {
-      toast.error('Confirm that the artist received and reviewed the HBE onboarding package');
-      return;
-    }
     setSubmitting(true);
     try { const res = await artistsApi.submitForApproval(artist._id, packageAcknowledged, onboardingNotes); setArtist(res.data.data); toast.success('Submitted for approval!'); navigate('/artists'); }
     catch (e: any) {
@@ -331,9 +321,8 @@ const ArtistOnboarding: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5 dark:text-gray-200">Legal Name <span className="text-red-500">*</span></label>
-                <input type="text" value={legalName} onChange={(e) => setLegalName(e.target.value)} onBlur={() => handleBlur('legalName')} className={inputCls('legalName')} placeholder="Full legal name" />
-                {fieldErr('legalName')}
+                <label className="block text-sm font-medium text-gray-700 mb-1.5 dark:text-gray-200">Legal Name <span className="text-xs font-normal text-gray-400">(optional)</span></label>
+                <input type="text" value={legalName} onChange={(e) => setLegalName(e.target.value)} className={inputCls('legalName')} placeholder="Full legal name" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5 dark:text-gray-200">Artist / Stage Name <span className="text-red-500">*</span></label>
@@ -360,13 +349,13 @@ const ArtistOnboarding: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5 dark:text-gray-200">Address</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5 dark:text-gray-200">Address <span className="text-xs font-normal text-gray-400">(only country is required)</span></label>
               <input type="text" value={address.street} onChange={(e) => setAddress({ ...address, street: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 w-full dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-500" placeholder="Street address" />
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
                 <input type="text" value={address.city} onChange={(e) => setAddress({ ...address, city: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 w-full dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-500" placeholder="City" />
                 <input type="text" value={address.state} onChange={(e) => setAddress({ ...address, state: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 w-full dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-500" placeholder="State" />
                 <input type="text" value={address.zipCode} onChange={(e) => setAddress({ ...address, zipCode: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 w-full dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-500" placeholder="ZIP Code" />
-                <input type="text" value={address.country} onChange={(e) => setAddress({ ...address, country: e.target.value })} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 w-full dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-500" placeholder="Country" />
+                <div><input type="text" value={address.country} onChange={(e) => setAddress({ ...address, country: e.target.value })} onBlur={() => handleBlur('country')} className={inputCls('country')} placeholder="Country *" />{fieldErr('country')}</div>
               </div>
             </div>
 
@@ -408,12 +397,11 @@ const ArtistOnboarding: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5 dark:text-gray-200">Primary Genre <span className="text-red-500">*</span></label>
-              <select value={genre} onChange={(e) => setGenre(e.target.value)} onBlur={() => handleBlur('genre')} className={inputCls('genre')}>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5 dark:text-gray-200">Primary Genre <span className="text-xs font-normal text-gray-400">(optional)</span></label>
+              <select value={genre} onChange={(e) => setGenre(e.target.value)} className={inputCls('genre')}>
                 <option value="">Select genre...</option>
                 {genres.map(g => <option key={g} value={g}>{g}</option>)}
               </select>
-              {fieldErr('genre')}
             </div>
 
             <div>
@@ -497,7 +485,7 @@ const ArtistOnboarding: React.FC = () => {
           <div className="space-y-6 animate-step-enter">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-amber-50 dark:bg-amber-500/10"><FileCheck size={18} className="text-amber-600 dark:text-amber-400" /></div>
-              <div className="flex-1"><h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Documents</h2><p className="text-xs text-gray-500 dark:text-gray-400">Upload required onboarding documents</p></div>
+              <div className="flex-1"><h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Documents</h2><p className="text-xs text-gray-500 dark:text-gray-400">Optional — upload now or add them later</p></div>
               <div className="text-right"><span className="text-sm font-bold text-amber-600 dark:text-amber-400">{uploadedCount}</span><span className="text-sm text-gray-500 dark:text-gray-400">/{requiredDocs.length}</span></div>
             </div>
 
@@ -581,7 +569,7 @@ const ArtistOnboarding: React.FC = () => {
                 <h3 className="text-sm font-semibold text-amber-700 mb-3 flex items-center gap-2 dark:text-amber-400"><FileCheck size={14} /> Documents</h3>
                 <div className="space-y-1.5 text-xs">
                   <div className="flex justify-between"><span className="text-gray-500 dark:text-gray-400">Total Uploaded</span><span className="text-gray-900 dark:text-gray-100">{documents.length} document(s)</span></div>
-                  {requiredDocs.map(doc => { const found = getDocForType(doc.type); return (<div key={doc.type} className="flex justify-between"><span className="text-gray-500 dark:text-gray-400">{doc.label}</span><span className={found ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}>{found ? 'Uploaded' : 'Missing'}</span></div>); })}
+                  {requiredDocs.map(doc => { const found = getDocForType(doc.type); return (<div key={doc.type} className="flex justify-between"><span className="text-gray-500 dark:text-gray-400">{doc.label}</span><span className={found ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'}>{found ? 'Uploaded' : 'Optional'}</span></div>); })}
                 </div>
                 <button onClick={() => setStep(3)} className="mt-3 text-xs text-amber-600 hover:text-amber-700 font-medium dark:text-amber-400 dark:hover:text-amber-300">Edit Documents</button>
               </div>
@@ -627,7 +615,7 @@ const ArtistOnboarding: React.FC = () => {
                   className="mt-0.5 w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                 />
                 <span className="text-xs leading-relaxed text-gray-700 dark:text-gray-200">
-                  I confirm that the artist received and reviewed the HBE onboarding package and understands the label workflow, approval, delivery, rights, payment, and professional-conduct expectations.
+                  Optional: I confirm that the artist received and reviewed the HBE onboarding package and understands the label workflow, approval, delivery, rights, payment, and professional-conduct expectations.
                   {artist?.onboardingPackage?.acknowledgedAt && <span className="block text-emerald-600 font-medium mt-1 dark:text-emerald-400">Acknowledged {new Date(artist.onboardingPackage.acknowledgedAt).toLocaleDateString()}</span>}
                 </span>
               </label>
