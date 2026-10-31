@@ -5,6 +5,7 @@ import {
   Mail, Globe, AtSign, Video, MessageCircle, Music2, FileText, CheckCircle,
   XCircle, Clock, Send, Trash2, ExternalLink, User, Calendar,
   Star, Camera, Shield, CreditCard, Building2, RefreshCw, Disc3,
+  BookOpen, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { artistsApi, distribeatsApi } from '../services/api';
@@ -15,6 +16,35 @@ import LoadingSpinner from '../components/ui/LoadingSpinner';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { formatCurrency, formatNumber, formatDate, getAvatarColor, getInitials } from '../utils/helpers';
 import type { Artist } from '../types';
+
+const formatBiographyParagraphs = (biography: string): string[] => {
+  const explicitParagraphs = biography
+    .split(/\r?\n\s*\r?\n/)
+    .map(paragraph => paragraph.replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+
+  if (explicitParagraphs.length > 1 || biography.length < 420) return explicitParagraphs;
+
+  const sentences = biography
+    .replace(/\s+/g, ' ')
+    .trim()
+    .match(/[^.!?]+(?:[.!?]+["”’']?|$)/g)
+    ?.map(sentence => sentence.trim())
+    .filter(Boolean) || [biography.trim()];
+
+  const paragraphs: string[] = [];
+  let current = '';
+  sentences.forEach(sentence => {
+    if (current && current.length + sentence.length > 360) {
+      paragraphs.push(current);
+      current = sentence;
+    } else {
+      current = current ? `${current} ${sentence}` : sentence;
+    }
+  });
+  if (current) paragraphs.push(current);
+  return paragraphs;
+};
 
 const ArtistProfile: React.FC = () => {
   const { id } = useParams();
@@ -30,6 +60,7 @@ const ArtistProfile: React.FC = () => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [createdLogin, setCreatedLogin] = useState<{ _id: string; name: string; email: string; tempPassword: string } | null>(null);
   const [syncingDistribeats, setSyncingDistribeats] = useState(false);
+  const [bioExpanded, setBioExpanded] = useState(false);
   const profileInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
@@ -133,6 +164,9 @@ const ArtistProfile: React.FC = () => {
 
   const displayName = artist.artistName || artist.stageName || artist.name;
   const legalDisplay = artist.legalName || artist.name;
+  const biographyParagraphs = artist.bio ? formatBiographyParagraphs(artist.bio) : [];
+  const biographyIsLong = biographyParagraphs.length > 2;
+  const visibleBiographyParagraphs = bioExpanded ? biographyParagraphs : biographyParagraphs.slice(0, 2);
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -321,10 +355,45 @@ const ArtistProfile: React.FC = () => {
         <div className="lg:col-span-2 space-y-6">
           {/* Bio */}
           {artist.bio && (
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 dark:bg-gray-800 dark:border-gray-700">
-              <h3 className="text-sm font-semibold text-gray-500 mb-3 dark:text-gray-400">Biography</h3>
-              <p className="text-sm text-gray-700 leading-relaxed dark:text-gray-200">{artist.bio}</p>
-            </div>
+            <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <div className="border-b border-gray-100 bg-gradient-to-r from-indigo-50/80 via-white to-white px-6 py-5 dark:border-gray-700 dark:from-indigo-500/10 dark:via-gray-800 dark:to-gray-800">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-indigo-100 bg-white text-indigo-600 shadow-sm dark:border-indigo-800 dark:bg-gray-900 dark:text-indigo-400">
+                    <BookOpen size={18} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-indigo-600 dark:text-indigo-400">Artist Profile</p>
+                    <h2 className="mt-0.5 text-lg font-bold tracking-tight text-gray-900 dark:text-gray-100">About {displayName}</h2>
+                  </div>
+                </div>
+              </div>
+
+              <div className="px-6 py-6 sm:px-7">
+                <div className="max-w-3xl border-l-2 border-indigo-200 pl-5 dark:border-indigo-800">
+                  <div className="space-y-4">
+                    {visibleBiographyParagraphs.map((paragraph, index) => (
+                      <p
+                        key={`${index}-${paragraph.slice(0, 24)}`}
+                        className={`${index === 0 ? 'font-medium text-gray-800 dark:text-gray-100' : 'text-gray-700 dark:text-gray-200'} text-[15px] leading-7`}
+                      >
+                        {paragraph}
+                      </p>
+                    ))}
+                  </div>
+
+                  {biographyIsLong && (
+                    <button
+                      type="button"
+                      onClick={() => setBioExpanded(expanded => !expanded)}
+                      className="mt-5 inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 transition-colors hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
+                      aria-expanded={bioExpanded}
+                    >
+                      {bioExpanded ? <><ChevronUp size={14} /> Show less</> : <><ChevronDown size={14} /> Read full biography</>}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </section>
           )}
 
           {/* Social Links */}
