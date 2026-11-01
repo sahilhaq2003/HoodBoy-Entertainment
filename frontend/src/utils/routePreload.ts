@@ -11,6 +11,7 @@ const loaders: Record<string, PageLoader> = {
   '/songs': () => import('../pages/Songs'),
   '/releases': () => import('../pages/Releases'),
   '/distribution': () => import('../pages/Distribution'),
+  '/system-health': () => import('../pages/SystemHealth'),
   '/the-lnk-up': () => import('../pages/LnkUp'),
   '/projects': () => import('../pages/Projects'),
   '/development': () => import('../pages/Development'),

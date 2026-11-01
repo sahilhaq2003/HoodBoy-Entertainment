@@ -8,6 +8,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSocket, type DistribeatsReleaseUpdate } from '../contexts/SocketContext';
 import { formatCurrency } from '../utils/helpers';
 import BulkReleaseImport from '../components/distribution/BulkReleaseImport';
+import SystemHealthPanel from '../components/distribution/SystemHealthPanel';
+import Royalties from './Royalties';
 
 const statusColors: Record<string, string> = {
   draft: '#64748B', submitted: '#8B5CF6', processing: '#0EA5E9', approved: '#16A34A',
@@ -138,8 +140,14 @@ const Distribution: React.FC = () => {
   const { connected, joinRelease, leaveRelease, syncProgress, webhookFeed } = useSocket();
   const requestedTab = searchParams.get('tab');
   const editParam = searchParams.get('edit');
-  const [tab, setTab] = useState<'catalog' | 'provider' | 'new' | 'transfer' | 'bulk' | 'royalties' | 'qc' | 'webhooks'>(
-    requestedTab === 'bulk' ? 'bulk' : requestedTab === 'transfer' ? 'transfer' : requestedTab === 'webhooks' && user?.role === 'admin' ? 'webhooks' : requestedTab === 'provider' && user?.role === 'admin' ? 'provider' : 'catalog'
+  const [tab, setTab] = useState<'catalog' | 'provider' | 'new' | 'transfer' | 'bulk' | 'royalties' | 'qc' | 'webhooks' | 'health'>(
+    requestedTab === 'bulk' ? 'bulk'
+      : requestedTab === 'transfer' ? 'transfer'
+      : requestedTab === 'royalties' ? 'royalties'
+      : requestedTab === 'health' ? 'health'
+      : requestedTab === 'webhooks' && user?.role === 'admin' ? 'webhooks'
+      : requestedTab === 'provider' && user?.role === 'admin' ? 'provider'
+      : 'catalog'
   );
   const [releases, setReleases] = useState<DistributionRelease[]>([]);
   const [artists, setArtists] = useState<Artist[]>([]);
@@ -932,13 +940,13 @@ const Distribution: React.FC = () => {
     )}
 
     <div className="flex flex-wrap gap-1 rounded-xl bg-[var(--hbe-fill-soft)] p-1 w-fit">
-      {([...(['catalog', 'royalties', 'new', 'transfer', 'bulk'] as const), ...(user?.role === 'admin' ? ['provider' as const, 'qc' as const, 'webhooks' as const] : [])]).map(key => (
+      {([...(['catalog', 'royalties', 'new', 'transfer', 'bulk'] as const), ...(user?.role === 'admin' ? ['provider' as const, 'qc' as const, 'webhooks' as const] : []), 'health' as const]).map(key => (
         <button key={key} onClick={() => {
           if (key === 'transfer' && !editing) reset('catalog_transfer');
           if (key === 'new' && !editing) reset('new_release');
           setTab(key);
         }} className={`rounded-lg px-4 py-2 text-sm font-semibold ${tab === key ? 'bg-[var(--hbe-surface)] text-[var(--hbe-text)] shadow-sm' : 'text-[var(--hbe-muted)]'}`}>
-          {key === 'catalog' ? 'Catalog' : key === 'provider' ? 'Provider Catalogue' : key === 'royalties' ? 'Revenue & Royalties' : key === 'transfer' ? 'Catalogue Transfer' : key === 'bulk' ? 'Bulk Import' : key === 'qc' ? 'Admin QC' : key === 'webhooks' ? 'Webhook History' : editing ? 'Edit Draft' : 'New Release'}
+          {key === 'catalog' ? 'Catalog' : key === 'provider' ? 'Provider Catalogue' : key === 'royalties' ? 'Revenue & Royalties' : key === 'transfer' ? 'Catalogue Transfer' : key === 'bulk' ? 'Bulk Import' : key === 'qc' ? 'Admin QC' : key === 'webhooks' ? 'Webhook History' : key === 'health' ? 'System Health' : editing ? 'Edit Draft' : 'New Release'}
         </button>
       ))}
     </div>
@@ -1495,7 +1503,17 @@ const Distribution: React.FC = () => {
       <BulkReleaseImport artists={artists} references={references} isArtistUser={user?.role === 'artist'} onCreated={load}/>
     )}
 
-    {tab === 'royalties' && <div className="space-y-5"><div className="grid gap-4 sm:grid-cols-3"><div className="rounded-2xl border border-[var(--hbe-line)] bg-[var(--hbe-surface)] p-5"><p className="text-xs text-[var(--hbe-muted)]">Total Revenue</p><p className="mt-2 text-2xl font-bold text-[var(--hbe-text)]">{formatCurrency(royalties?.totalRevenue||0)}</p></div><div className="rounded-2xl border border-[var(--hbe-line)] bg-[var(--hbe-surface)] p-5"><p className="text-xs text-[var(--hbe-muted)]">Artist Earnings</p><p className="mt-2 text-2xl font-bold text-emerald-500">{formatCurrency(royalties?.artistEarnings||0)}</p></div><div className="rounded-2xl border border-[var(--hbe-line)] bg-[var(--hbe-surface)] p-5"><p className="text-xs text-[var(--hbe-muted)]">Statements</p><p className="mt-2 text-2xl font-bold text-[var(--hbe-text)]">{royalties?.entries?.length||0}</p></div></div><div className="flex justify-between gap-4"><div><h2 className="font-bold text-[var(--hbe-text)]">Royalty history</h2><p className="text-xs text-[var(--hbe-muted)]">Internal royalty ledger. Import approved statements into the ledger before reconciliation.</p></div><button onClick={download} className="shrink-0 rounded-xl border border-[var(--hbe-line)] px-4 py-2 text-sm font-semibold text-[var(--hbe-text)] flex items-center gap-2"><Download size={15}/> CSV</button></div><div className="grid gap-4 lg:grid-cols-3">{[['Platform / source',royalties?.byPlatform],['Release',royalties?.byRelease],['Track',royalties?.byTrack]].map(([label,data]:any)=><div key={label} className="rounded-2xl border border-[var(--hbe-line)] bg-[var(--hbe-surface)] p-5"><h3 className="mb-4 text-sm font-bold text-[var(--hbe-text)] flex items-center gap-2"><BarChart3 size={15}/>{label}</h3><div className="space-y-3">{Object.entries(data||{}).map(([name,value]:any)=><div key={name} className="flex justify-between text-sm"><span className="capitalize text-[var(--hbe-muted)]">{name.replace(/_/g,' ')}</span><strong className="text-[var(--hbe-text)]">{formatCurrency(value)}</strong></div>)}{Object.keys(data||{}).length===0&&<p className="text-xs text-[var(--hbe-muted)]">No reporting data yet</p>}</div></div>)}</div></div>}
+    {tab === 'royalties' && <Royalties embedded />}
+
+    {tab === 'health' && (
+      <SystemHealthPanel
+        embedded
+        onEditRelease={(id) => {
+          const target = releases.find(r => r._id === id);
+          if (target) editDraft(target);
+        }}
+      />
+    )}
 
     {tab === 'provider' && user?.role === 'admin' && <div className="space-y-4 rounded-2xl border border-[var(--hbe-line)] bg-[var(--hbe-surface)] p-5"><div className="flex items-center justify-between gap-4"><div><h2 className="text-lg font-bold text-[var(--hbe-text)]">DistriBeats provider catalogue</h2><p className="text-xs text-[var(--hbe-muted)]">Live API view for reconciling remote releases with local records.</p></div><button onClick={loadRemoteReleases} disabled={remoteLoading} className="rounded-xl border border-[var(--hbe-line)] px-3 py-2 text-xs font-semibold text-[var(--hbe-text)] disabled:opacity-50"><RefreshCw size={13} className={`mr-1 inline ${remoteLoading ? 'animate-spin' : ''}`}/>Refresh</button></div><div className="overflow-x-auto"><table className="w-full min-w-[720px] text-left text-sm"><thead className="border-b border-[var(--hbe-divide)] text-xs uppercase text-[var(--hbe-muted)]"><tr><th className="pb-3">Release</th><th className="pb-3">Provider ID</th><th className="pb-3">UPC</th><th className="pb-3">Status</th><th className="pb-3">Local record</th></tr></thead><tbody className="divide-y divide-[var(--hbe-divide)]">{remoteReleases.map(remote => { const remoteId = String(remote.id || remote.release_id || ''); const local = releases.find(item => item.distribeatsReleaseId === remoteId || item.providerReleaseId === remoteId); return <tr key={remoteId || remote.title}><td className="py-3 font-semibold text-[var(--hbe-text)]">{remote.title || remote.name || 'Untitled release'}</td><td className="py-3 font-mono text-xs text-[var(--hbe-muted)]">{remoteId || '—'}</td><td className="py-3 text-[var(--hbe-text-soft)]">{remote.upc || '—'}</td><td className="py-3 capitalize text-[var(--hbe-text-soft)]">{String(remote.status || 'unknown').replaceAll('_', ' ')}</td><td className="py-3">{local ? <Link to={`/distribution/${local._id}`} className="font-semibold text-violet-500">Open local release</Link> : <span className="text-xs font-semibold text-amber-500">Not linked locally</span>}</td></tr>})}</tbody></table>{!remoteLoading && remoteReleases.length === 0 && <p className="py-10 text-center text-sm text-[var(--hbe-muted)]">No remote releases returned by DistriBeats.</p>}</div></div>}
 

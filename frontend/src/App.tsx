@@ -49,6 +49,7 @@ const CampaignManager = lazy(() => import('./pages/CampaignManager'));
 const MetadataManager = lazy(() => import('./pages/MetadataManager'));
 const LnkUp = lazy(() => import('./pages/LnkUp'));
 const TeamManagement = lazy(() => import('./pages/TeamManagement'));
+const SystemHealth = lazy(() => import('./pages/SystemHealth'));
 
 const PageLoader = () => (
   <div className="flex min-h-64 items-center justify-center" role="status" aria-label="Loading page">
@@ -133,6 +134,7 @@ const AppRoutes: React.FC = () => {
         <Route path="releases" element={<AccessGuard resource="releases"><Releases /></AccessGuard>} />
         <Route path="distribution" element={<AccessGuard resource="distribution"><Distribution /></AccessGuard>} />
         <Route path="distribution/:id" element={<AccessGuard resource="distribution"><DistributionDetail /></AccessGuard>} />
+        <Route path="system-health" element={<AccessGuard resource="distribution"><SystemHealth /></AccessGuard>} />
         <Route path="the-lnk-up" element={<AccessGuard resource="theLnkUp"><LnkUp /></AccessGuard>} />
         <Route path="projects" element={<AccessGuard resource="projects"><Projects /></AccessGuard>} />
         <Route path="development" element={<AccessGuard resource="development"><Development /></AccessGuard>} />

@@ -6,6 +6,7 @@ const controller = require('../controllers/distributionController');
 
 router.use(protect);
 router.get('/connection', checkPermission('distribution', 'read'), controller.connectionStatus);
+router.get('/system-health', checkPermission('distribution', 'read'), controller.systemHealth);
 router.get('/reference-data', checkPermission('distribution', 'read'), controller.referenceData);
 router.get('/import-song/:songId', checkPermission('distribution', 'read'), controller.importSong);
 router.post('/validate-draft', checkPermission('distribution', 'write'), controller.validateDraftPayload);

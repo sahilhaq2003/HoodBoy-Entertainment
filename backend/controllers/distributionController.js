@@ -1,5 +1,8 @@
 const fs = require('fs/promises');
+const path = require('path');
+const connectDB = require('../config/db');
 const DistributionRelease = require('../models/DistributionRelease');
+const DistribeatsWebhookEvent = require('../models/DistribeatsWebhookEvent');
 const Artist = require('../models/Artist');
 const Song = require('../models/Song');
 const SongMetadata = require('../models/SongMetadata');
@@ -494,6 +497,287 @@ exports.adminUpdateQc = async (req, res) => {
     await release.save();
     emitRelease(release);
     res.json({ success: true, data: release });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * 100% Read-Only System & Distribution Health Diagnostics.
+ * Never creates or submits any demo/test release. Inspects infrastructure, MySQL, storage,
+ * DistriBeats API/catalogue, webhook audit logs, artist readiness, and every distribution release's
+ * metadata, on-disk cover/audio files, QC status, and sync errors.
+ */
+exports.systemHealth = async (req, res) => {
+  try {
+    const startedAt = Date.now();
+    const forceRefresh = req.query.refresh === '1' || req.query.refresh === 'true';
+
+    // 1. Database health check (read-only ping)
+    let dbStatus = 'healthy';
+    let dbLatencyMs = 0;
+    let dbError = '';
+    try {
+      const dbStart = Date.now();
+      const seq = connectDB.getSequelize?.();
+      if (seq) await seq.authenticate();
+      dbLatencyMs = Date.now() - dbStart;
+    } catch (err) {
+      dbStatus = 'down';
+      dbError = err.message || 'Database connection error';
+    }
+
+    // 2. Upload storage directory health check (read-only)
+    const uploadDir = path.resolve(__dirname, '..', 'uploads', 'distribution');
+    let storageStatus = 'healthy';
+    let uploadDirExists = false;
+    let totalFilesOnDisk = 0;
+    let totalBytesOnDisk = 0;
+    try {
+      const entries = await fs.readdir(uploadDir, { withFileTypes: true });
+      uploadDirExists = true;
+      for (const entry of entries) {
+        if (entry.isFile()) {
+          totalFilesOnDisk += 1;
+          const st = await fs.stat(path.join(uploadDir, entry.name)).catch(() => null);
+          if (st) totalBytesOnDisk += st.size;
+        }
+      }
+    } catch {
+      uploadDirExists = false;
+      storageStatus = 'warning';
+    }
+
+    // 3. DistriBeats connection & live catalogue probe (read-only)
+    const [connection, catalogue] = await Promise.all([
+      distribeats.connectionStatus(forceRefresh).catch(err => ({
+        status: 'api_unavailable',
+        message: err.message || 'Failed to check DistriBeats connection',
+      })),
+      distribeats.getCatalogue().catch(() => ({})),
+    ]);
+
+    if (req.user.role !== 'admin') {
+      delete connection.credentialHint;
+      delete connection.account;
+    }
+
+    // 4. Webhook health check (read-only)
+    const [totalWebhooks, processedWebhooks, failedWebhooks, latestWebhook] = await Promise.all([
+      DistribeatsWebhookEvent.countDocuments({}).catch(() => 0),
+      DistribeatsWebhookEvent.countDocuments({ status: 'processed' }).catch(() => 0),
+      DistribeatsWebhookEvent.countDocuments({ status: { $in: ['failed', 'error', 'invalid_signature'] } }).catch(() => 0),
+      DistribeatsWebhookEvent.findOne({}).sort({ receivedAt: -1 }).select('receivedAt event status').lean().catch(() => null),
+    ]);
+
+    // 5. Artist roster readiness (read-only)
+    const filter = await scope(req);
+    const [releases, artists] = await Promise.all([
+      DistributionRelease.find(filter)
+        .populate('artist', 'name stageName artistName legalName email socialLinks distribeatsArtistId')
+        .sort({ createdAt: -1 })
+        .lean(),
+      req.user.role === 'artist'
+        ? Artist.find(filter.artist ? { _id: filter.artist } : {}).lean()
+        : Artist.find({}).lean(),
+    ]);
+
+    const artistById = new Map(artists.map(a => [String(a._id), a]));
+
+    // 6. Per-release non-destructive audit (metadata + mapped OpenAPI payload + on-disk files + QC + sync)
+    const byStatus = { draft: 0, submitted: 0, processing: 0, approved: 0, delivered: 0, live: 0, rejected: 0, error: 0 };
+    let healthyReleasesCount = 0;
+    let releasesWithErrorsCount = 0;
+    let qcPendingCount = 0;
+    let transferReleasesCount = 0;
+    let bulkReleasesCount = 0;
+
+    const releaseChecks = [];
+    for (const release of releases) {
+      const stKey = release.status || 'draft';
+      byStatus[stKey] = (byStatus[stKey] || 0) + 1;
+      if (release.distributionMode === 'catalog_transfer') transferReleasesCount += 1;
+      if (release.bulkReleaseKey || release.bulkImportKey) bulkReleasesCount += 1;
+      if (['pending_qc', 'action_required', 'manual_review'].includes(release.qcStatus || 'pending_qc')) {
+        qcPendingCount += 1;
+      }
+
+      const artistObj = (release.artist && typeof release.artist === 'object')
+        ? release.artist
+        : artistById.get(String(release.artist || '')) || null;
+
+      const report = validateRelease(release, { catalogue, mode: 'submit' });
+      const diskErrors = await verifyStoredFilesOnDisk(release, catalogue);
+      let mappedErrors = [];
+      try {
+        const mapped = mapRelease(release, artistObj);
+        mappedErrors = validateMappedPayload(mapped, catalogue);
+      } catch (mapErr) {
+        mappedErrors = [{ field: 'release', message: mapErr.message || 'Mapping error', code: 'MAP_ERROR' }];
+      }
+
+      const issues = [];
+      report.errors.forEach(item => {
+        issues.push({
+          category: item.field === 'cover' || item.field?.endsWith('.audio') ? 'file' : 'metadata',
+          field: item.field,
+          message: item.message,
+          code: item.code || 'VALIDATION_ERROR',
+        });
+      });
+      diskErrors.forEach(item => {
+        if (!issues.some(existing => existing.field === item.field && existing.message === item.message)) {
+          issues.push({ category: 'file', field: item.field, message: item.message, code: item.code || 'DISK_FILE_ERROR' });
+        }
+      });
+      mappedErrors.forEach(item => {
+        if (!issues.some(existing => existing.field === item.field && existing.message === item.message)) {
+          issues.push({ category: 'metadata', field: item.field, message: item.message, code: item.code || 'OPENAPI_PAYLOAD_ERROR' });
+        }
+      });
+
+      if (release.qcStatus === 'qc_failed' || release.qcStatus === 'action_required') {
+        issues.push({
+          category: 'qc',
+          field: 'qcStatus',
+          message: release.adminReviewNotes || `QC status is "${(release.qcStatus || '').replace(/_/g, ' ')}".`,
+          code: 'QC_ISSUE',
+        });
+      }
+
+      if (release.syncStatus === 'error' || release.lastSyncError) {
+        issues.push({
+          category: 'sync',
+          field: 'distribeatsSync',
+          message: release.lastSyncError || 'DistriBeats synchronization reported an error.',
+          code: 'SYNC_ERROR',
+        });
+      }
+
+      const coverOk = Boolean(release.coverArtUrl) && !issues.some(i => i.field === 'cover');
+      const audioOk = Array.isArray(release.tracks) && release.tracks.length > 0 && !issues.some(i => /\.audio$/.test(i.field));
+      const metadataOk = !issues.some(i => i.category === 'metadata');
+      const syncOk = !issues.some(i => i.category === 'sync');
+      const qcOk = release.qcStatus === 'ready_for_distribution' || ['submitted', 'processing', 'approved', 'delivered', 'live'].includes(release.status);
+
+      if (issues.length === 0) healthyReleasesCount += 1;
+      else releasesWithErrorsCount += 1;
+
+      releaseChecks.push({
+        _id: String(release._id),
+        title: release.title || 'Untitled Release',
+        type: release.type || 'single',
+        distributionMode: release.distributionMode || 'new_release',
+        sourceDistributor: release.sourceDistributor || '',
+        status: release.status || 'draft',
+        qcStatus: release.qcStatus || 'pending_qc',
+        syncStatus: release.syncStatus || 'idle',
+        upc: release.upc || '',
+        providerReleaseId: release.distribeatsReleaseId || release.providerReleaseId || '',
+        releaseDate: release.releaseDate,
+        originalReleaseDate: release.originalReleaseDate || null,
+        tracksCount: Array.isArray(release.tracks) ? release.tracks.length : 0,
+        artist: {
+          _id: artistObj?._id ? String(artistObj._id) : '',
+          name: displayName(artistObj) || 'Unassigned Artist',
+          hasDistribeatsId: Boolean(artistObj?.distribeatsArtistId),
+          hasEmail: Boolean(artistObj?.email),
+        },
+        coverOk,
+        audioOk,
+        metadataOk,
+        syncOk,
+        qcOk,
+        readyToSubmit: issues.length === 0 && release.qcStatus === 'ready_for_distribution' && release.status === 'draft',
+        issues,
+      });
+    }
+
+    const mem = process.memoryUsage();
+    const unavailableStores = Array.isArray(catalogue?.unavailableStores) ? catalogue.unavailableStores : [];
+    const allStores = Array.isArray(catalogue?.stores) ? catalogue.stores : [];
+    const activeStoresCount = allStores.filter(s => !unavailableStores.includes(s)).length;
+
+    const overallStatus =
+      dbStatus === 'down' || connection?.status === 'authentication_error' || connection?.status === 'live_key_blocked'
+        ? 'degraded'
+        : connection?.status !== 'connected' || releasesWithErrorsCount > 0
+          ? 'warning'
+          : 'healthy';
+
+    res.json({
+      success: true,
+      data: {
+        overallStatus,
+        checkedAt: new Date().toISOString(),
+        checkDurationMs: Date.now() - startedAt,
+        readOnlyGuarantee: '100% Read-Only Diagnostics — No demo releases or external submissions are ever triggered.',
+        infrastructure: {
+          server: {
+            status: 'healthy',
+            uptimeSeconds: Math.round(process.uptime()),
+            memoryRssMb: Math.round((mem.rss / 1048576) * 10) / 10,
+            memoryHeapMb: Math.round((mem.heapUsed / 1048576) * 10) / 10,
+            nodeVersion: process.version,
+            env: process.env.NODE_ENV || 'development',
+          },
+          database: {
+            status: dbStatus,
+            dialect: 'MySQL (Sequelize Pool)',
+            latencyMs: dbLatencyMs,
+            error: dbError || undefined,
+          },
+          storage: {
+            status: storageStatus,
+            uploadDirExists,
+            totalFilesOnDisk,
+            totalMegabytesOnDisk: Math.round((totalBytesOnDisk / 1048576) * 100) / 100,
+          },
+          webhook: {
+            status: process.env.DISTRIBEATS_WEBHOOK_SECRET ? 'configured' : 'not_configured',
+            configured: Boolean(process.env.DISTRIBEATS_WEBHOOK_SECRET),
+            totalEvents: totalWebhooks,
+            processedEvents: processedWebhooks,
+            failedEvents: failedWebhooks,
+            lastReceivedAt: latestWebhook?.receivedAt || null,
+            lastEventType: latestWebhook?.event || null,
+          },
+        },
+        provider: {
+          connection,
+          catalogue: {
+            loaded: Boolean(allStores.length || catalogue?.genres?.length),
+            genresCount: Array.isArray(catalogue?.genres) ? catalogue.genres.length : 0,
+            languagesCount: Array.isArray(catalogue?.languages) ? catalogue.languages.length : 0,
+            activeStoresCount,
+            unavailableStoresCount: unavailableStores.length,
+            unavailableStores,
+            performerRolesCount: Array.isArray(catalogue?.performerRoles) ? catalogue.performerRoles.length : 0,
+            releaseTypes: Array.isArray(catalogue?.releaseTypes) ? catalogue.releaseTypes : ['Single', 'EP', 'Album'],
+            maxAudioMegabytes: Math.round(policy.maxAudioBytes(catalogue) / 1_000_000),
+            maxCoverMegabytes: Math.round(policy.maxCoverBytes() / 1048576),
+            earliestReleaseDate: policy.earliestReleaseDate().toISOString().slice(0, 10),
+            leadTime: policy.leadTimeConfig(),
+          },
+        },
+        distributionAudit: {
+          totalReleases: releases.length,
+          byStatus,
+          healthyReleasesCount,
+          releasesWithErrorsCount,
+          qcPendingCount,
+          transferReleasesCount,
+          bulkReleasesCount,
+          releaseChecks,
+        },
+        artistRosterAudit: {
+          totalArtists: artists.length,
+          linkedToDistribeatsCount: artists.filter(a => Boolean(a.distribeatsArtistId)).length,
+          withEmailCount: artists.filter(a => Boolean(a.email)).length,
+          withSpotifyUrlCount: artists.filter(a => Boolean(a.socialLinks?.spotify)).length,
+        },
+      },
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

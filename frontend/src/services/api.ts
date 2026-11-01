@@ -253,6 +253,7 @@ export const distributionApi = {
   getAll: (params?: object) => api.get('/distribution', { params }),
   getById: (id: string) => api.get(`/distribution/${id}`),
   getConnection: () => api.get('/distribution/connection'),
+  getSystemHealth: (refresh = false) => api.get('/distribution/system-health', { params: refresh ? { refresh: 1 } : undefined }),
   getReferenceData: () => api.get('/distribution/reference-data'),
   importSong: (songId: string) => api.get(`/distribution/import-song/${songId}`),
   validate: (id: string) => api.post(`/distribution/${id}/validate`),

@@ -20,9 +20,10 @@ import {
   AlertCircle,
   Eye,
   ArrowUpRight,
+  BarChart3,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { royaltiesApi, artistsApi } from '../services/api';
+import { royaltiesApi, artistsApi, distributionApi } from '../services/api';
 import { formatCurrency, formatDate, getStatusClass, formatStatus } from '../utils/helpers';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { useAuth } from '../contexts/AuthContext';
@@ -50,9 +51,15 @@ const defaultIncomeBySource: IncomeBySource = {
 
 const statusOptions = ['draft', 'calculated', 'approved', 'paid', 'disputed'] as const;
 
-const Royalties: React.FC = () => {
-  const { user } = useAuth();
+type RoyaltiesProps = {
+  embedded?: boolean;
+};
+
+const Royalties: React.FC<RoyaltiesProps> = ({ embedded = false }) => {
+  const { user, canAccess } = useAuth();
+  const canWriteRoyalties = canAccess('royalties', 'write');
   const [entries, setEntries] = useState<RoyaltyEntry[]>([]);
+  const [summary, setSummary] = useState<any>(null);
   const [artists, setArtists] = useState<Artist[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -90,23 +97,48 @@ const Royalties: React.FC = () => {
       if (filterArtist) params.artist = filterArtist;
       if (filterStatus) params.status = filterStatus;
       if (filterPeriod) params.period = filterPeriod;
-      const res = await royaltiesApi.getAll(params);
-      setEntries(res.data.data || []);
+
+      const summaryRes = await distributionApi.getRoyaltySummary(filterPeriod ? { period: filterPeriod } : undefined).catch(() => null);
+      if (summaryRes?.data?.data) {
+        setSummary(summaryRes.data.data);
+      }
+
+      if (canAccess('royalties', 'read')) {
+        const res = await royaltiesApi.getAll(params);
+        setEntries(res.data.data || []);
+      } else if (summaryRes?.data?.data?.entries) {
+        setEntries(summaryRes.data.data.entries || []);
+      }
     } catch {
       toast.error('Failed to load royalty entries');
     } finally {
       setLoading(false);
     }
-  }, [filterArtist, filterStatus, filterPeriod]);
+  }, [filterArtist, filterStatus, filterPeriod, canAccess]);
 
   const fetchArtists = useCallback(async () => {
+    if (user?.role === 'artist') return;
     try {
       const res = await artistsApi.getAll({ limit: 200 });
       setArtists(res.data.data || []);
     } catch {
-      toast.error('Failed to load artists');
+      // ignore if user role does not have artist list read access
     }
-  }, []);
+  }, [user?.role]);
+
+  const handleExportCsv = async () => {
+    try {
+      const res = await distributionApi.exportRoyalties();
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'royalty-report.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error('Failed to export royalty CSV');
+    }
+  };
 
   useEffect(() => {
     fetchArtists();
@@ -292,66 +324,115 @@ const Royalties: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Royalty Ledger</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Manage royalty calculations, statements, and artist payments
+          <h1 className={`${embedded ? 'text-xl' : 'text-2xl'} font-bold text-[var(--hbe-text)]`}>Revenue & Royalties</h1>
+          <p className="text-xs sm:text-sm text-[var(--hbe-muted)] mt-1">
+            Unified distribution revenue breakdown, royalty calculations, statements, and artist payouts
           </p>
         </div>
-        <button
-          onClick={() => {
-            resetForm();
-            setShowCreateModal(true);
-          }}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-1.5"
-        >
-          <Plus size={16} />
-          New Entry
-        </button>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            className="rounded-xl border border-[var(--hbe-line)] bg-[var(--hbe-surface)] px-4 py-2 text-sm font-semibold text-[var(--hbe-text)] hover:border-violet-500/40 inline-flex items-center gap-2"
+          >
+            <Download size={15} />
+            Export CSV
+          </button>
+          {!embedded && (
+            <Link
+              to="/distribution?tab=royalties"
+              className="rounded-xl border border-violet-500/30 bg-violet-500/10 px-4 py-2 text-sm font-semibold text-violet-400 hover:bg-violet-500/20 inline-flex items-center gap-1.5"
+            >
+              Distribution View <ArrowUpRight size={15} />
+            </Link>
+          )}
+          {canWriteRoyalties && (
+            <button
+              type="button"
+              onClick={() => {
+                resetForm();
+                setShowCreateModal(true);
+              }}
+              className="bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors inline-flex items-center gap-1.5"
+            >
+              <Plus size={16} />
+              New Royalty Entry
+            </button>
+          )}
+        </div>
       </div>
 
-      <div className="flex flex-col gap-3 rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm dark:border-sky-900 dark:bg-sky-950/30 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold text-sky-900 dark:text-sky-200">Distribution reporting boundary</p><p className="mt-1 text-xs text-sky-700 dark:text-sky-400">This ledger handles royalty calculations and payments. Distribeats’ public API currently provides releases, artists, DDEX and webhooks, but not royalty reports.</p></div><Link to={user?.role === 'admin' ? '/distribution?tab=provider' : '/distribution'} className="shrink-0 rounded-lg border border-sky-300 px-3 py-2 text-xs font-semibold text-sky-700 hover:bg-sky-100 dark:border-sky-800 dark:text-sky-300">{user?.role === 'admin' ? 'Open provider catalogue' : 'Open distribution records'}</Link></div>
-
+      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map((kpi) => (
           <div
             key={kpi.label}
-            className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5"
+            className="rounded-2xl border border-[var(--hbe-line)] bg-[var(--hbe-surface)] p-5"
           >
             <div className="flex items-center justify-between mb-3">
               <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${kpi.color}`}>
                 <kpi.icon size={18} className="text-white" />
               </div>
             </div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">{kpi.value}</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{kpi.label}</div>
+            <div className="text-2xl font-bold text-[var(--hbe-text)]">{kpi.value}</div>
+            <div className="text-xs text-[var(--hbe-muted)] mt-1">{kpi.label}</div>
           </div>
         ))}
       </div>
 
-      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+      {/* Distribution Revenue Breakdown (Platform / Release / Track) */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        {([
+          ['Platform / Source', summary?.byPlatform],
+          ['By Release', summary?.byRelease],
+          ['By Track', summary?.byTrack],
+        ] as const).map(([label, data]) => (
+          <div key={label} className="rounded-2xl border border-[var(--hbe-line)] bg-[var(--hbe-surface)] p-5">
+            <h3 className="mb-4 text-sm font-bold text-[var(--hbe-text)] flex items-center gap-2">
+              <BarChart3 size={15} className="text-violet-500" />
+              {label}
+            </h3>
+            <div className="space-y-2.5">
+              {Object.entries(data || {}).map(([name, value]: any) => (
+                <div key={name} className="flex justify-between text-sm">
+                  <span className="capitalize text-[var(--hbe-muted)]">{String(name).replace(/_/g, ' ')}</span>
+                  <strong className="text-[var(--hbe-text)]">{formatCurrency(Number(value) || 0)}</strong>
+                </div>
+              ))}
+              {Object.keys(data || {}).length === 0 && (
+                <p className="text-xs text-[var(--hbe-muted)]">No reporting data yet</p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="rounded-2xl border border-[var(--hbe-line)] bg-[var(--hbe-surface)] p-4">
         <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+          <div className="flex items-center gap-2 text-sm text-[var(--hbe-muted)]">
             <Filter size={16} />
             <span>Filters</span>
           </div>
-          <select
-            value={filterArtist}
-            onChange={(e) => setFilterArtist(e.target.value)}
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          >
-            <option value="">All Artists</option>
-            {artists.map((a) => (
-              <option key={a._id} value={a._id}>
-                {getArtistName(a)}
-              </option>
-            ))}
-          </select>
+          {user?.role !== 'artist' && (
+            <select
+              value={filterArtist}
+              onChange={(e) => setFilterArtist(e.target.value)}
+              className="px-3 py-2 border border-[var(--hbe-line)] rounded-xl text-sm bg-[var(--hbe-surface)] text-[var(--hbe-text)] outline-none focus:border-violet-500"
+            >
+              <option value="">All Artists</option>
+              {artists.map((a) => (
+                <option key={a._id} value={a._id}>
+                  {getArtistName(a)}
+                </option>
+              ))}
+            </select>
+          )}
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            className="px-3 py-2 border border-[var(--hbe-line)] rounded-xl text-sm bg-[var(--hbe-surface)] text-[var(--hbe-text)] outline-none focus:border-violet-500"
           >
             <option value="">All Statuses</option>
             {statusOptions.map((s) => (
@@ -365,11 +446,11 @@ const Royalties: React.FC = () => {
             value={filterPeriod}
             onChange={(e) => setFilterPeriod(e.target.value)}
             placeholder="Period (e.g. Q1 2026)"
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            className="px-3 py-2 border border-[var(--hbe-line)] rounded-xl text-sm bg-[var(--hbe-surface)] text-[var(--hbe-text)] outline-none focus:border-violet-500"
           />
           <button
             onClick={fetchEntries}
-            className="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-1.5"
+            className="border border-[var(--hbe-line)] bg-[var(--hbe-fill-soft)] hover:border-violet-500/40 text-[var(--hbe-text)] px-4 py-2 rounded-xl text-sm font-semibold transition-colors inline-flex items-center gap-1.5"
           >
             <Search size={16} />
             Search
@@ -381,7 +462,7 @@ const Royalties: React.FC = () => {
                 setFilterStatus('');
                 setFilterPeriod('');
               }}
-              className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+              className="text-sm text-violet-500 hover:underline font-semibold"
             >
               Clear
             </button>
@@ -389,26 +470,28 @@ const Royalties: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm overflow-hidden">
+      <div className="rounded-2xl border border-[var(--hbe-line)] bg-[var(--hbe-surface)] shadow-sm overflow-hidden">
         {entries.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16">
-            <div className="w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-4">
-              <DollarSign size={28} className="text-gray-400 dark:text-gray-500" />
+            <div className="w-14 h-14 rounded-full bg-[var(--hbe-fill-soft)] flex items-center justify-center mb-4">
+              <DollarSign size={28} className="text-[var(--hbe-muted)]" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">No royalty entries</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Create your first royalty entry to start tracking
+            <h3 className="text-lg font-semibold text-[var(--hbe-text)]">No royalty statements yet</h3>
+            <p className="text-sm text-[var(--hbe-muted)] mt-1">
+              {canWriteRoyalties ? 'Create a royalty entry to calculate splits and generate statements' : 'Approved royalty statements will appear here once calculated'}
             </p>
-            <button
-              onClick={() => {
-                resetForm();
-                setShowCreateModal(true);
-              }}
-              className="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-1.5"
-            >
-              <Plus size={16} />
-              New Entry
-            </button>
+            {canWriteRoyalties && (
+              <button
+                onClick={() => {
+                  resetForm();
+                  setShowCreateModal(true);
+                }}
+                className="mt-4 bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors inline-flex items-center gap-1.5"
+              >
+                <Plus size={16} />
+                New Royalty Entry
+              </button>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -494,7 +577,7 @@ const Royalties: React.FC = () => {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-end gap-1">
-                            {entry.status === 'draft' && (
+                            {canWriteRoyalties && entry.status === 'draft' && (
                               <button
                                 onClick={() => handleCalculate(entry._id)}
                                 title="Calculate"
@@ -512,7 +595,7 @@ const Royalties: React.FC = () => {
                                 <Eye size={15} />
                               </button>
                             )}
-                            {!entry.statementGenerated && entry.status !== 'draft' && (
+                            {canWriteRoyalties && !entry.statementGenerated && entry.status !== 'draft' && (
                               <button
                                 onClick={() => handleGenerateStatement(entry._id)}
                                 title="Generate Statement"
@@ -521,19 +604,21 @@ const Royalties: React.FC = () => {
                                 <FileText size={15} />
                               </button>
                             )}
-                            {entry.status === 'calculated' && (
+                            {canWriteRoyalties && entry.status === 'calculated' && (
                               <button onClick={() => handleApprove(entry._id)} title="Approve statement" className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"><CheckCircle size={15} /></button>
                             )}
-                            {entry.status === 'approved' && entry.remainingBalance > 0 && (
+                            {canWriteRoyalties && entry.status === 'approved' && entry.remainingBalance > 0 && (
                               <button onClick={() => handleRecordPayment(entry)} title="Record payment" className="p-1.5 rounded-lg text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/20"><DollarSign size={15} /></button>
                             )}
-                            <button
-                              onClick={() => setDeleteTarget(entry._id)}
-                              title="Delete"
-                              className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                            >
-                              <Trash2 size={15} />
-                            </button>
+                            {canWriteRoyalties && (
+                              <button
+                                onClick={() => setDeleteTarget(entry._id)}
+                                title="Delete"
+                                className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

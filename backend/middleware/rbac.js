@@ -17,6 +17,7 @@ const ROLE_DASHBOARDS = {
 const ROLE_NAV = {
   admin: [
     { path: '/', label: 'Dashboard' },
+    { path: '/system-health', label: 'System Health' },
     { path: '/artists', label: 'Artists' },
     { path: '/songs', label: 'Music Catalog' },
     { path: '/releases', label: 'Releases' },
@@ -44,6 +45,7 @@ const ROLE_NAV = {
   ],
   manager: [
     { path: '/manager-dashboard', label: 'Dashboard' },
+    { path: '/system-health', label: 'System Health' },
     { path: '/artists', label: 'Artists' },
     { path: '/songs', label: 'Music Catalog' },
     { path: '/releases', label: 'Releases' },

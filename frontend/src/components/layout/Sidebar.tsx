@@ -1,11 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Music, Radio, FileText, DollarSign,
   Phone, CheckSquare, Settings, Star, TrendingUp, LogOut, X,
   Award, FolderOpen, Shield, Calendar, Disc, Megaphone,
-  BarChart3, CreditCard, Receipt, Wallet, User, Home, FileClock, LayoutGrid,
-  Tv, UserCog,
+  BarChart3, CreditCard, Receipt, Wallet, User, Home, FileClock,
+  Tv, UserCog, Activity,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { preloadRoute, preloadRoutes } from '../../utils/routePreload';
@@ -16,6 +16,7 @@ const iconMap: Record<string, React.ReactNode> = {
   '/artist-dashboard': <LayoutDashboard size={17} />,
   '/finance-dashboard': <LayoutDashboard size={17} />,
   '/marketing-dashboard': <LayoutDashboard size={17} />,
+  '/system-health': <Activity size={17} />,
   '/artists': <Users size={17} />,
   '/songs': <Music size={17} />,
   '/releases': <Radio size={17} />,
@@ -56,7 +57,7 @@ const SECTION_ORDER: Array<{ label: string; prefix: string }> = [
 ];
 
 const sectionFor = (path: string): { label: string } => {
-  if (path === '/' || path.endsWith('-dashboard')) return { label: 'Overview' };
+  if (path === '/' || path.endsWith('-dashboard') || path === '/system-health') return { label: 'Overview' };
   if (['/artists', '/songs', '/releases', '/distribution', '/metadata', '/files', '/my-music', '/my-releases'].some((p) => path.startsWith(p)))
     return { label: 'Catalog' };
   if (['/projects', '/development', '/tasks', '/contracts', '/contract-templates', '/contacts', '/campaigns', '/the-lnk-up'].some((p) => path.startsWith(p)))
@@ -85,11 +86,24 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const location = useLocation();
-  const { user, logout, nav } = useAuth();
+  const { user, logout, nav, canAccess } = useAuth();
+
+  const effectiveNav = useMemo(() => {
+    const items = [...nav];
+    if (canAccess('distribution', 'read') && !items.some((item) => item.path === '/system-health')) {
+      const dashIdx = items.findIndex((item) => item.path === '/' || item.path.endsWith('-dashboard'));
+      if (dashIdx >= 0) {
+        items.splice(dashIdx + 1, 0, { path: '/system-health', label: 'System Health' });
+      } else {
+        items.unshift({ path: '/system-health', label: 'System Health' });
+      }
+    }
+    return items;
+  }, [nav, canAccess]);
 
   const grouped = SECTION_ORDER.map((section) => ({
     ...section,
-    items: nav.filter((item) => sectionFor(item.path).label === section.label),
+    items: effectiveNav.filter((item) => sectionFor(item.path).label === section.label),
   })).filter((g) => g.items.length > 0);
 
   const meta = roleMeta[user?.role || ''] || roleMeta.manager;
@@ -98,10 +112,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   // requests have much higher latency than local development, so this makes
   // later sidebar navigation use the browser cache instead of waiting on click.
   useEffect(() => {
-    const paths = nav.map(item => item.path);
+    const paths = effectiveNav.map(item => item.path);
     const timer = window.setTimeout(() => { void preloadRoutes(paths); }, 1200);
     return () => window.clearTimeout(timer);
-  }, [nav]);
+  }, [effectiveNav]);
 
   const sidebarContent = (
     <div className="sidebar-panel h-full flex flex-col w-[264px] flex-shrink-0">
