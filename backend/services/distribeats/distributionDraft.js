@@ -15,7 +15,7 @@ const parseJson = (value, fallback) => {
 const bool = value => value === true || String(value).toLowerCase() === 'true';
 const text = value => String(value ?? '').trim();
 
-const SCALARS = ['title', 'type', 'genre', 'subGenre', 'language', 'upc', 'copyright', 'producer', 'spotifyArtistUrl', 'aiDocumentUrl', 'catalogNumber', 'publishingCopyright', 'artworkAiUsage', 'distributionMode', 'sourceDistributor', 'sourceReleaseUrl'];
+const SCALARS = ['title', 'type', 'genre', 'subGenre', 'language', 'upc', 'copyright', 'producer', 'spotifyArtistUrl', 'aiDocumentUrl', 'catalogNumber', 'publishingCopyright', 'artworkAiUsage', 'distributionMode', 'sourceDistributor', 'sourceReleaseUrl', 'bulkImportKey', 'bulkReleaseKey'];
 const LISTS = ['featuringArtists', 'songwriters', 'composers', 'territories', 'excludedTerritories', 'mixingEngineers', 'masteringEngineers', 'dspOutletIds'];
 
 // Fields only the server may set; never accepted from a client track payload.

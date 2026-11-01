@@ -84,6 +84,8 @@ const distributionReleaseSchema = new mongoose.Schema({
   sourceDistributor: { type: String, trim: true, default: '' },
   sourceReleaseUrl: { type: String, trim: true, default: '' },
   transferAcknowledged: { type: Boolean, default: false },
+  bulkImportKey: { type: String, trim: true, maxlength: 191, default: '', index: true },
+  bulkReleaseKey: { type: String, trim: true, maxlength: 120, default: '' },
   coverArtUrl: { type: String, default: '' },
   coverArtFileName: { type: String, default: '' },
   coverArtMeta: { type: mongoose.Schema.Types.Mixed },

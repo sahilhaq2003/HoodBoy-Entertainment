@@ -392,6 +392,8 @@ export interface DistributionRelease {
   sourceDistributor?: string;
   sourceReleaseUrl?: string;
   transferAcknowledged?: boolean;
+  bulkImportKey?: string;
+  bulkReleaseKey?: string;
   genre: string;
   language: string;
   explicit: boolean;

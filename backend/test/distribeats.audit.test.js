@@ -197,12 +197,16 @@ test('catalogue transfer requires source proof, original identifiers, and keep-l
     sourceDistributor: 'DistroKid',
     sourceReleaseUrl: 'https://open.spotify.com/album/4TESTCATALOGUE',
     transferAcknowledged: 'true',
+    bulkImportKey: 'bulk-manifest-release-001',
+    bulkReleaseKey: 'release-001',
   });
   assert.deepEqual(parsed, {
     distributionMode: 'catalog_transfer',
     sourceDistributor: 'DistroKid',
     sourceReleaseUrl: 'https://open.spotify.com/album/4TESTCATALOGUE',
     transferAcknowledged: true,
+    bulkImportKey: 'bulk-manifest-release-001',
+    bulkReleaseKey: 'release-001',
   });
 
   const validTransfer = makeValidRelease({

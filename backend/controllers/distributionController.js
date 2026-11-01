@@ -226,11 +226,18 @@ exports.getOne = async (req, res) => {
 
 exports.create = async (req, res) => {
   try {
+    const incoming = parseReleaseBody(req.body);
+    if (incoming.bulkImportKey) {
+      const existing = await DistributionRelease.findOne({ bulkImportKey: incoming.bulkImportKey, createdBy: req.user._id });
+      if (existing) {
+        await unlinkQuietly(req.files);
+        return res.status(200).json({ success: true, data: existing, duplicate: true });
+      }
+    }
     const catalogue = await distribeats.getCatalogue().catch(() => ({}));
     const { uploads, errors: fileErrors } = await processUploadedAssets(req, catalogue);
     if (fileErrors.length) return res.status(422).json({ success: false, message: fileErrors[0].message, errors: fileErrors });
 
-    const incoming = parseReleaseBody(req.body);
     if (req.user.role === 'artist') incoming.artist = (await artistForUser(req))?._id;
     const defaults = {
       type: 'single',

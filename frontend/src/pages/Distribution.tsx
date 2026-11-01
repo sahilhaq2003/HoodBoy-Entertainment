@@ -7,6 +7,7 @@ import type { Artist, DistributionRelease, DistributionTrack, Song } from '../ty
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket, type DistribeatsReleaseUpdate } from '../contexts/SocketContext';
 import { formatCurrency } from '../utils/helpers';
+import BulkReleaseImport from '../components/distribution/BulkReleaseImport';
 
 const statusColors: Record<string, string> = {
   draft: '#64748B', submitted: '#8B5CF6', processing: '#0EA5E9', approved: '#16A34A',
@@ -137,8 +138,8 @@ const Distribution: React.FC = () => {
   const { connected, joinRelease, leaveRelease, syncProgress, webhookFeed } = useSocket();
   const requestedTab = searchParams.get('tab');
   const editParam = searchParams.get('edit');
-  const [tab, setTab] = useState<'catalog' | 'provider' | 'new' | 'transfer' | 'royalties' | 'qc' | 'webhooks'>(
-    requestedTab === 'transfer' ? 'transfer' : requestedTab === 'webhooks' && user?.role === 'admin' ? 'webhooks' : requestedTab === 'provider' && user?.role === 'admin' ? 'provider' : 'catalog'
+  const [tab, setTab] = useState<'catalog' | 'provider' | 'new' | 'transfer' | 'bulk' | 'royalties' | 'qc' | 'webhooks'>(
+    requestedTab === 'bulk' ? 'bulk' : requestedTab === 'transfer' ? 'transfer' : requestedTab === 'webhooks' && user?.role === 'admin' ? 'webhooks' : requestedTab === 'provider' && user?.role === 'admin' ? 'provider' : 'catalog'
   );
   const [releases, setReleases] = useState<DistributionRelease[]>([]);
   const [artists, setArtists] = useState<Artist[]>([]);
@@ -150,6 +151,7 @@ const Distribution: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [actionBusy, setActionBusy] = useState('');
+  const [selectedReleaseIds, setSelectedReleaseIds] = useState<string[]>([]);
   const [references, setReferences] = useState<any>(null);
   const [webhookEvents, setWebhookEvents] = useState<any[]>([]);
   const [webhookTotal, setWebhookTotal] = useState(0);
@@ -818,6 +820,29 @@ const Distribution: React.FC = () => {
     } finally { setActionBusy(''); }
   };
 
+  const bulkSubmitReady = async () => {
+    const eligible = releases.filter(release => selectedReleaseIds.includes(release._id) && release.status === 'draft' && release.qcStatus === 'ready_for_distribution');
+    if (!eligible.length) return toast.error('Select at least one draft that has passed Content/QC.');
+    setActionBusy('bulk-submit');
+    let succeeded = 0;
+    const failures: string[] = [];
+    for (const release of eligible) {
+      try {
+        const response = await distributionApi.submit(release._id);
+        setReleases(items => items.map(item => item._id === release._id ? { ...item, ...response.data.data } : item));
+        setSelectedReleaseIds(current => current.filter(id => id !== release._id));
+        succeeded += 1;
+      } catch (error: any) {
+        const details = error.response?.data?.errors;
+        const message = Array.isArray(details) ? details.map((item: any) => item.message || item).join('; ') : error.response?.data?.message || 'Submission failed';
+        failures.push(`${release.title}: ${message}`);
+      }
+    }
+    setActionBusy('');
+    if (failures.length) toast.error(`${succeeded} submitted; ${failures.length} failed. ${failures[0]}`);
+    else toast.success(`${succeeded} release${succeeded === 1 ? '' : 's'} submitted to DistriBeats successfully.`);
+  };
+
   const syncRelease = async (id: string) => {
     setActionBusy(`sync_${id}`);
     try { await distributionApi.sync(id); toast.success('Status refresh requested'); }
@@ -907,13 +932,13 @@ const Distribution: React.FC = () => {
     )}
 
     <div className="flex flex-wrap gap-1 rounded-xl bg-[var(--hbe-fill-soft)] p-1 w-fit">
-      {([...(['catalog', 'royalties', 'new', 'transfer'] as const), ...(user?.role === 'admin' ? ['provider' as const, 'qc' as const, 'webhooks' as const] : [])]).map(key => (
+      {([...(['catalog', 'royalties', 'new', 'transfer', 'bulk'] as const), ...(user?.role === 'admin' ? ['provider' as const, 'qc' as const, 'webhooks' as const] : [])]).map(key => (
         <button key={key} onClick={() => {
           if (key === 'transfer' && !editing) reset('catalog_transfer');
           if (key === 'new' && !editing) reset('new_release');
           setTab(key);
         }} className={`rounded-lg px-4 py-2 text-sm font-semibold ${tab === key ? 'bg-[var(--hbe-surface)] text-[var(--hbe-text)] shadow-sm' : 'text-[var(--hbe-muted)]'}`}>
-          {key === 'catalog' ? 'Catalog' : key === 'provider' ? 'Provider Catalogue' : key === 'royalties' ? 'Revenue & Royalties' : key === 'transfer' ? 'Catalogue Transfer' : key === 'qc' ? 'Admin QC' : key === 'webhooks' ? 'Webhook History' : editing ? 'Edit Draft' : 'New Release'}
+          {key === 'catalog' ? 'Catalog' : key === 'provider' ? 'Provider Catalogue' : key === 'royalties' ? 'Revenue & Royalties' : key === 'transfer' ? 'Catalogue Transfer' : key === 'bulk' ? 'Bulk Import' : key === 'qc' ? 'Admin QC' : key === 'webhooks' ? 'Webhook History' : editing ? 'Edit Draft' : 'New Release'}
         </button>
       ))}
     </div>
@@ -922,10 +947,11 @@ const Distribution: React.FC = () => {
       <div className="flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1"><Search size={15} className="absolute left-3 top-3 text-[var(--hbe-muted)]"/><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search title, artist, UPC or provider ID" className={`${input} pl-9`} /></div>
         <select value={status} onChange={e => setStatus(e.target.value)} className={`${input} sm:w-48`}><option value="">All statuses</option>{Object.keys(statusColors).map(s => <option key={s}>{s}</option>)}</select>
-        {canAccess('distribution', 'write') && <div className="flex gap-2"><button onClick={() => { reset('catalog_transfer'); setTab('transfer'); }} className="rounded-xl border border-violet-500/40 bg-violet-500/10 px-4 py-2.5 text-sm font-bold text-violet-500 flex items-center gap-2"><RefreshCw size={16}/> Transfer Catalogue</button><button onClick={() => { reset('new_release'); setTab('new'); }} className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white flex items-center gap-2"><Plus size={16}/> New Release</button></div>}
+        {canAccess('distribution', 'write') && <div className="flex flex-wrap gap-2">{selectedReleaseIds.length > 0 && <button disabled={actionBusy === 'bulk-submit' || connection?.status !== 'connected'} onClick={bulkSubmitReady} className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50 flex items-center gap-2"><Send size={16}/>{actionBusy === 'bulk-submit' ? 'Submitting Queue…' : `Submit ${selectedReleaseIds.length} Ready`}</button>}<button onClick={() => setTab('bulk')} className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-2.5 text-sm font-bold text-emerald-500 flex items-center gap-2"><Upload size={16}/> Bulk Import</button><button onClick={() => { reset('catalog_transfer'); setTab('transfer'); }} className="rounded-xl border border-violet-500/40 bg-violet-500/10 px-4 py-2.5 text-sm font-bold text-violet-500 flex items-center gap-2"><RefreshCw size={16}/> Transfer Catalogue</button><button onClick={() => { reset('new_release'); setTab('new'); }} className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white flex items-center gap-2"><Plus size={16}/> New Release</button></div>}
       </div>
-      <div className="overflow-hidden rounded-2xl border border-[var(--hbe-line)] bg-[var(--hbe-surface)]"><div className="overflow-x-auto"><table className="w-full min-w-[840px] text-left"><thead className="bg-[var(--hbe-fill-soft)] text-xs uppercase text-[var(--hbe-muted)]"><tr><th className="p-4">Release</th><th>Artist</th><th>Status</th><th>QC Status</th><th>Validation</th><th>Date</th><th className="pr-4 text-right">Action</th></tr></thead><tbody className="divide-y divide-[var(--hbe-divide)]">{filtered.map(release => <tr key={release._id}>
-        <td className="p-4"><div className="flex items-center gap-3">{release.coverArtUrl ? <img src={release.coverArtUrl} loading="lazy" className="h-11 w-11 rounded-lg object-cover"/> : <div className="h-11 w-11 rounded-lg bg-violet-500/10 grid place-items-center"><Music2 size={17}/></div>}<div><div className="flex flex-wrap items-center gap-2"><p className="font-semibold text-[var(--hbe-text)]">{release.title}</p>{release.distributionMode === 'catalog_transfer' && <span className="rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] font-bold text-sky-500">TRANSFER</span>}</div><p className="text-xs text-[var(--hbe-muted)]">{release.tracks.length} track{release.tracks.length === 1 ? '' : 's'} · {release.type.toUpperCase()}</p></div></div></td>
+      <div className="overflow-hidden rounded-2xl border border-[var(--hbe-line)] bg-[var(--hbe-surface)]"><div className="overflow-x-auto"><table className="w-full min-w-[900px] text-left"><thead className="bg-[var(--hbe-fill-soft)] text-xs uppercase text-[var(--hbe-muted)]"><tr><th className="p-4"><input type="checkbox" aria-label="Select all ready drafts" checked={filtered.some(release => release.status === 'draft' && release.qcStatus === 'ready_for_distribution') && filtered.filter(release => release.status === 'draft' && release.qcStatus === 'ready_for_distribution').every(release => selectedReleaseIds.includes(release._id))} onChange={event => { const ids = filtered.filter(release => release.status === 'draft' && release.qcStatus === 'ready_for_distribution').map(release => release._id); setSelectedReleaseIds(current => event.target.checked ? [...new Set([...current, ...ids])] : current.filter(id => !ids.includes(id))); }}/></th><th>Release</th><th>Artist</th><th>Status</th><th>QC Status</th><th>Validation</th><th>Date</th><th className="pr-4 text-right">Action</th></tr></thead><tbody className="divide-y divide-[var(--hbe-divide)]">{filtered.map(release => <tr key={release._id}>
+        <td className="p-4"><input type="checkbox" aria-label={`Select ${release.title}`} disabled={release.status !== 'draft' || release.qcStatus !== 'ready_for_distribution' || actionBusy === 'bulk-submit'} checked={selectedReleaseIds.includes(release._id)} onChange={event => setSelectedReleaseIds(current => event.target.checked ? [...new Set([...current, release._id])] : current.filter(id => id !== release._id))}/></td>
+        <td><div className="flex items-center gap-3">{release.coverArtUrl ? <img src={release.coverArtUrl} loading="lazy" className="h-11 w-11 rounded-lg object-cover"/> : <div className="h-11 w-11 rounded-lg bg-violet-500/10 grid place-items-center"><Music2 size={17}/></div>}<div><div className="flex flex-wrap items-center gap-2"><p className="font-semibold text-[var(--hbe-text)]">{release.title}</p>{release.distributionMode === 'catalog_transfer' && <span className="rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] font-bold text-sky-500">TRANSFER</span>}{release.bulkReleaseKey && <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-500">BULK</span>}</div><p className="text-xs text-[var(--hbe-muted)]">{release.tracks.length} track{release.tracks.length === 1 ? '' : 's'} · {release.type.toUpperCase()}</p></div></div></td>
         <td className="text-sm text-[var(--hbe-text-soft)]">{release.artist?.stageName || release.artist?.name}</td>
         <td><span className="rounded-full px-2.5 py-1 text-xs font-bold capitalize" style={{ color: statusColors[release.status], background: `${statusColors[release.status]}18` }}>{release.status.replaceAll('_', ' ')}</span></td>
         <td className="text-xs">
@@ -1434,6 +1460,10 @@ const Distribution: React.FC = () => {
           </button>
         </div>
       </div>
+    )}
+
+    {tab === 'bulk' && canAccess('distribution', 'write') && (
+      <BulkReleaseImport artists={artists} references={references} isArtistUser={user?.role === 'artist'} onCreated={load}/>
     )}
 
     {tab === 'royalties' && <div className="space-y-5"><div className="grid gap-4 sm:grid-cols-3"><div className="rounded-2xl border border-[var(--hbe-line)] bg-[var(--hbe-surface)] p-5"><p className="text-xs text-[var(--hbe-muted)]">Total Revenue</p><p className="mt-2 text-2xl font-bold text-[var(--hbe-text)]">{formatCurrency(royalties?.totalRevenue||0)}</p></div><div className="rounded-2xl border border-[var(--hbe-line)] bg-[var(--hbe-surface)] p-5"><p className="text-xs text-[var(--hbe-muted)]">Artist Earnings</p><p className="mt-2 text-2xl font-bold text-emerald-500">{formatCurrency(royalties?.artistEarnings||0)}</p></div><div className="rounded-2xl border border-[var(--hbe-line)] bg-[var(--hbe-surface)] p-5"><p className="text-xs text-[var(--hbe-muted)]">Statements</p><p className="mt-2 text-2xl font-bold text-[var(--hbe-text)]">{royalties?.entries?.length||0}</p></div></div><div className="flex justify-between gap-4"><div><h2 className="font-bold text-[var(--hbe-text)]">Royalty history</h2><p className="text-xs text-[var(--hbe-muted)]">Internal royalty ledger. Import approved statements into the ledger before reconciliation.</p></div><button onClick={download} className="shrink-0 rounded-xl border border-[var(--hbe-line)] px-4 py-2 text-sm font-semibold text-[var(--hbe-text)] flex items-center gap-2"><Download size={15}/> CSV</button></div><div className="grid gap-4 lg:grid-cols-3">{[['Platform / source',royalties?.byPlatform],['Release',royalties?.byRelease],['Track',royalties?.byTrack]].map(([label,data]:any)=><div key={label} className="rounded-2xl border border-[var(--hbe-line)] bg-[var(--hbe-surface)] p-5"><h3 className="mb-4 text-sm font-bold text-[var(--hbe-text)] flex items-center gap-2"><BarChart3 size={15}/>{label}</h3><div className="space-y-3">{Object.entries(data||{}).map(([name,value]:any)=><div key={name} className="flex justify-between text-sm"><span className="capitalize text-[var(--hbe-muted)]">{name.replace(/_/g,' ')}</span><strong className="text-[var(--hbe-text)]">{formatCurrency(value)}</strong></div>)}{Object.keys(data||{}).length===0&&<p className="text-xs text-[var(--hbe-muted)]">No reporting data yet</p>}</div></div>)}</div></div>}
