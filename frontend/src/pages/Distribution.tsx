@@ -812,7 +812,7 @@ const Distribution: React.FC = () => {
     try {
       const res = await distributionApi.submit(id);
       setReleases(items => items.map(item => item._id === id ? { ...item, ...res.data.data } : item));
-      toast.success('Release submitted to DistriBeats (TEST MODE). Tracking updates in real time…');
+      toast.success(`Release submitted to DistriBeats${connection?.testMode ? ' (TEST MODE)' : ''}. Tracking updates in real time…`);
     } catch (error: any) {
       const apiErrs = error.response?.data?.errors;
       const msg = Array.isArray(apiErrs) ? apiErrs.map((e: any) => e.message || e).join('; ') : error.response?.data?.message;
@@ -985,7 +985,13 @@ const Distribution: React.FC = () => {
           <div>
             <div className="flex items-center gap-2.5">
               <h2 className="text-lg font-bold text-[var(--hbe-text)]">{editing ? `Edit Draft: ${editing.title}` : form.distributionMode === 'catalog_transfer' ? 'Transfer Existing Catalogue' : 'Create Distribution Release Draft'}</h2>
-              <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${form.distributionMode === 'catalog_transfer' ? 'bg-sky-500/15 text-sky-500' : 'bg-amber-500/15 text-amber-500'}`}>{form.distributionMode === 'catalog_transfer' ? 'CATALOGUE TRANSFER' : 'TEST MODE'}</span>
+              {form.distributionMode === 'catalog_transfer' ? (
+                <span className="rounded-full bg-sky-500/15 px-2.5 py-0.5 text-[11px] font-bold text-sky-500">CATALOGUE TRANSFER</span>
+              ) : isTestMode ? (
+                <span className="rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[11px] font-bold text-amber-500">TEST MODE</span>
+              ) : (
+                <span className="rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-bold text-emerald-500">LIVE MODE</span>
+              )}
             </div>
             <p className="text-xs text-[var(--hbe-muted)] mt-0.5">
               {form.distributionMode === 'catalog_transfer' ? 'Preserve the original metadata and recording identifiers. ' : 'All selections come from the live DistriBeats catalogue. '}Artwork: 3000×3000 px RGB JPG/PNG · Audio: WAV/FLAC · Delivery date: ≥ {leadTimeDays} {leadTimeUnit} days (earliest {earliestReleaseDate}).

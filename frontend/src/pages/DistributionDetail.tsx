@@ -42,7 +42,7 @@ const DistributionDetail: React.FC = () => {
       }
       const r = type === 'submit' ? await distributionApi.submit(id) : type === 'distribute' ? await distributionApi.distribute(id) : await distributionApi.sync(id);
       setRelease(r.data.data);
-      toast.success(type === 'submit' ? 'Release submitted to DistriBeats (TEST MODE).' : 'DistriBeats status synchronized.');
+      toast.success(type === 'submit' ? `Release submitted to DistriBeats${connection?.testMode ? ' (TEST MODE)' : ''}.` : 'DistriBeats status synchronized.');
     } catch (e: any) {
       toast.error(e.response?.data?.errors?.map((x: any) => x.message || x).join(', ') || e.response?.data?.message || 'Action failed');
       await load();
@@ -72,6 +72,7 @@ const DistributionDetail: React.FC = () => {
   if (loading) return <div className="grid min-h-64 place-items-center"><RefreshCw className="animate-spin text-violet-500" /></div>;
   if (!release) return <p className="text-[var(--hbe-muted)]">Release not found.</p>;
   const active = stages.indexOf(release.status);
+  const isTestMode = connection?.testMode !== false;
 
   return (
     <div className="space-y-6 pb-12">
@@ -80,7 +81,9 @@ const DistributionDetail: React.FC = () => {
           <Link to="/distribution" className="mb-3 inline-flex items-center gap-1 text-xs font-semibold text-violet-500"><ArrowLeft size={14} /> Distribution catalog</Link>
           <div className="flex flex-wrap items-center gap-2.5">
             <h1 className="text-2xl font-bold text-[var(--hbe-text)]">{release.title}</h1>
-            <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/15 px-2.5 py-0.5 text-[11px] font-bold text-amber-500"><ShieldAlert size={12} /> TEST MODE</span>
+            {isTestMode && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/15 px-2.5 py-0.5 text-[11px] font-bold text-amber-500"><ShieldAlert size={12} /> TEST MODE</span>
+            )}
           </div>
           <p className="text-sm text-[var(--hbe-muted)]">{release.artist?.stageName || release.artist?.name} · {release.type.toUpperCase()} · {release.genre}{release.subGenre ? ` / ${release.subGenre}` : ''}</p>
         </div>
@@ -90,7 +93,7 @@ const DistributionDetail: React.FC = () => {
               <>
                 <Link to={`/distribution?edit=${release._id}`} className="rounded-xl border border-[var(--hbe-line)] px-4 py-2.5 text-sm font-bold text-[var(--hbe-text)] flex items-center gap-2"><Edit3 size={15} /> Edit Draft</Link>
                 <button disabled={busy} onClick={() => action('validate')} className="rounded-xl border border-[var(--hbe-line)] px-4 py-2.5 text-sm font-bold text-[var(--hbe-text)] flex items-center gap-2"><CheckCircle2 size={15} /> Validate</button>
-                <button disabled={busy || release.qcStatus !== 'ready_for_distribution'} onClick={() => action('submit')} className={`rounded-xl px-4 py-2.5 text-sm font-bold text-white flex items-center gap-2 ${release.qcStatus === 'ready_for_distribution' ? 'bg-violet-600' : 'bg-zinc-600 cursor-not-allowed opacity-50'}`} title={release.qcStatus !== 'ready_for_distribution' ? 'Cannot submit until Content/QC passes.' : ''}><Send size={15} /> Submit (TEST)</button>
+                <button disabled={busy || release.qcStatus !== 'ready_for_distribution'} onClick={() => action('submit')} className={`rounded-xl px-4 py-2.5 text-sm font-bold text-white flex items-center gap-2 ${release.qcStatus === 'ready_for_distribution' ? 'bg-violet-600' : 'bg-zinc-600 cursor-not-allowed opacity-50'}`} title={release.qcStatus !== 'ready_for_distribution' ? 'Cannot submit until Content/QC passes.' : ''}><Send size={15} /> {isTestMode ? 'Submit (TEST)' : 'Submit'}</button>
               </>
             )}
             {!['draft', 'live', 'rejected'].includes(release.status) && release.distribeatsReleaseId && (
