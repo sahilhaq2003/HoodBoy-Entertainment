@@ -1013,11 +1013,34 @@ const Distribution: React.FC = () => {
 
         {form.distributionMode === 'catalog_transfer' && (
           <div className="rounded-2xl border border-sky-500/30 bg-sky-500/5 p-5 space-y-4">
-            <div className="flex items-start gap-3">
-              <RefreshCw size={18} className="mt-0.5 shrink-0 text-sky-500"/>
-              <div>
-                <h3 className="font-bold text-[var(--hbe-text)]">Transfer an existing DistroKid release</h3>
-                <p className="mt-1 text-xs leading-5 text-[var(--hbe-muted)]">Use the exact original audio, artwork, titles, credits, UPC and ISRCs. Keep the DistroKid release live until this transfer is delivered to every selected store.</p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex items-start gap-3">
+                <RefreshCw size={18} className="mt-0.5 shrink-0 text-sky-500"/>
+                <div>
+                  <h3 className="font-bold text-[var(--hbe-text)]">Transfer an existing DistroKid release</h3>
+                  <p className="mt-1 text-xs leading-5 text-[var(--hbe-muted)]">Use the exact original audio, artwork, titles, credits, UPC and ISRCs so Spotify, Apple Music and all DSPs merge your existing stream counts and playlists seamlessly.</p>
+                </div>
+              </div>
+              <button type="button" onClick={() => setTab('bulk')} className="shrink-0 rounded-xl border border-sky-500/40 bg-sky-500/10 px-3.5 py-2 text-xs font-bold text-sky-400 hover:bg-sky-500/20">
+                Transfer Multiple Releases (Bulk CSV) →
+              </button>
+            </div>
+            <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4 text-xs">
+              <div className="rounded-xl border border-sky-500/20 bg-[var(--hbe-surface)]/70 p-3">
+                <strong className="block text-sky-400">1. DistroKid Album Page</strong>
+                <span className="mt-1 block text-[11px] leading-4 text-[var(--hbe-muted)]">Open <code>distrokid.com/mymusic</code> → click your release → copy the <strong>DistroKid UPC</strong>, <strong>Original Release Date</strong>, and each track&apos;s <strong>12-char ISRC</strong>.</span>
+              </div>
+              <div className="rounded-xl border border-sky-500/20 bg-[var(--hbe-surface)]/70 p-3">
+                <strong className="block text-sky-400">2. DistroKid Vault (Masters)</strong>
+                <span className="mt-1 block text-[11px] leading-4 text-[var(--hbe-muted)]">Open <code>distrokid.com/vault</code> to download your original <strong>WAV/FLAC audio</strong> and <strong>cover art</strong> (cover art is auto-adjusted to 3000×3000 px RGB).</span>
+              </div>
+              <div className="rounded-xl border border-sky-500/20 bg-[var(--hbe-surface)]/70 p-3">
+                <strong className="block text-sky-400">3. Match Exact Metadata</strong>
+                <span className="mt-1 block text-[11px] leading-4 text-[var(--hbe-muted)]">Enter the exact Release Title, Track Title(s), Artist Name, Spotify Artist URL, Original Release Date, UPC, and ISRCs below.</span>
+              </div>
+              <div className="rounded-xl border border-sky-500/20 bg-[var(--hbe-surface)]/70 p-3">
+                <strong className="block text-sky-400">4. Keep DistroKid Live First</strong>
+                <span className="mt-1 block text-[11px] leading-4 text-[var(--hbe-muted)]">Submit here first. Only remove the release from DistroKid <strong>after</strong> this transfer status turns <strong>Live</strong> in stores (preserves streams & playlists).</span>
               </div>
             </div>
             <div className="grid gap-4 md:grid-cols-3">
@@ -1309,7 +1332,7 @@ const Distribution: React.FC = () => {
                   </label>
                   <label className="text-xs font-semibold text-[var(--hbe-muted)]">
                     ISRC {form.distributionMode === 'catalog_transfer' ? '* (use original)' : '(optional, 12 chars)'}
-                    <input className={`${fieldErrors[`${p}.isrc`] ? errInput : input} mt-1`} value={t.isrc} onChange={e => updateTrack(i, { isrc: e.target.value.replace(/-/g, '').toUpperCase().slice(0, 12) })} placeholder="USABC2600001"/>
+                    <input className={`${fieldErrors[`${p}.isrc`] ? errInput : input} mt-1`} value={t.isrc} onChange={e => updateTrack(i, { isrc: e.target.value.replace(/[\s-]/g, '').toUpperCase().slice(0, 12) })} placeholder="USABC2600001"/>
                     {fieldErrors[`${p}.isrc`] && <span className="mt-1 block text-[11px] text-red-500">{fieldErrors[`${p}.isrc`]}</span>}
                   </label>
                   <label className="text-xs font-semibold text-[var(--hbe-muted)]">

@@ -59,8 +59,8 @@ const resolveTrack = (track, release) => {
     title: r.type === 'single' || r.releaseType === 'Single' ? r.title : t.title,
     ownTitle: t.title,
     version: t.version && t.version !== 'Original' ? t.version : '',
-    isrc: String(t.isrc || '').replace(/-/g, '').toUpperCase(),
-    iswc: String(t.iswc || '').toUpperCase(),
+    isrc: String(t.isrc || '').replace(/[\s-]/g, '').toUpperCase(),
+    iswc: String(t.iswc || '').trim().toUpperCase(),
     featuring: pick(t.featuredArtists?.length ? t.featuredArtists : t.featuring, r.featuringArtists),
     composers: pick(t.composers, r.composers?.length ? r.composers : r.songwriters),
     writers: instrumental ? [] : pick(t.writers, r.songwriters?.length ? r.songwriters : r.composers),
@@ -120,13 +120,16 @@ const effectiveStores = release => list(release.dspOutletIds).filter(store => st
 /** The release in the exact shape documented by POST /releases. */
 const mapRelease = (releaseInput, artist) => {
   const release = plain(releaseInput);
-  const year = new Date(release.releaseDate).getUTCFullYear();
-  const owner = String(release.copyright || process.env.DISTRIBEATS_LABEL_NAME || 'HoodBoy Entertainment').replace(/^[©℗]\s*/, '').replace(/^\d{4}\s+/, '');
-  const pLineOwner = String(release.publishingCopyright || owner).replace(/^[©℗]\s*/, '').replace(/^\d{4}\s+/, '');
+  const year = new Date(release.originalReleaseDate || release.releaseDate).getUTCFullYear();
+  const cleanCopyright = String(release.copyright || '').replace(/^[©℗]\s*/, '').trim();
+  const cleanPublishing = String(release.publishingCopyright || '').replace(/^[©℗]\s*/, '').trim();
+  const owner = cleanCopyright.replace(/^\d{4}\s+/, '') || process.env.DISTRIBEATS_LABEL_NAME || 'HoodBoy Entertainment';
+  const pLineOwner = cleanPublishing.replace(/^\d{4}\s+/, '') || owner;
   const spotifyUrl = release.spotifyArtistUrl || artist?.socialLinks?.spotify || '';
   const worldwide = isWorldwide(release);
   const territories = list(release.territories).filter(REAL_TERRITORY).map(code => code.toUpperCase());
   const excluded = list(release.excludedTerritories).map(code => code.toUpperCase());
+  const cleanUpc = String(release.upc || '').replace(/[\s-]/g, '');
   return {
     title: release.title,
     displayArtist: displayName(artist),
@@ -137,11 +140,11 @@ const mapRelease = (releaseInput, artist) => {
     language: release.language || '',
     releaseDate: isoDate(release.releaseDate),
     ...(release.originalReleaseDate ? { originalReleaseDate: isoDate(release.originalReleaseDate) } : {}),
-    ...(release.upc ? { upc: release.upc } : {}),
+    ...(cleanUpc ? { upc: cleanUpc } : {}),
     ...(release.catalogNumber ? { catalogNumber: release.catalogNumber } : {}),
     ...(process.env.DISTRIBEATS_LABEL_NAME ? { label: process.env.DISTRIBEATS_LABEL_NAME } : {}),
-    pLine: /^\d{4}\s+/.test(String(release.publishingCopyright || '')) ? release.publishingCopyright.replace(/^[©℗]\s*/, '') : `${year} ${pLineOwner}`,
-    cLine: `${year} ${owner}`,
+    pLine: /^\d{4}\s+/.test(cleanPublishing) ? cleanPublishing : `${year} ${pLineOwner}`,
+    cLine: /^\d{4}\s+/.test(cleanCopyright) ? cleanCopyright : `${year} ${owner}`,
     explicit: Boolean(release.explicit),
     ...(!worldwide && territories.length ? { territories } : {}),
     ...(excluded.length ? { excludedTerritories: excluded } : {}),

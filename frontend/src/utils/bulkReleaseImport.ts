@@ -94,3 +94,104 @@ export const buildBulkTemplate = (artist = '') => {
   ];
   return [BULK_RELEASE_HEADERS.join(','), ...values.map(row => BULK_RELEASE_HEADERS.map(header => escapeCsv(row[header] || '')).join(','))].join('\r\n');
 };
+
+export const buildDistroKidTransferTemplate = (artist = '') => {
+  const delivery = new Date();
+  delivery.setUTCDate(delivery.getUTCDate() + 14);
+  const deliveryDate = delivery.toISOString().slice(0, 10);
+  const values: Record<string, string>[] = [
+    {
+      release_key: 'dk-single-001', mode: 'catalog_transfer', release_title: 'Midnight Drive', artist,
+      release_type: 'single', genre: 'Hip-Hop', sub_genre: 'Hip-Hop', language: 'English',
+      delivery_date: deliveryDate, original_release_date: '2024-03-15', upc: '198588123456',
+      copyright: '2024 HoodBoy Entertainment', publishing_copyright: '2024 HoodBoy Entertainment',
+      source_distributor: 'DistroKid', source_release_url: 'https://open.spotify.com/album/4EXAMPLEALBUM1',
+      spotify_artist_url: 'https://open.spotify.com/artist/4EXAMPLEARTIST', stores: 'Spotify|Apple Music|YouTube Music|TIDAL|Amazon|Deezer|TikTok',
+      territories: 'WORLDWIDE', cover_file: 'dk-single-001-cover.jpg', track_number: '1',
+      track_title: 'Midnight Drive', version: 'Original', isrc: 'QZK6L2400001', explicit: 'false',
+      instrumental: 'false', composition_type: 'Original', copyright_type: 'Original', ai_usage: 'None',
+      writers: 'First Last', composers: 'First Last', producers: 'Producer Legal Name',
+      mixing_engineers: 'Mixing Engineer Name', mastering_engineers: 'Mastering Engineer Name',
+      performers: 'Artist Legal Name::Lead Vocals', audio_file: 'dk-single-001-track-01.wav',
+    },
+    {
+      release_key: 'dk-ep-002', mode: 'catalog_transfer', release_title: 'City Lights EP', artist,
+      release_type: 'ep', genre: 'Hip-Hop', sub_genre: 'Hip-Hop', language: 'English',
+      delivery_date: deliveryDate, original_release_date: '2023-11-10', upc: '198588654321',
+      copyright: '2023 HoodBoy Entertainment', publishing_copyright: '2023 HoodBoy Entertainment',
+      source_distributor: 'DistroKid', source_release_url: 'https://open.spotify.com/album/4EXAMPLEALBUM2',
+      spotify_artist_url: 'https://open.spotify.com/artist/4EXAMPLEARTIST', stores: 'Spotify|Apple Music|YouTube Music|TIDAL|Amazon|Deezer|TikTok',
+      territories: 'WORLDWIDE', cover_file: 'dk-ep-002-cover.jpg', track_number: '1',
+      track_title: 'City Lights Intro', version: 'Original', isrc: 'QZK6L2300101', explicit: 'false',
+      instrumental: 'false', composition_type: 'Original', copyright_type: 'Original', ai_usage: 'None',
+      writers: 'First Last', composers: 'First Last', producers: 'Producer Legal Name',
+      mixing_engineers: 'Mixing Engineer Name', mastering_engineers: 'Mastering Engineer Name',
+      performers: 'Artist Legal Name::Lead Vocals', audio_file: 'dk-ep-002-track-01.wav',
+    },
+    {
+      release_key: 'dk-ep-002', mode: 'catalog_transfer', release_title: 'City Lights EP', artist,
+      release_type: 'ep', genre: 'Hip-Hop', sub_genre: 'Hip-Hop', language: 'English',
+      delivery_date: deliveryDate, original_release_date: '2023-11-10', upc: '198588654321',
+      copyright: '2023 HoodBoy Entertainment', publishing_copyright: '2023 HoodBoy Entertainment',
+      source_distributor: 'DistroKid', source_release_url: 'https://open.spotify.com/album/4EXAMPLEALBUM2',
+      spotify_artist_url: 'https://open.spotify.com/artist/4EXAMPLEARTIST', stores: 'Spotify|Apple Music|YouTube Music|TIDAL|Amazon|Deezer|TikTok',
+      territories: 'WORLDWIDE', cover_file: 'dk-ep-002-cover.jpg', track_number: '2',
+      track_title: 'Skyline Views', version: 'Original', isrc: 'QZK6L2300102', explicit: 'true',
+      instrumental: 'false', composition_type: 'Original', copyright_type: 'Original', ai_usage: 'None',
+      writers: 'First Last', composers: 'First Last', producers: 'Producer Legal Name',
+      mixing_engineers: 'Mixing Engineer Name', mastering_engineers: 'Mastering Engineer Name',
+      performers: 'Artist Legal Name::Lead Vocals', audio_file: 'dk-ep-002-track-02.wav',
+    },
+  ];
+  return [BULK_RELEASE_HEADERS.join(','), ...values.map(row => BULK_RELEASE_HEADERS.map(header => escapeCsv(row[header] || '')).join(','))].join('\r\n');
+};
+
+/**
+ * Ensures any cover image (such as a 1400x1400 or 2000x2000 px cover downloaded from DistroKid Vault)
+ * is automatically center-cropped and converted to DistriBeats' required 3000x3000 px RGB JPEG.
+ */
+export const ensureCover3000x3000 = async (file: File): Promise<File> => {
+  const img = await new Promise<HTMLImageElement | null>(resolve => {
+    const url = URL.createObjectURL(file);
+    const el = new Image();
+    el.onload = () => { URL.revokeObjectURL(url); resolve(el); };
+    el.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+    el.src = url;
+  });
+  if (!img || !img.naturalWidth || !img.naturalHeight) return file;
+  const origW = img.naturalWidth;
+  const origH = img.naturalHeight;
+  const ext = file.name.toLowerCase().split('.').pop() || '';
+  if (
+    origW === 3000 &&
+    origH === 3000 &&
+    ['jpg', 'jpeg', 'png'].includes(ext) &&
+    ['image/jpeg', 'image/png'].includes(file.type) &&
+    file.size <= 24 * 1024 * 1024
+  ) {
+    return file;
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 3000;
+  canvas.height = 3000;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return file;
+  ctx.fillStyle = '#09090b';
+  ctx.fillRect(0, 0, 3000, 3000);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  const scale = Math.max(3000 / origW, 3000 / origH);
+  const drawW = origW * scale;
+  const drawH = origH * scale;
+  ctx.drawImage(img, (3000 - drawW) / 2, (3000 - drawH) / 2, drawW, drawH);
+
+  const baseName = file.name.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9-_]+/g, '-') || 'cover';
+  const adjusted = await new Promise<File | null>(resolve => {
+    canvas.toBlob(blob => {
+      if (!blob) return resolve(null);
+      resolve(new File([blob], `${baseName}-3000x3000.jpg`, { type: 'image/jpeg' }));
+    }, 'image/jpeg', 0.94);
+  });
+  return adjusted || file;
+};

@@ -3,7 +3,7 @@ import { AlertTriangle, CheckCircle2, Download, FileSpreadsheet, FolderOpen, Loa
 import toast from 'react-hot-toast';
 import { distributionApi } from '../../services/api';
 import type { Artist } from '../../types';
-import { buildBulkTemplate, bulkBoolean, parseBulkCsv, parseBulkPerformers, splitBulkList, type BulkCsvRow } from '../../utils/bulkReleaseImport';
+import { buildBulkTemplate, buildDistroKidTransferTemplate, bulkBoolean, ensureCover3000x3000, parseBulkCsv, parseBulkPerformers, splitBulkList, type BulkCsvRow } from '../../utils/bulkReleaseImport';
 
 type ResultState = { status: 'waiting' | 'creating' | 'created' | 'failed'; id?: string; message?: string; duplicate?: boolean };
 type ReleaseGroup = { key: string; rows: BulkCsvRow[]; first: BulkCsvRow; errors: string[]; artistId: string; cover?: File; audio: Array<File | undefined> };
@@ -17,8 +17,8 @@ type Props = {
 
 const input = 'w-full rounded-xl border border-[var(--hbe-line)] bg-[var(--hbe-surface)] px-3 py-2 text-sm text-[var(--hbe-text)] outline-none focus:border-violet-500';
 const normalized = (value: unknown) => String(value || '').trim().toLowerCase();
-const validIsrc = (value: string) => /^[A-Z]{2}[A-Z0-9]{3}\d{7}$/.test(value.replace(/-/g, '').toUpperCase());
-const validUpc = (value: string) => /^\d{12,14}$/.test(value);
+const validIsrc = (value: string) => /^[A-Z]{2}[A-Z0-9]{3}\d{7}$/.test(value.replace(/[\s-]/g, '').toUpperCase());
+const validUpc = (value: string) => /^\d{12,14}$/.test(value.replace(/[\s-]/g, ''));
 const validHttps = (value: string) => /^https:\/\/\S+$/i.test(value);
 const splitNames = (value = '') => splitBulkList(value);
 
@@ -155,18 +155,19 @@ const BulkReleaseImport: React.FC<Props> = ({ artists, references, isArtistUser,
     }
   };
 
-  const downloadTemplate = () => {
+  const downloadTemplate = (distrokidOnly = false) => {
     const exampleArtist = isArtistUser ? '' : artists[0]?._id || '';
-    const blob = new Blob([buildBulkTemplate(exampleArtist)], { type: 'text/csv;charset=utf-8' });
+    const csvContent = distrokidOnly ? buildDistroKidTransferTemplate(exampleArtist) : buildBulkTemplate(exampleArtist);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'hbe-bulk-distribution-template.csv';
+    link.download = distrokidOnly ? 'hbe-distrokid-transfer-template.csv' : 'hbe-bulk-distribution-template.csv';
     link.click();
     URL.revokeObjectURL(url);
   };
 
-  const buildFormData = (group: ReleaseGroup) => {
+  const buildFormData = async (group: ReleaseGroup) => {
     const row = group.first;
     const mode = ['transfer', 'catalog_transfer'].includes(normalized(row.mode)) ? 'catalog_transfer' : 'new_release';
     const data = new FormData();
@@ -198,11 +199,14 @@ const BulkReleaseImport: React.FC<Props> = ({ artists, references, isArtistUser,
     add('explicit', group.rows.some(track => bulkBoolean(track.explicit)));
     add('bulkReleaseKey', group.key);
     add('bulkImportKey', `bulk-${csvFile?.name || 'manifest'}-${csvFile?.lastModified || 0}-${group.key}`.replace(/[^a-zA-Z0-9_.-]/g, '-').slice(0, 180));
-    if (group.cover) data.append('cover', group.cover);
+    if (group.cover) {
+      const adjustedCover = await ensureCover3000x3000(group.cover);
+      data.append('cover', adjustedCover);
+    }
     const tracks = group.rows.map((track, index) => ({
       title: track.track_title,
       version: track.version || 'Original',
-      isrc: track.isrc.replace(/-/g, '').toUpperCase(),
+      isrc: track.isrc.replace(/[\s-]/g, '').toUpperCase(),
       explicit: bulkBoolean(track.explicit),
       instrumental: bulkBoolean(track.instrumental),
       language: track.language || row.language || 'English',
@@ -238,7 +242,8 @@ const BulkReleaseImport: React.FC<Props> = ({ artists, references, isArtistUser,
         if (previous?.status === 'created' || (retryFailedOnly && previous?.status !== 'failed')) continue;
         setResults(current => ({ ...current, [group.key]: { status: 'creating' } }));
         try {
-          const response = await distributionApi.create(buildFormData(group));
+          const formData = await buildFormData(group);
+          const response = await distributionApi.create(formData);
           const release = response.data.data;
           setResults(current => ({ ...current, [group.key]: { status: 'created', id: release._id, duplicate: Boolean(response.data.duplicate), message: response.data.duplicate ? 'Existing draft reused safely.' : 'Draft created and queued for QC.' } }));
           created += 1;
@@ -261,8 +266,11 @@ const BulkReleaseImport: React.FC<Props> = ({ artists, references, isArtistUser,
     <div className="space-y-6">
       <div className="rounded-2xl border border-[var(--hbe-line)] bg-[var(--hbe-surface)] p-5 sm:p-7">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div><h2 className="flex items-center gap-2 text-xl font-bold text-[var(--hbe-text)]"><FileSpreadsheet size={21} className="text-violet-500"/>Bulk Releases & Catalogue Transfers</h2><p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--hbe-muted)]">Create up to 100 independent release drafts from one manifest. Each release is uploaded separately, receives its own validation result and provider ID, and can be retried without recreating successful drafts.</p></div>
-          <button type="button" onClick={downloadTemplate} className="shrink-0 rounded-xl border border-violet-500/40 bg-violet-500/10 px-4 py-2.5 text-sm font-bold text-violet-500"><Download size={15} className="mr-2 inline"/>Download CSV Template</button>
+          <div><h2 className="flex items-center gap-2 text-xl font-bold text-[var(--hbe-text)]"><FileSpreadsheet size={21} className="text-violet-500"/>Bulk Releases & Catalogue Transfers</h2><p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--hbe-muted)]">Create up to 100 independent release drafts from one manifest. Each release is uploaded separately, cover artwork is auto-adjusted to 3000×3000 px RGB, and each draft receives its own validation result and provider ID.</p></div>
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <button type="button" onClick={() => downloadTemplate(true)} className="rounded-xl border border-sky-500/40 bg-sky-500/10 px-4 py-2.5 text-sm font-bold text-sky-500"><Download size={15} className="mr-2 inline"/>DistroKid Transfer CSV Template</button>
+            <button type="button" onClick={() => downloadTemplate(false)} className="rounded-xl border border-violet-500/40 bg-violet-500/10 px-4 py-2.5 text-sm font-bold text-violet-500"><Download size={15} className="mr-2 inline"/>General CSV Template</button>
+          </div>
         </div>
 
         <div className="mt-6 grid gap-3 md:grid-cols-4">

@@ -31,7 +31,7 @@ const sanitizeTrack = raw => {
   }
   for (const field of ['explicit', 'instrumental']) if (has(t, field)) t[field] = bool(t[field]);
   for (const field of ['title', 'version', 'isrc', 'iswc', 'language', 'rightsProofUrl', 'previewStart']) if (has(t, field)) t[field] = text(t[field]);
-  if (has(t, 'isrc')) t.isrc = t.isrc.replace(/-/g, '').toUpperCase();
+  if (has(t, 'isrc')) t.isrc = t.isrc.replace(/[\s-]/g, '').toUpperCase();
   if (has(t, 'iswc')) t.iswc = t.iswc.toUpperCase();
   if (has(t, 'compositionType')) t.compositionType = normalizeCompositionType(t.compositionType);
   if (has(t, 'copyrightType')) t.copyrightType = normalizeRecordingRights(t.copyrightType);
@@ -46,6 +46,7 @@ const sanitizeTrack = raw => {
 const parseReleaseBody = body => {
   const out = {};
   SCALARS.forEach(key => { if (has(body, key)) out[key] = text(body[key]); });
+  if (has(out, 'upc')) out.upc = out.upc.replace(/[\s-]/g, '');
   LISTS.forEach(key => { if (has(body, key)) out[key] = list(parseJson(body[key], body[key])); });
   if (has(body, 'explicit')) out.explicit = bool(body.explicit);
   if (has(body, 'worldwide')) out.worldwide = bool(body.worldwide);
