@@ -137,8 +137,8 @@ const Distribution: React.FC = () => {
   const { connected, joinRelease, leaveRelease, syncProgress, webhookFeed } = useSocket();
   const requestedTab = searchParams.get('tab');
   const editParam = searchParams.get('edit');
-  const [tab, setTab] = useState<'catalog' | 'provider' | 'new' | 'royalties' | 'qc' | 'webhooks'>(
-    requestedTab === 'webhooks' && user?.role === 'admin' ? 'webhooks' : requestedTab === 'provider' && user?.role === 'admin' ? 'provider' : 'catalog'
+  const [tab, setTab] = useState<'catalog' | 'provider' | 'new' | 'transfer' | 'royalties' | 'qc' | 'webhooks'>(
+    requestedTab === 'transfer' ? 'transfer' : requestedTab === 'webhooks' && user?.role === 'admin' ? 'webhooks' : requestedTab === 'provider' && user?.role === 'admin' ? 'provider' : 'catalog'
   );
   const [releases, setReleases] = useState<DistributionRelease[]>([]);
   const [artists, setArtists] = useState<Artist[]>([]);
@@ -174,6 +174,10 @@ const Distribution: React.FC = () => {
     language: 'English',
     releaseDate: '',
     originalReleaseDate: '',
+    distributionMode: (requestedTab === 'transfer' ? 'catalog_transfer' : 'new_release') as 'new_release' | 'catalog_transfer',
+    sourceDistributor: requestedTab === 'transfer' ? 'DistroKid' : '',
+    sourceReleaseUrl: '',
+    transferAcknowledged: false,
     explicit: false,
     upc: '',
     copyright: '',
@@ -339,13 +343,15 @@ const Distribution: React.FC = () => {
 
   const clearErrors = () => { setFieldErrors({}); setErrorList([]); };
 
-  const reset = () => {
+  const reset = (mode: 'new_release' | 'catalog_transfer' = 'new_release') => {
     setEditing(null);
     clearErrors();
     setCoverPreviewInfo('');
     setForm({
       title: '', artist: '', type: 'single', genre: '', subGenre: '', language: 'English',
-      releaseDate: '', originalReleaseDate: '', explicit: false, upc: '', copyright: '',
+      releaseDate: '', originalReleaseDate: '', distributionMode: mode,
+      sourceDistributor: mode === 'catalog_transfer' ? 'DistroKid' : '', sourceReleaseUrl: '', transferAcknowledged: false,
+      explicit: false, upc: '', copyright: '',
       publishingCopyright: '', catalogNumber: '', artworkAiUsage: 'none',
       worldwide: true, territories: [], excludedTerritories: [], dspOutletIds: ['Spotify'],
       featuringArtists: '', producer: '', songwriters: '', composers: '',
@@ -376,6 +382,10 @@ const Distribution: React.FC = () => {
       language: release.language || 'English',
       releaseDate: release.releaseDate ? release.releaseDate.slice(0, 10) : '',
       originalReleaseDate: release.originalReleaseDate ? release.originalReleaseDate.slice(0, 10) : '',
+      distributionMode: release.distributionMode || 'new_release',
+      sourceDistributor: release.sourceDistributor || '',
+      sourceReleaseUrl: release.sourceReleaseUrl || '',
+      transferAcknowledged: Boolean(release.transferAcknowledged),
       explicit: Boolean(release.explicit),
       upc: release.upc || '',
       copyright: release.copyright || '',
@@ -437,7 +447,7 @@ const Distribution: React.FC = () => {
         audioSizeBytes: t.audioSizeBytes,
       };
     }));
-    setTab('new');
+    setTab(release.distributionMode === 'catalog_transfer' ? 'transfer' : 'new');
   };
 
   const handleCoverSelect = async (file?: File) => {
@@ -650,6 +660,16 @@ const Distribution: React.FC = () => {
     else if (form.releaseDate < earliestReleaseDate) {
       errs.push({ field: 'releaseDate', message: `Release date must be at least ${leadTimeDays} ${leadTimeUnit} days from today (earliest ${earliestReleaseDate}).` });
     }
+    if (form.distributionMode === 'catalog_transfer') {
+      if (!form.sourceDistributor.trim()) errs.push({ field: 'sourceDistributor', message: 'Select the distributor currently delivering this release.' });
+      if (!/^https:\/\/\S+$/i.test(form.sourceReleaseUrl.trim())) errs.push({ field: 'sourceReleaseUrl', message: 'Enter an HTTPS link to the existing release on DistroKid or a streaming store.' });
+      if (!form.originalReleaseDate) errs.push({ field: 'originalReleaseDate', message: 'Original release date is required for a catalogue transfer.' });
+      else if (form.originalReleaseDate > new Date().toISOString().slice(0, 10)) errs.push({ field: 'originalReleaseDate', message: 'Original release date cannot be in the future.' });
+      if (!/^\d{12,14}$/.test(form.upc.trim())) errs.push({ field: 'upc', message: 'Enter the existing 12–14 digit DistroKid UPC/EAN.' });
+      if (!form.transferAcknowledged) errs.push({ field: 'transferAcknowledged', message: 'Confirm that the existing release will remain live until the transfer is delivered.' });
+    } else if (form.upc.trim() && !/^\d{12,14}$/.test(form.upc.trim())) {
+      errs.push({ field: 'upc', message: 'UPC/EAN must contain 12–14 digits.' });
+    }
     if (!form.copyright.trim()) errs.push({ field: 'copyright', message: 'Copyright owner (© line) is required.' });
     if (!form.dspOutletIds.length) errs.push({ field: 'dspOutletIds', message: 'Select at least one store.' });
     if (!form.worldwide && form.territories.length === 0) errs.push({ field: 'territories', message: 'Select at least one ISO territory or enable worldwide distribution.' });
@@ -673,6 +693,8 @@ const Distribution: React.FC = () => {
     tracks.forEach((t, i) => {
       const p = `tracks[${i}]`;
       if (!t.title.trim()) errs.push({ field: `${p}.title`, message: `Track ${i + 1}: title is required.` });
+      if (form.distributionMode === 'catalog_transfer' && !t.isrc.trim()) errs.push({ field: `${p}.isrc`, message: `Track ${i + 1}: original ISRC is required for a catalogue transfer.` });
+      if (t.isrc.trim() && !/^[A-Z]{2}[A-Z0-9]{3}\d{7}$/.test(t.isrc.replace(/-/g, '').toUpperCase())) errs.push({ field: `${p}.isrc`, message: `Track ${i + 1}: ISRC must contain 12 characters, for example USABC2600001.` });
       if (!t.language) errs.push({ field: `${p}.language`, message: `Track ${i + 1}: language is required.` });
       if (!splitCsv(t.composers).length) errs.push({ field: `${p}.composers`, message: `Track ${i + 1}: composer(s) (full legal names) are required.` });
       if (!t.instrumental && !splitCsv(t.writers).length) errs.push({ field: `${p}.writers`, message: `Track ${i + 1}: writer(s) are required unless the track is instrumental.` });
@@ -711,6 +733,10 @@ const Distribution: React.FC = () => {
       data.append('language', form.language);
       data.append('releaseDate', form.releaseDate);
       if (form.originalReleaseDate) data.append('originalReleaseDate', form.originalReleaseDate);
+      data.append('distributionMode', form.distributionMode);
+      data.append('sourceDistributor', form.sourceDistributor.trim());
+      data.append('sourceReleaseUrl', form.sourceReleaseUrl.trim());
+      data.append('transferAcknowledged', String(form.transferAcknowledged));
       data.append('explicit', String(form.explicit));
       data.append('upc', form.upc.trim());
       data.append('copyright', form.copyright.trim());
@@ -881,9 +907,13 @@ const Distribution: React.FC = () => {
     )}
 
     <div className="flex flex-wrap gap-1 rounded-xl bg-[var(--hbe-fill-soft)] p-1 w-fit">
-      {([...(['catalog', 'royalties', 'new'] as const), ...(user?.role === 'admin' ? ['provider' as const, 'qc' as const, 'webhooks' as const] : [])]).map(key => (
-        <button key={key} onClick={() => setTab(key)} className={`rounded-lg px-4 py-2 text-sm font-semibold ${tab === key ? 'bg-[var(--hbe-surface)] text-[var(--hbe-text)] shadow-sm' : 'text-[var(--hbe-muted)]'}`}>
-          {key === 'catalog' ? 'Catalog' : key === 'provider' ? 'Provider Catalogue' : key === 'royalties' ? 'Revenue & Royalties' : key === 'qc' ? 'Admin QC' : key === 'webhooks' ? 'Webhook History' : editing ? 'Edit Draft' : 'New Release'}
+      {([...(['catalog', 'royalties', 'new', 'transfer'] as const), ...(user?.role === 'admin' ? ['provider' as const, 'qc' as const, 'webhooks' as const] : [])]).map(key => (
+        <button key={key} onClick={() => {
+          if (key === 'transfer' && !editing) reset('catalog_transfer');
+          if (key === 'new' && !editing) reset('new_release');
+          setTab(key);
+        }} className={`rounded-lg px-4 py-2 text-sm font-semibold ${tab === key ? 'bg-[var(--hbe-surface)] text-[var(--hbe-text)] shadow-sm' : 'text-[var(--hbe-muted)]'}`}>
+          {key === 'catalog' ? 'Catalog' : key === 'provider' ? 'Provider Catalogue' : key === 'royalties' ? 'Revenue & Royalties' : key === 'transfer' ? 'Catalogue Transfer' : key === 'qc' ? 'Admin QC' : key === 'webhooks' ? 'Webhook History' : editing ? 'Edit Draft' : 'New Release'}
         </button>
       ))}
     </div>
@@ -892,10 +922,10 @@ const Distribution: React.FC = () => {
       <div className="flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1"><Search size={15} className="absolute left-3 top-3 text-[var(--hbe-muted)]"/><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search title, artist, UPC or provider ID" className={`${input} pl-9`} /></div>
         <select value={status} onChange={e => setStatus(e.target.value)} className={`${input} sm:w-48`}><option value="">All statuses</option>{Object.keys(statusColors).map(s => <option key={s}>{s}</option>)}</select>
-        {canAccess('distribution', 'write') && <button onClick={() => { reset(); setTab('new'); }} className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white flex items-center gap-2"><Plus size={16}/> New Release</button>}
+        {canAccess('distribution', 'write') && <div className="flex gap-2"><button onClick={() => { reset('catalog_transfer'); setTab('transfer'); }} className="rounded-xl border border-violet-500/40 bg-violet-500/10 px-4 py-2.5 text-sm font-bold text-violet-500 flex items-center gap-2"><RefreshCw size={16}/> Transfer Catalogue</button><button onClick={() => { reset('new_release'); setTab('new'); }} className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white flex items-center gap-2"><Plus size={16}/> New Release</button></div>}
       </div>
       <div className="overflow-hidden rounded-2xl border border-[var(--hbe-line)] bg-[var(--hbe-surface)]"><div className="overflow-x-auto"><table className="w-full min-w-[840px] text-left"><thead className="bg-[var(--hbe-fill-soft)] text-xs uppercase text-[var(--hbe-muted)]"><tr><th className="p-4">Release</th><th>Artist</th><th>Status</th><th>QC Status</th><th>Validation</th><th>Date</th><th className="pr-4 text-right">Action</th></tr></thead><tbody className="divide-y divide-[var(--hbe-divide)]">{filtered.map(release => <tr key={release._id}>
-        <td className="p-4"><div className="flex items-center gap-3">{release.coverArtUrl ? <img src={release.coverArtUrl} loading="lazy" className="h-11 w-11 rounded-lg object-cover"/> : <div className="h-11 w-11 rounded-lg bg-violet-500/10 grid place-items-center"><Music2 size={17}/></div>}<div><p className="font-semibold text-[var(--hbe-text)]">{release.title}</p><p className="text-xs text-[var(--hbe-muted)]">{release.tracks.length} track{release.tracks.length === 1 ? '' : 's'} · {release.type.toUpperCase()}</p></div></div></td>
+        <td className="p-4"><div className="flex items-center gap-3">{release.coverArtUrl ? <img src={release.coverArtUrl} loading="lazy" className="h-11 w-11 rounded-lg object-cover"/> : <div className="h-11 w-11 rounded-lg bg-violet-500/10 grid place-items-center"><Music2 size={17}/></div>}<div><div className="flex flex-wrap items-center gap-2"><p className="font-semibold text-[var(--hbe-text)]">{release.title}</p>{release.distributionMode === 'catalog_transfer' && <span className="rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] font-bold text-sky-500">TRANSFER</span>}</div><p className="text-xs text-[var(--hbe-muted)]">{release.tracks.length} track{release.tracks.length === 1 ? '' : 's'} · {release.type.toUpperCase()}</p></div></div></td>
         <td className="text-sm text-[var(--hbe-text-soft)]">{release.artist?.stageName || release.artist?.name}</td>
         <td><span className="rounded-full px-2.5 py-1 text-xs font-bold capitalize" style={{ color: statusColors[release.status], background: `${statusColors[release.status]}18` }}>{release.status.replaceAll('_', ' ')}</span></td>
         <td className="text-xs">
@@ -922,17 +952,17 @@ const Distribution: React.FC = () => {
       </tr>)}</tbody></table></div>{filtered.length === 0 && <p className="p-10 text-center text-sm text-[var(--hbe-muted)]">No distribution releases found.</p>}</div>
     </>}
 
-    {tab === 'new' && (
+    {(tab === 'new' || tab === 'transfer') && (
       <div className="rounded-2xl border border-[var(--hbe-line)] bg-[var(--hbe-surface)] p-5 sm:p-7 space-y-7">
         {/* Form header & Music Catalog import bar */}
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between border-b border-[var(--hbe-divide)] pb-5">
           <div>
             <div className="flex items-center gap-2.5">
-              <h2 className="text-lg font-bold text-[var(--hbe-text)]">{editing ? `Edit Draft: ${editing.title}` : 'Create Distribution Release Draft'}</h2>
-              <span className="rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[11px] font-bold text-amber-500">TEST MODE</span>
+              <h2 className="text-lg font-bold text-[var(--hbe-text)]">{editing ? `Edit Draft: ${editing.title}` : form.distributionMode === 'catalog_transfer' ? 'Transfer Existing Catalogue' : 'Create Distribution Release Draft'}</h2>
+              <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${form.distributionMode === 'catalog_transfer' ? 'bg-sky-500/15 text-sky-500' : 'bg-amber-500/15 text-amber-500'}`}>{form.distributionMode === 'catalog_transfer' ? 'CATALOGUE TRANSFER' : 'TEST MODE'}</span>
             </div>
             <p className="text-xs text-[var(--hbe-muted)] mt-0.5">
-              All selections come from the live DistriBeats catalogue. Artwork: 3000×3000 px RGB JPG/PNG · Audio: WAV/FLAC · Lead time: ≥ {leadTimeDays} {leadTimeUnit} days (earliest {earliestReleaseDate}).
+              {form.distributionMode === 'catalog_transfer' ? 'Preserve the original metadata and recording identifiers. ' : 'All selections come from the live DistriBeats catalogue. '}Artwork: 3000×3000 px RGB JPG/PNG · Audio: WAV/FLAC · Delivery date: ≥ {leadTimeDays} {leadTimeUnit} days (earliest {earliestReleaseDate}).
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -945,9 +975,44 @@ const Distribution: React.FC = () => {
             <button type="button" disabled={!selectedImportSong || importingSong} onClick={() => handleImportFromCatalog()} className="rounded-xl border border-violet-500/40 bg-violet-500/10 px-3.5 py-2 text-xs font-bold text-violet-400 hover:bg-violet-500/20 disabled:opacity-50 flex items-center gap-1.5">
               <FolderDown size={14}/>{importingSong ? 'Importing…' : 'Prefill from Catalog'}
             </button>
-            {editing && <button type="button" onClick={reset} className="rounded-xl border border-[var(--hbe-line)] px-3 py-2 text-xs font-semibold text-[var(--hbe-muted)]">Cancel Edit</button>}
+            {editing && <button type="button" onClick={() => reset()} className="rounded-xl border border-[var(--hbe-line)] px-3 py-2 text-xs font-semibold text-[var(--hbe-muted)]">Cancel Edit</button>}
           </div>
         </div>
+
+        {form.distributionMode === 'catalog_transfer' && (
+          <div className="rounded-2xl border border-sky-500/30 bg-sky-500/5 p-5 space-y-4">
+            <div className="flex items-start gap-3">
+              <RefreshCw size={18} className="mt-0.5 shrink-0 text-sky-500"/>
+              <div>
+                <h3 className="font-bold text-[var(--hbe-text)]">Transfer an existing DistroKid release</h3>
+                <p className="mt-1 text-xs leading-5 text-[var(--hbe-muted)]">Use the exact original audio, artwork, titles, credits, UPC and ISRCs. Keep the DistroKid release live until this transfer is delivered to every selected store.</p>
+              </div>
+            </div>
+            <div className="grid gap-4 md:grid-cols-3">
+              <label className="text-xs font-semibold text-[var(--hbe-muted)]">
+                Current distributor *
+                <select className={`${fieldErrors.sourceDistributor ? errInput : input} mt-1`} value={form.sourceDistributor} onChange={e => setForm({ ...form, sourceDistributor: e.target.value })}>
+                  <option value="DistroKid">DistroKid</option>
+                  <option value="TuneCore">TuneCore</option>
+                  <option value="CD Baby">CD Baby</option>
+                  <option value="UnitedMasters">UnitedMasters</option>
+                  <option value="Other">Other distributor</option>
+                </select>
+                {fieldErrors.sourceDistributor && <span className="mt-1 block text-[11px] text-red-500">{fieldErrors.sourceDistributor}</span>}
+              </label>
+              <label className="text-xs font-semibold text-[var(--hbe-muted)] md:col-span-2">
+                Existing release URL *
+                <input type="url" className={`${fieldErrors.sourceReleaseUrl ? errInput : input} mt-1`} value={form.sourceReleaseUrl} onChange={e => setForm({ ...form, sourceReleaseUrl: e.target.value })} placeholder="https://open.spotify.com/album/... or DistroKid release URL"/>
+                {fieldErrors.sourceReleaseUrl && <span className="mt-1 block text-[11px] text-red-500">{fieldErrors.sourceReleaseUrl}</span>}
+              </label>
+            </div>
+            <label className="flex items-start gap-2 text-xs font-semibold text-[var(--hbe-text)]">
+              <input type="checkbox" className="mt-0.5" checked={form.transferAcknowledged} onChange={e => setForm({ ...form, transferAcknowledged: e.target.checked })}/>
+              <span>I understand that I must not remove the existing release from DistroKid until the transferred release is live in all selected stores. *</span>
+            </label>
+            {fieldErrors.transferAcknowledged && <span className="block text-[11px] text-red-500">{fieldErrors.transferAcknowledged}</span>}
+          </div>
+        )}
 
         {/* Validation Error Summary */}
         {errorList.length > 0 && (
@@ -1024,13 +1089,14 @@ const Distribution: React.FC = () => {
             </label>
 
             <label className="text-xs font-semibold text-[var(--hbe-muted)]">
-              Original release date (optional)
-              <input type="date" className={`${input} mt-1`} value={form.originalReleaseDate} onChange={e => setForm({ ...form, originalReleaseDate: e.target.value })}/>
+              Original release date {form.distributionMode === 'catalog_transfer' ? '*' : '(optional)'}
+              <input type="date" max={form.distributionMode === 'catalog_transfer' ? new Date().toISOString().slice(0, 10) : undefined} className={`${fieldErrors.originalReleaseDate ? errInput : input} mt-1`} value={form.originalReleaseDate} onChange={e => setForm({ ...form, originalReleaseDate: e.target.value })}/>
+              {fieldErrors.originalReleaseDate && <span className="mt-1 block text-[11px] text-red-500">{fieldErrors.originalReleaseDate}</span>}
             </label>
 
             <label className="text-xs font-semibold text-[var(--hbe-muted)]">
-              UPC / EAN (optional, 12–14 digits)
-              <input className={`${fieldErrors.upc ? errInput : input} mt-1`} value={form.upc} onChange={e => setForm({ ...form, upc: e.target.value })} placeholder="Leave blank for free assignment"/>
+              UPC / EAN {form.distributionMode === 'catalog_transfer' ? '* (existing DistroKid code)' : '(optional, 12–14 digits)'}
+              <input inputMode="numeric" className={`${fieldErrors.upc ? errInput : input} mt-1`} value={form.upc} onChange={e => setForm({ ...form, upc: e.target.value.replace(/\D/g, '').slice(0, 14) })} placeholder={form.distributionMode === 'catalog_transfer' ? 'Enter the existing DistroKid UPC' : 'Leave blank for free assignment'}/>
               {fieldErrors.upc && <span className="mt-1 block text-[11px] text-red-500">{fieldErrors.upc}</span>}
             </label>
 
@@ -1210,8 +1276,8 @@ const Distribution: React.FC = () => {
                     <input className={`${input} mt-1`} value={t.version} onChange={e => updateTrack(i, { version: e.target.value })} placeholder="Original, Radio Edit, Live…"/>
                   </label>
                   <label className="text-xs font-semibold text-[var(--hbe-muted)]">
-                    ISRC (optional, 12 chars)
-                    <input className={`${fieldErrors[`${p}.isrc`] ? errInput : input} mt-1`} value={t.isrc} onChange={e => updateTrack(i, { isrc: e.target.value })} placeholder="USABC2600001"/>
+                    ISRC {form.distributionMode === 'catalog_transfer' ? '* (use original)' : '(optional, 12 chars)'}
+                    <input className={`${fieldErrors[`${p}.isrc`] ? errInput : input} mt-1`} value={t.isrc} onChange={e => updateTrack(i, { isrc: e.target.value.replace(/-/g, '').toUpperCase().slice(0, 12) })} placeholder="USABC2600001"/>
                     {fieldErrors[`${p}.isrc`] && <span className="mt-1 block text-[11px] text-red-500">{fieldErrors[`${p}.isrc`]}</span>}
                   </label>
                   <label className="text-xs font-semibold text-[var(--hbe-muted)]">
@@ -1364,7 +1430,7 @@ const Distribution: React.FC = () => {
         <div className="flex justify-end gap-3 border-t border-[var(--hbe-divide)] pt-5">
           {editing && <button type="button" onClick={() => { reset(); setTab('catalog'); }} className="rounded-xl border border-[var(--hbe-line)] px-5 py-3 text-sm font-semibold text-[var(--hbe-muted)]">Discard Changes</button>}
           <button type="button" disabled={saving} onClick={saveRelease} className="rounded-xl bg-violet-600 px-6 py-3 text-sm font-bold text-white disabled:opacity-50 flex items-center gap-2">
-            <Upload size={16}/>{saving ? 'Validating & Saving…' : editing ? 'Update Release Draft' : 'Save Release Draft'}
+            <Upload size={16}/>{saving ? 'Validating & Saving…' : editing ? 'Update Release Draft' : form.distributionMode === 'catalog_transfer' ? 'Save Transfer Draft' : 'Save Release Draft'}
           </button>
         </div>
       </div>

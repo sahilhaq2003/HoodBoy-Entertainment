@@ -68,7 +68,10 @@ const validateTrack = (track, index, release, sets, { mode, maxAudioBytes }) => 
   }
   if (sets.aiUsage.size && !sets.aiUsage.has(normalizeAiUsage(raw))) errors.push(err(`${p}.aiUsage`, `AI usage "${raw.aiUsage}" is not supported by DistriBeats.`, 'UNSUPPORTED_VALUE'));
 
-  // Identifier formats.
+  // Identifier formats. Existing ISRCs are mandatory for catalogue transfers.
+  if (release.distributionMode === 'catalog_transfer') {
+    needs('isrc', Boolean(t.isrc), 'The original ISRC is required for every catalogue-transfer track so stores can match the recording.');
+  }
   if (t.isrc && !ISRC.test(t.isrc)) errors.push(err(`${p}.isrc`, 'ISRC must look like USABC2600001 (12 characters, no hyphens needed).', 'FORMAT'));
   if (t.iswc && !ISWC.test(t.iswc)) errors.push(err(`${p}.iswc`, 'ISWC must look like T-123.456.789-0.', 'FORMAT'));
 
@@ -147,6 +150,28 @@ const validateRelease = (input, ctx = {}) => {
 
   needs('copyright', Boolean(String(release.copyright || '').trim()), 'Copyright owner (c-line) is required.');
   if (release.upc && !UPC.test(String(release.upc))) errors.push(err('upc', 'UPC/EAN must be 12–14 digits.', 'FORMAT'));
+
+  // Catalogue transfers retain the original recording identity and remain live at the old distributor until delivery.
+  if (release.distributionMode === 'catalog_transfer') {
+    needs('sourceDistributor', Boolean(String(release.sourceDistributor || '').trim()), 'Select the distributor currently delivering this release.');
+    needs('sourceReleaseUrl', Boolean(String(release.sourceReleaseUrl || '').trim()), 'An existing store or distributor release URL is required for catalogue transfers.');
+    if (release.sourceReleaseUrl && !HTTPS_URL.test(String(release.sourceReleaseUrl))) {
+      errors.push(err('sourceReleaseUrl', 'The existing release URL must be a valid HTTPS URL.', 'FORMAT'));
+    }
+    needs('originalReleaseDate', Boolean(release.originalReleaseDate), 'The original release date is required for catalogue transfers.');
+    if (release.originalReleaseDate) {
+      const originalDate = policy.parseDateOnly(release.originalReleaseDate);
+      if (!originalDate) errors.push(err('originalReleaseDate', 'Original release date is not a valid date.', 'FORMAT'));
+      else if (originalDate.getTime() > (ctx.now ? new Date(ctx.now) : new Date()).getTime()) {
+        errors.push(err('originalReleaseDate', 'Original release date cannot be in the future for a catalogue transfer.', 'RANGE'));
+      }
+    }
+    needs('upc', Boolean(String(release.upc || '').trim()), 'The existing DistroKid UPC/EAN is required for transfer reconciliation.');
+    needs('transferAcknowledged', Boolean(release.transferAcknowledged), 'Confirm that the existing release will remain live until the transferred release is delivered.');
+    warnings.push('Keep the existing release live at the source distributor until all selected stores confirm the transferred release is available.');
+  } else if (release.sourceReleaseUrl && !HTTPS_URL.test(String(release.sourceReleaseUrl))) {
+    errors.push(err('sourceReleaseUrl', 'The source release URL must be a valid HTTPS URL.', 'FORMAT'));
+  }
 
   // Stores: provider-controlled, never free text.
   const stores = effectiveStores(release);

@@ -241,6 +241,10 @@ exports.create = async (req, res) => {
       dspOutletIds: ['Spotify'],
       attestations: { age: false, rights: false },
       artworkAiUsage: 'none',
+      distributionMode: 'new_release',
+      sourceDistributor: '',
+      sourceReleaseUrl: '',
+      transferAcknowledged: false,
     };
     const merged = mergeDraft(defaults, { ...incoming, ...(uploads.cover || {}) }, uploads);
     if (merged.worldwide === false && Array.isArray(merged.territories)) {

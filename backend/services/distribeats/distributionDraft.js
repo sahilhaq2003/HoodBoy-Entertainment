@@ -15,7 +15,7 @@ const parseJson = (value, fallback) => {
 const bool = value => value === true || String(value).toLowerCase() === 'true';
 const text = value => String(value ?? '').trim();
 
-const SCALARS = ['title', 'type', 'genre', 'subGenre', 'language', 'upc', 'copyright', 'producer', 'spotifyArtistUrl', 'aiDocumentUrl', 'catalogNumber', 'publishingCopyright', 'artworkAiUsage'];
+const SCALARS = ['title', 'type', 'genre', 'subGenre', 'language', 'upc', 'copyright', 'producer', 'spotifyArtistUrl', 'aiDocumentUrl', 'catalogNumber', 'publishingCopyright', 'artworkAiUsage', 'distributionMode', 'sourceDistributor', 'sourceReleaseUrl'];
 const LISTS = ['featuringArtists', 'songwriters', 'composers', 'territories', 'excludedTerritories', 'mixingEngineers', 'masteringEngineers', 'dspOutletIds'];
 
 // Fields only the server may set; never accepted from a client track payload.
@@ -49,6 +49,7 @@ const parseReleaseBody = body => {
   LISTS.forEach(key => { if (has(body, key)) out[key] = list(parseJson(body[key], body[key])); });
   if (has(body, 'explicit')) out.explicit = bool(body.explicit);
   if (has(body, 'worldwide')) out.worldwide = bool(body.worldwide);
+  if (has(body, 'transferAcknowledged')) out.transferAcknowledged = bool(body.transferAcknowledged);
   if (has(body, 'releaseDate')) out.releaseDate = body.releaseDate;
   if (has(body, 'originalReleaseDate')) out.originalReleaseDate = body.originalReleaseDate || undefined;
   if (has(body, 'artist')) out.artist = body.artist;

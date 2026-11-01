@@ -388,6 +388,10 @@ export interface DistributionRelease {
   type: 'single' | 'ep' | 'album';
   releaseDate: string;
   originalReleaseDate?: string;
+  distributionMode?: 'new_release' | 'catalog_transfer';
+  sourceDistributor?: string;
+  sourceReleaseUrl?: string;
+  transferAcknowledged?: boolean;
   genre: string;
   language: string;
   explicit: boolean;

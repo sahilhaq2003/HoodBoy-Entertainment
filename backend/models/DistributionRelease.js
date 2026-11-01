@@ -80,6 +80,10 @@ const distributionReleaseSchema = new mongoose.Schema({
   // true = worldwide (minus excludedTerritories); false = only the listed territories.
   worldwide: { type: Boolean, default: true },
   originalReleaseDate: { type: Date },
+  distributionMode: { type: String, enum: ['new_release', 'catalog_transfer'], default: 'new_release' },
+  sourceDistributor: { type: String, trim: true, default: '' },
+  sourceReleaseUrl: { type: String, trim: true, default: '' },
+  transferAcknowledged: { type: Boolean, default: false },
   coverArtUrl: { type: String, default: '' },
   coverArtFileName: { type: String, default: '' },
   coverArtMeta: { type: mongoose.Schema.Types.Mixed },

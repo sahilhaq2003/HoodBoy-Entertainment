@@ -107,6 +107,12 @@ const DistributionDetail: React.FC = () => {
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-500"><strong>DistriBeats unavailable:</strong> {connection?.message || 'configure the server-side integration before submitting.'}</div>
       )}
 
+      {release.distributionMode === 'catalog_transfer' && (
+        <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-4 text-sm text-[var(--hbe-text-soft)]">
+          <div className="flex items-start gap-3"><RefreshCw size={17} className="mt-0.5 shrink-0 text-sky-500"/><div><strong className="text-sky-500">Catalogue transfer from {release.sourceDistributor || 'another distributor'}</strong><p className="mt-1">Keep the existing release live until this release reaches <strong>Live</strong> in every selected store. Removing it early can interrupt availability and store matching.</p>{release.sourceReleaseUrl && <a href={release.sourceReleaseUrl} target="_blank" rel="noreferrer" className="mt-2 inline-block break-all text-xs font-semibold text-sky-500 underline">Open existing release</a>}</div></div>
+        </div>
+      )}
+
       {release.validationResult && !release.validationResult.ready && (
         <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-xs text-amber-400 space-y-1.5">
           <div className="font-bold text-sm flex items-center gap-1.5 text-amber-500"><AlertTriangle size={15} /> Pre-submission validation issues ({release.validationResult.errors?.length || 0}):</div>
@@ -145,6 +151,8 @@ const DistributionDetail: React.FC = () => {
           <dl className="mt-5 grid grid-cols-2 gap-4 text-sm">
             <div><dt className="text-xs text-[var(--hbe-muted)]">Release date</dt><dd className="font-semibold text-[var(--hbe-text)]">{new Date(release.releaseDate).toLocaleDateString()}</dd></div>
             <div><dt className="text-xs text-[var(--hbe-muted)]">UPC / EAN</dt><dd className="font-semibold text-[var(--hbe-text)]">{release.upc || 'Assigned on approval'}</dd></div>
+            {release.distributionMode === 'catalog_transfer' && <div><dt className="text-xs text-[var(--hbe-muted)]">Original release date</dt><dd className="font-semibold text-[var(--hbe-text)]">{release.originalReleaseDate ? new Date(release.originalReleaseDate).toLocaleDateString() : 'Required'}</dd></div>}
+            {release.distributionMode === 'catalog_transfer' && <div><dt className="text-xs text-[var(--hbe-muted)]">Transfer source</dt><dd className="font-semibold text-[var(--hbe-text)]">{release.sourceDistributor || '—'}</dd></div>}
             <div><dt className="text-xs text-[var(--hbe-muted)]">Territories</dt><dd className="font-semibold text-[var(--hbe-text)]">{release.worldwide !== false ? `Worldwide${release.excludedTerritories?.length ? ` (excl. ${release.excludedTerritories.join(', ')})` : ''}` : release.territories.join(', ')}</dd></div>
             <div><dt className="text-xs text-[var(--hbe-muted)]">Provider ID</dt><dd className="break-all font-semibold text-[var(--hbe-text)]">{release.distribeatsReleaseId || release.providerReleaseId || 'Not submitted'}</dd></div>
             <div className="col-span-2"><dt className="text-xs text-[var(--hbe-muted)]">Selected Stores ({release.dspOutletIds?.length || 0})</dt><dd className="font-semibold text-[var(--hbe-text)] text-xs mt-1">{(release.dspOutletIds || []).join(', ') || '—'}</dd></div>

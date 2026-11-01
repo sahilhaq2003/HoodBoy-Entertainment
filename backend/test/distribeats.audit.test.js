@@ -191,6 +191,47 @@ test('1. Valid original track passes submission validation with zero errors', ()
   assert.equal(result.errors.length, 0);
 });
 
+test('catalogue transfer requires source proof, original identifiers, and keep-live acknowledgement', () => {
+  const parsed = parseReleaseBody({
+    distributionMode: 'catalog_transfer',
+    sourceDistributor: 'DistroKid',
+    sourceReleaseUrl: 'https://open.spotify.com/album/4TESTCATALOGUE',
+    transferAcknowledged: 'true',
+  });
+  assert.deepEqual(parsed, {
+    distributionMode: 'catalog_transfer',
+    sourceDistributor: 'DistroKid',
+    sourceReleaseUrl: 'https://open.spotify.com/album/4TESTCATALOGUE',
+    transferAcknowledged: true,
+  });
+
+  const validTransfer = makeValidRelease({
+    distributionMode: 'catalog_transfer',
+    sourceDistributor: 'DistroKid',
+    sourceReleaseUrl: 'https://open.spotify.com/album/4TESTCATALOGUE',
+    originalReleaseDate: '2024-01-12',
+    upc: '123456789012',
+    transferAcknowledged: true,
+  });
+  const validResult = validateRelease(validTransfer, { catalogue: CATALOGUE, mode: 'submit', now: new Date('2026-11-01T00:00:00Z') });
+  assert.equal(validResult.ready, true, `Expected valid transfer, got errors: ${JSON.stringify(validResult.errors)}`);
+  assert.ok(validResult.warnings.some(message => message.includes('existing release live')));
+
+  const invalidTransfer = makeValidRelease({
+    distributionMode: 'catalog_transfer',
+    sourceDistributor: '',
+    sourceReleaseUrl: 'not-a-url',
+    originalReleaseDate: '',
+    upc: '',
+    transferAcknowledged: false,
+    tracks: [makeValidTrack({ isrc: '' })],
+  });
+  const invalidResult = validateRelease(invalidTransfer, { catalogue: CATALOGUE, mode: 'submit', now: new Date('2026-11-01T00:00:00Z') });
+  for (const field of ['sourceDistributor', 'sourceReleaseUrl', 'originalReleaseDate', 'upc', 'transferAcknowledged', 'tracks[0].isrc']) {
+    assert.ok(invalidResult.errors.some(item => item.field === field), `Expected transfer validation error for ${field}`);
+  }
+});
+
 test('2. Instrumental track does not require writers, while non-instrumental tracks require writers', () => {
   const release = makeValidRelease({
     tracks: [
