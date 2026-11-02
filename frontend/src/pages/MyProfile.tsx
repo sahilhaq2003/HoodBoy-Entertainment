@@ -3,7 +3,7 @@ import { Camera, Save, Loader2, AlertCircle, User, Mail, Phone, MapPin, Music2, 
 import toast from 'react-hot-toast';
 import { dashboardApi } from '../services/api';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
-import { getAvatarColor, getInitials } from '../utils/helpers';
+import { getAvatarColor, getInitials, optimizeUploadImage, setCachedArtist } from '../utils/helpers';
 import type { Artist } from '../types';
 
 const EMPTY_SOCIAL = { instagram: '', tiktok: '', youtube: '', spotify: '', twitter: '' };
@@ -81,13 +81,15 @@ const MyProfile: React.FC = () => {
   };
 
   const handleImageUpload = async (file: File, field: 'image' | 'coverPhoto') => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('field', field);
     setUploading(field);
     try {
+      const optimized = await optimizeUploadImage(file, field);
+      const formData = new FormData();
+      formData.append('file', optimized);
+      formData.append('field', field);
       const res = await dashboardApi.uploadMyImage(formData);
       setProfile(res.data.data);
+      setCachedArtist(res.data.data);
       toast.success(field === 'image' ? 'Profile photo updated' : 'Cover photo updated');
     } catch (e: any) {
       toast.error(e.response?.data?.message || 'Upload failed');
@@ -145,10 +147,7 @@ const MyProfile: React.FC = () => {
           }}
         >
           {profile.coverPhoto ? (
-            <>
-              <img src={profile.coverPhoto} alt="Cover" className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/15" />
-            </>
+            <img src={profile.coverPhoto} alt="Cover" loading="eager" fetchPriority="high" decoding="async" className="w-full h-full object-cover" />
           ) : (
             <>
               <div className="absolute -right-12 -top-16 w-56 h-56 rounded-full border border-white/20" />
@@ -185,7 +184,7 @@ const MyProfile: React.FC = () => {
             {uploading === 'image' ? (
               <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-700"><Loader2 size={22} className="animate-spin text-gray-500 dark:text-gray-400" /></div>
             ) : profile.image ? (
-              <img src={profile.image} alt={displayName} className="w-full h-full object-cover" />
+              <img src={profile.image} alt={displayName} loading="eager" fetchPriority="high" decoding="async" className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-white text-3xl font-bold" style={{ background: `linear-gradient(135deg, ${getAvatarColor(displayName)}, ${getAvatarColor(displayName)}99)` }}>
                 {initials}

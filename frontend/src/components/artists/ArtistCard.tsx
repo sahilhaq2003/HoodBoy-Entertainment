@@ -1,9 +1,9 @@
- import React from 'react';
+import React from 'react';
 import { Music, DollarSign, TrendingUp, Calendar, FileText, ArrowUpRight, Edit2, Trash2, Disc3 } from 'lucide-react';
 import type { Artist } from '../../types';
 import StatusBadge from '../ui/StatusBadge';
 import OnboardingProgress from '../onboarding/OnboardingProgress';
-import { formatCurrency, formatNumber, formatDate, getInitials, getAvatarColor } from '../../utils/helpers';
+import { formatCurrency, formatNumber, formatDate, getInitials, getAvatarColor, preloadArtistMedia } from '../../utils/helpers';
 
 interface ArtistCardProps {
   artist: Artist;
@@ -21,24 +21,24 @@ const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onOpen, onDelete }) => 
   return (
     <div
       className="group relative bg-white dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm hover:shadow-[0_24px_50px_-16px_rgba(79,70,229,0.28)] hover:border-gray-300 dark:hover:border-gray-600 hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden flex flex-col"
+      onMouseEnter={() => preloadArtistMedia(artist)}
+      onFocus={() => preloadArtistMedia(artist)}
       onClick={() => onOpen(artist)}
     >
-      {/* Cover banner (displays artist.coverPhoto when set, otherwise signature gradient banner) */}
+      {/* Cover banner (100% clear coverPhoto when set, otherwise signature gradient banner) */}
       <div
         className="relative h-24 flex-shrink-0 overflow-hidden"
         style={{ background: `linear-gradient(135deg, ${color} 0%, ${color}99 55%, ${color}44 100%)` }}
       >
         {artist.coverPhoto ? (
-          <>
-            <img
-              src={artist.coverPhoto}
-              alt={`${name} banner`}
-              loading="lazy"
-              decoding="async"
-              className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-black/10 to-black/20" />
-          </>
+          <img
+            src={artist.coverPhoto}
+            alt={`${name} banner`}
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
+            className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
         ) : (
           <>
             <div className="absolute -right-10 -top-12 w-40 h-40 rounded-full border border-white/20" />
@@ -55,14 +55,14 @@ const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onOpen, onDelete }) => 
         <div className="absolute top-2.5 left-2.5 z-20 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
           <button
             onClick={(e) => { e.stopPropagation(); onOpen(artist); }}
-            className="w-7 h-7 rounded-lg bg-black/35 text-white hover:bg-black/55 backdrop-blur-sm flex items-center justify-center transition-all"
+            className="w-7 h-7 rounded-lg bg-black/45 text-white hover:bg-black/65 backdrop-blur-sm flex items-center justify-center transition-all"
             title="View / Edit"
           >
             <Edit2 size={13} />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(artist._id); }}
-            className="w-7 h-7 rounded-lg bg-black/35 text-white hover:bg-red-500/80 backdrop-blur-sm flex items-center justify-center transition-all"
+            className="w-7 h-7 rounded-lg bg-black/45 text-white hover:bg-red-500/85 backdrop-blur-sm flex items-center justify-center transition-all"
             title="Delete"
           >
             <Trash2 size={13} />
@@ -77,7 +77,14 @@ const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onOpen, onDelete }) => 
           style={{ background: color }}
         >
           {artist.image ? (
-            <img src={artist.image} alt={name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+            <img
+              src={artist.image}
+              alt={name}
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
+              className="w-full h-full object-cover"
+            />
           ) : (
             getInitials(name)
           )}

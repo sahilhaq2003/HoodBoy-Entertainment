@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { artistsApi } from '../services/api';
+import { optimizeUploadImage, setCachedArtist } from '../utils/helpers';
 import OnboardingProgress from '../components/onboarding/OnboardingProgress';
 import FileUpload from '../components/onboarding/FileUpload';
 import type { Artist, ArtistDocument } from '../types';
@@ -209,9 +210,15 @@ const ArtistOnboarding: React.FC = () => {
 
   const handleImageUpload = async (file: File, field: 'image' | 'coverPhoto') => {
     if (!artist) return;
-    const fd = new FormData(); fd.append('file', file); fd.append('field', field);
     setUploadingImage(field);
-    try { const res = await artistsApi.uploadImage(artist._id, fd); setArtist(res.data.data); toast.success(field === 'image' ? 'Profile photo updated' : 'Cover photo updated'); }
+    try {
+      const optimized = await optimizeUploadImage(file, field);
+      const fd = new FormData(); fd.append('file', optimized); fd.append('field', field);
+      const res = await artistsApi.uploadImage(artist._id, fd);
+      setArtist(res.data.data);
+      setCachedArtist(res.data.data);
+      toast.success(field === 'image' ? 'Profile photo updated' : 'Cover photo updated');
+    }
     catch (e: any) { toast.error(e.response?.data?.message || 'Upload failed'); }
     setUploadingImage(null);
   };

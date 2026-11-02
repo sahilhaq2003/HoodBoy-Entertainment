@@ -1,3 +1,5 @@
+import type { Artist } from '../types';
+
 export const formatCurrency = (amount: number): string => {
   if (amount === null || amount === undefined || isNaN(amount)) return '$0';
   if (amount >= 1000000) return `$${(amount / 1000000).toFixed(1)}M`;
@@ -86,4 +88,98 @@ export const getAvatarColor = (name: string): string => {
   ];
   const idx = name.charCodeAt(0) % colors.length;
   return colors[idx];
+};
+
+// ── Fast Artist & Image Preload Cache ─────────────────────────────────────────
+const artistMemoryCache = new Map<string, Artist>();
+const preloadedImages = new Set<string>();
+
+export const preloadImageUrl = (url?: string | null): void => {
+  if (!url || typeof window === 'undefined' || preloadedImages.has(url)) return;
+  preloadedImages.add(url);
+  const img = new window.Image();
+  img.decoding = 'async';
+  img.src = url;
+};
+
+export const preloadArtistMedia = (artist?: Partial<Artist> | null): void => {
+  if (!artist) return;
+  preloadImageUrl(artist.coverPhoto);
+  preloadImageUrl(artist.image);
+};
+
+export const setCachedArtist = (artist?: Artist | null): void => {
+  if (!artist?._id) return;
+  artistMemoryCache.set(artist._id, artist);
+  preloadArtistMedia(artist);
+};
+
+export const cacheArtists = (artists?: Artist[] | null): void => {
+  if (!Array.isArray(artists)) return;
+  artists.forEach(a => setCachedArtist(a));
+};
+
+export const getCachedArtist = (id?: string | null): Artist | null => {
+  if (!id) return null;
+  return artistMemoryCache.get(id) || null;
+};
+
+/**
+ * Resize and compress profile/banner images on the client before upload so
+ * banners and avatars download in milliseconds instead of multi-megabyte raw files.
+ */
+export const optimizeUploadImage = async (
+  file: File,
+  field: 'image' | 'coverPhoto' = 'image'
+): Promise<File> => {
+  if (typeof window === 'undefined' || !file.type.startsWith('image/')) return file;
+  const maxWidth = field === 'coverPhoto' ? 1600 : 512;
+  const maxHeight = field === 'coverPhoto' ? 720 : 512;
+
+  return new Promise<File>((resolve) => {
+    const objectUrl = URL.createObjectURL(file);
+    const img = new window.Image();
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      let { width, height } = img;
+      if (width <= maxWidth && height <= maxHeight && file.size <= 180 * 1024) {
+        resolve(file);
+        return;
+      }
+      const scale = Math.min(maxWidth / width, maxHeight / height, 1);
+      width = Math.max(1, Math.round(width * scale));
+      height = Math.max(1, Math.round(height * scale));
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve(file);
+        return;
+      }
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, width, height);
+
+      const outputType = 'image/webp';
+      canvas.toBlob(
+        (blob) => {
+          if (!blob || blob.size >= file.size) {
+            resolve(file);
+            return;
+          }
+          const baseName = file.name.replace(/\.[^.]+$/, '') || field;
+          resolve(new File([blob], `${baseName}.webp`, { type: outputType }));
+        },
+        outputType,
+        0.88
+      );
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(file);
+    };
+    img.src = objectUrl;
+  });
 };

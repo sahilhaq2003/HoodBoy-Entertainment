@@ -14,7 +14,7 @@ import OnboardingProgress from '../components/onboarding/OnboardingProgress';
 import StatusBadge from '../components/ui/StatusBadge';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
-import { formatCurrency, formatNumber, formatDate, getAvatarColor, getInitials } from '../utils/helpers';
+import { formatCurrency, formatNumber, formatDate, getAvatarColor, getInitials, getCachedArtist, setCachedArtist, optimizeUploadImage } from '../utils/helpers';
 import type { Artist } from '../types';
 
 const formatBiographyParagraphs = (biography: string): string[] => {
@@ -50,8 +50,8 @@ const ArtistProfile: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [artist, setArtist] = useState<Artist | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [artist, setArtist] = useState<Artist | null>(() => (id ? getCachedArtist(id) : null));
+  const [loading, setLoading] = useState(() => !(id && getCachedArtist(id)));
   const [actionLoading, setActionLoading] = useState(false);
   const [rejectNotes, setRejectNotes] = useState('');
   const [showRejectModal, setShowRejectModal] = useState(false);
@@ -69,13 +69,22 @@ const ArtistProfile: React.FC = () => {
   }, [id]);
 
   const loadArtist = async (artistId: string) => {
-    setLoading(true);
+    const cached = getCachedArtist(artistId);
+    if (cached) {
+      setArtist(cached);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
     try {
       const res = await artistsApi.getById(artistId);
       setArtist(res.data.data);
+      setCachedArtist(res.data.data);
     } catch (e) {
-      toast.error('Failed to load artist');
-      navigate('/artists');
+      if (!cached) {
+        toast.error('Failed to load artist');
+        navigate('/artists');
+      }
     }
     setLoading(false);
   };
@@ -127,13 +136,15 @@ const ArtistProfile: React.FC = () => {
 
   const handleImageUpload = async (file: File, field: 'image' | 'coverPhoto') => {
     if (!artist) return;
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('field', field);
     setUploadingImage(field);
     try {
+      const optimized = await optimizeUploadImage(file, field);
+      const formData = new FormData();
+      formData.append('file', optimized);
+      formData.append('field', field);
       const res = await artistsApi.uploadImage(artist._id, formData);
       setArtist(res.data.data);
+      setCachedArtist(res.data.data);
       toast.success(field === 'image' ? 'Profile photo updated' : 'Cover photo updated');
     } catch (e: any) {
       toast.error(e.response?.data?.message || 'Upload failed');
@@ -180,14 +191,14 @@ const ArtistProfile: React.FC = () => {
           }}
         >
           {artist.coverPhoto ? (
-            <>
-              <img
-                src={artist.coverPhoto}
-                alt="Cover"
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/15" />
-            </>
+            <img
+              src={artist.coverPhoto}
+              alt="Cover"
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
+              className="w-full h-full object-cover"
+            />
           ) : (
             <>
               <div className="absolute -right-12 -top-16 w-56 h-56 rounded-full border border-white/20" />
@@ -250,7 +261,7 @@ const ArtistProfile: React.FC = () => {
                 onClick={() => profileInputRef.current?.click()}
               >
                 {artist.image ? (
-                  <img src={artist.image} alt={displayName} className="w-full h-full object-cover" />
+                  <img src={artist.image} alt={displayName} loading="eager" fetchPriority="high" decoding="async" className="w-full h-full object-cover" />
                 ) : (
                   getInitials(displayName)
                 )}

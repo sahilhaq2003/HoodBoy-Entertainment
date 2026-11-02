@@ -12,7 +12,7 @@ import { useAuth } from '../contexts/AuthContext';
 import StatusBadge from '../components/ui/StatusBadge';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import ArtistCard from '../components/artists/ArtistCard';
-import { formatCurrency, formatNumber, getInitials, getAvatarColor } from '../utils/helpers';
+import { formatCurrency, formatNumber, getInitials, getAvatarColor, cacheArtists } from '../utils/helpers';
 
 const Artists: React.FC = () => {
   const navigate = useNavigate();
@@ -42,6 +42,7 @@ const Artists: React.FC = () => {
         artistsApi.getOnboardingStats(),
       ]);
       setArtists(artistsRes.data.data);
+      cacheArtists(artistsRes.data.data);
       setOnboardingStats(statsRes.data.data);
     } catch (e) { console.error(e); toast.error('Failed to load artists'); }
     setLoading(false);
