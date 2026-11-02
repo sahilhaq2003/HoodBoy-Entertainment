@@ -173,27 +173,29 @@ const ArtistProfile: React.FC = () => {
       {/* Cover Photo & Header */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden dark:bg-gray-800 dark:border-gray-700">
         {/* Cover Photo */}
-        <div className="relative h-40 md:h-52">
+        <div
+          className="relative h-40 md:h-52 overflow-hidden"
+          style={{
+            background: `linear-gradient(135deg, ${getAvatarColor(displayName)} 0%, ${getAvatarColor(displayName)}99 55%, ${getAvatarColor(displayName)}44 100%)`,
+          }}
+        >
           {artist.coverPhoto ? (
-            <img
-              src={artist.coverPhoto}
-              alt="Cover"
-              className="w-full h-full object-cover"
-            />
+            <>
+              <img
+                src={artist.coverPhoto}
+                alt="Cover"
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/15" />
+            </>
           ) : (
-            <div
-              className="w-full h-full"
-              style={{
-                background: `linear-gradient(135deg, ${getAvatarColor(displayName)}30 0%, ${getAvatarColor(displayName)}10 100%)`,
-              }}
-            />
+            <>
+              <div className="absolute -right-12 -top-16 w-56 h-56 rounded-full border border-white/20" />
+              <div className="absolute -right-4 -top-8 w-36 h-36 rounded-full border border-white/10" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-white/10" />
+              <Disc3 size={140} strokeWidth={1} className="absolute -bottom-8 -right-6 text-white/15" />
+            </>
           )}
-          <div
-            className="absolute inset-0"
-            style={{
-              background: 'linear-gradient(to top, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.3) 50%, transparent 100%)',
-            }}
-          />
 
           {/* Cover photo upload button */}
           <input
@@ -209,15 +211,16 @@ const ArtistProfile: React.FC = () => {
           <button
             onClick={() => coverInputRef.current?.click()}
             disabled={uploadingImage === 'coverPhoto'}
-            className="absolute top-3 right-3 p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-white/80 transition-colors shadow-sm dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800/80"
+            className="absolute top-3 right-3 px-3 py-1.5 rounded-lg bg-black/35 text-white hover:bg-black/55 backdrop-blur-sm transition-colors shadow-sm flex items-center gap-1.5 text-xs font-medium"
             title="Change cover photo"
           >
-            <Camera size={16} />
+            <Camera size={15} />
+            <span className="hidden sm:inline">{uploadingImage === 'coverPhoto' ? 'Uploading…' : 'Change Banner'}</span>
           </button>
           {/* Back button */}
           <button
             onClick={() => navigate('/artists')}
-            className="absolute top-3 left-3 p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-white/80 transition-colors shadow-sm dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800/80"
+            className="absolute top-3 left-3 p-2 rounded-lg bg-black/35 text-white hover:bg-black/55 backdrop-blur-sm transition-colors shadow-sm"
           >
             <ArrowLeft size={18} />
           </button>

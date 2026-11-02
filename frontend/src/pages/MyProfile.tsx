@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Camera, Save, Loader2, AlertCircle, User, Mail, Phone, MapPin, Music2, Link2, Wallet, Building2, Trash2 } from 'lucide-react';
+import { Camera, Save, Loader2, AlertCircle, User, Mail, Phone, MapPin, Music2, Link2, Wallet, Building2, Trash2, Disc3 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { dashboardApi } from '../services/api';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
@@ -138,13 +138,25 @@ const MyProfile: React.FC = () => {
     <div className="space-y-6 max-w-5xl mx-auto">
       {/* Header */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden dark:bg-gray-800 dark:border-gray-700">
-        <div className="relative h-40 md:h-52">
+        <div
+          className="relative h-40 md:h-52 overflow-hidden"
+          style={{
+            background: `linear-gradient(135deg, ${getAvatarColor(displayName)} 0%, ${getAvatarColor(displayName)}99 55%, ${getAvatarColor(displayName)}44 100%)`,
+          }}
+        >
           {profile.coverPhoto ? (
-            <img src={profile.coverPhoto} alt="Cover" className="w-full h-full object-cover" />
+            <>
+              <img src={profile.coverPhoto} alt="Cover" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/15" />
+            </>
           ) : (
-            <div className="w-full h-full" style={{ background: `linear-gradient(135deg, ${getAvatarColor(displayName)}40 0%, ${getAvatarColor(displayName)}15 100%)` }} />
+            <>
+              <div className="absolute -right-12 -top-16 w-56 h-56 rounded-full border border-white/20" />
+              <div className="absolute -right-4 -top-8 w-36 h-36 rounded-full border border-white/10" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-white/10" />
+              <Disc3 size={140} strokeWidth={1} className="absolute -bottom-8 -right-6 text-white/15" />
+            </>
           )}
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.2) 50%, transparent 100%)' }} />
           <input
             ref={coverInputRef}
             type="file"
@@ -155,14 +167,15 @@ const MyProfile: React.FC = () => {
           <button
             onClick={() => coverInputRef.current?.click()}
             disabled={uploading === 'coverPhoto'}
-            className="absolute top-3 right-3 p-2 rounded-lg bg-white/90 text-gray-500 hover:text-gray-700 shadow-sm transition-colors"
+            className="absolute top-3 right-3 px-3 py-1.5 rounded-lg bg-black/35 text-white hover:bg-black/55 backdrop-blur-sm shadow-sm transition-colors flex items-center gap-1.5 text-xs font-medium"
             title="Change cover photo"
           >
-            {uploading === 'coverPhoto' ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
+            {uploading === 'coverPhoto' ? <Loader2 size={15} className="animate-spin" /> : <Camera size={15} />}
+            <span className="hidden sm:inline">{uploading === 'coverPhoto' ? 'Uploading…' : 'Change Banner'}</span>
           </button>
           {editing && profile.coverPhoto && (
-            <button onClick={() => handleRemoveImage('coverPhoto')} disabled={uploading === 'coverPhoto'} className="absolute top-3 right-12 p-2 rounded-lg bg-white/90 text-red-500 hover:text-red-700 shadow-sm transition-colors" title="Remove cover photo">
-              <Trash2 size={16} />
+            <button onClick={() => handleRemoveImage('coverPhoto')} disabled={uploading === 'coverPhoto'} className="absolute top-3 right-36 p-2 rounded-lg bg-black/35 text-red-300 hover:bg-red-500/80 hover:text-white backdrop-blur-sm shadow-sm transition-colors" title="Remove cover photo">
+              <Trash2 size={15} />
             </button>
           )}
         </div>

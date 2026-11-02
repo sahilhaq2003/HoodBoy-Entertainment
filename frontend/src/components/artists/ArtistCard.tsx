@@ -1,4 +1,4 @@
-import React from 'react';
+ import React from 'react';
 import { Music, DollarSign, TrendingUp, Calendar, FileText, ArrowUpRight, Edit2, Trash2, Disc3 } from 'lucide-react';
 import type { Artist } from '../../types';
 import StatusBadge from '../ui/StatusBadge';
@@ -23,15 +23,30 @@ const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onOpen, onDelete }) => 
       className="group relative bg-white dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm hover:shadow-[0_24px_50px_-16px_rgba(79,70,229,0.28)] hover:border-gray-300 dark:hover:border-gray-600 hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden flex flex-col"
       onClick={() => onOpen(artist)}
     >
-      {/* Cover banner */}
+      {/* Cover banner (displays artist.coverPhoto when set, otherwise signature gradient banner) */}
       <div
-        className="relative h-20 flex-shrink-0 overflow-hidden"
+        className="relative h-24 flex-shrink-0 overflow-hidden"
         style={{ background: `linear-gradient(135deg, ${color} 0%, ${color}99 55%, ${color}44 100%)` }}
       >
-        <div className="absolute -right-10 -top-12 w-40 h-40 rounded-full border border-white/20" />
-        <div className="absolute -right-3 -top-6 w-24 h-24 rounded-full border border-white/10" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-white/10" />
-        <Disc3 size={84} strokeWidth={1} className="absolute -bottom-5 -right-4 text-white/15" />
+        {artist.coverPhoto ? (
+          <>
+            <img
+              src={artist.coverPhoto}
+              alt={`${name} banner`}
+              loading="lazy"
+              decoding="async"
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-black/10 to-black/20" />
+          </>
+        ) : (
+          <>
+            <div className="absolute -right-10 -top-12 w-40 h-40 rounded-full border border-white/20" />
+            <div className="absolute -right-3 -top-6 w-24 h-24 rounded-full border border-white/10" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-white/10" />
+            <Disc3 size={84} strokeWidth={1} className="absolute -bottom-5 -right-4 text-white/15" />
+          </>
+        )}
 
         <div className="absolute top-2.5 right-2.5 z-20">
           <StatusBadge status={artist.status} />
@@ -40,14 +55,14 @@ const ArtistCard: React.FC<ArtistCardProps> = ({ artist, onOpen, onDelete }) => 
         <div className="absolute top-2.5 left-2.5 z-20 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
           <button
             onClick={(e) => { e.stopPropagation(); onOpen(artist); }}
-            className="w-7 h-7 rounded-lg bg-black/25 text-white hover:bg-black/45 backdrop-blur-sm flex items-center justify-center transition-all"
+            className="w-7 h-7 rounded-lg bg-black/35 text-white hover:bg-black/55 backdrop-blur-sm flex items-center justify-center transition-all"
             title="View / Edit"
           >
             <Edit2 size={13} />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(artist._id); }}
-            className="w-7 h-7 rounded-lg bg-black/25 text-white hover:bg-red-500/80 backdrop-blur-sm flex items-center justify-center transition-all"
+            className="w-7 h-7 rounded-lg bg-black/35 text-white hover:bg-red-500/80 backdrop-blur-sm flex items-center justify-center transition-all"
             title="Delete"
           >
             <Trash2 size={13} />

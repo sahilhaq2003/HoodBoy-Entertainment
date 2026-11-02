@@ -1100,7 +1100,16 @@ const Distribution: React.FC = () => {
             {user?.role !== 'artist' && (
               <label className="text-xs font-semibold text-[var(--hbe-muted)]">
                 Primary artist *
-                <select className={`${fieldErrors.artist ? errInput : input} mt-1`} value={form.artist} onChange={e => setForm({ ...form, artist: e.target.value })}>
+                <select className={`${fieldErrors.artist ? errInput : input} mt-1`} value={form.artist} onChange={e => {
+                  const nextId = e.target.value;
+                  const picked = artists.find(a => a._id === nextId);
+                  const pickedSpotify = picked?.socialLinks?.spotify?.trim() || '';
+                  setForm(prev => ({
+                    ...prev,
+                    artist: nextId,
+                    spotifyArtistUrl: prev.spotifyArtistUrl.trim() ? prev.spotifyArtistUrl : pickedSpotify,
+                  }));
+                }}>
                   <option value="">Select artist</option>
                   {artists.map(a => <option key={a._id} value={a._id}>{a.artistName || a.stageName || a.name}</option>)}
                 </select>
