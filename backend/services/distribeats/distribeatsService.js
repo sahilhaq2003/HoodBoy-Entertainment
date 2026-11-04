@@ -123,7 +123,17 @@ const submitRelease = async (release, artist) => {
       const payload = mapRelease(release, artist);
       const mappedErrors = validateMappedPayload(payload, catalogue);
       if (mappedErrors.length) throw validationFailure(mappedErrors);
-      remote = await client.post('/releases', payload, { idempotencyKey: `hbe-release-${release._id}` });
+      try {
+        remote = await client.post('/releases', payload, { idempotencyKey: `hbe-release-${release._id}` });
+      } catch (postErr) {
+        if (payload.label && /label must match your registered label name/i.test(String(postErr?.message || ''))) {
+          const fallbackPayload = { ...payload };
+          delete fallbackPayload.label;
+          remote = await client.post('/releases', fallbackPayload, { idempotencyKey: `hbe-release-${release._id}-defaultlabel` });
+        } else {
+          throw postErr;
+        }
+      }
       const remoteId = remote?.id || remote?.release_id;
       if (!remoteId) throw new DistribeatsError('Distribeats did not return a release id.', { code: 'DISTRIBEATS_RELEASE_ID_MISSING' });
       release.distribeatsReleaseId = String(remoteId);
