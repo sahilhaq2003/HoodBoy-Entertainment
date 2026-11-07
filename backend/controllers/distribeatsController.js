@@ -3,6 +3,7 @@ const Artist = require('../models/Artist');
 const DistribeatsWebhookEvent = require('../models/DistribeatsWebhookEvent');
 const service = require('../services/distribeats/distribeatsService');
 const { verifyWebhook } = require('../services/distribeats/distribeatsWebhook');
+const { notifyDistribution, notifySystemAlert } = require('../services/emailService');
 
 const emit = (event, data) => { try { global.io?.to('distribeats:admin').emit(event, data); } catch {} };
 const emitRelease = release => {
@@ -184,6 +185,7 @@ exports.webhook = async (req, res) => {
       return res.status(200).json({ received: true, duplicate: true });
     }
     if (deliveryId) release.webhookEventKeys.push(deliveryId);
+    const previousStatus = release.status;
     release.distribeatsRawStatus = remote.status || release.distribeatsRawStatus;
     release.status = service.normalizeStatus(remote.status);
     release.upc ||= remote.upc || '';
@@ -202,10 +204,12 @@ exports.webhook = async (req, res) => {
       releaseTitle: release.title, remoteReleaseId: String(remote.id), remoteStatus: remote.status || '',
     });
     emitRelease(release);
+    await notifyDistribution(release, previousStatus);
     emit('distribeats:webhook_received', { event, releaseId: String(release._id), title: release.title, at: new Date() });
     res.status(200).json({ received: true });
   } catch (error) {
     if (audit) await DistribeatsWebhookEvent.create({ ...audit, status: 'failed', message: error.message }).catch(() => {});
+    await notifySystemAlert({ code: 'distribeats_webhook_failed', title: 'DistriBeats webhook processing failed', message: error.message, entityId: audit?.deliveryId || '', bucketMinutes: 30 });
     res.status(error.status || 401).json({ received: false, message: error.message });
   }
 };

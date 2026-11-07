@@ -13,6 +13,7 @@ const eventSchema = new mongoose.Schema({
   eventDate: { type: Date, required: true },
   startTime: { type: String, default: '' },
   endTime: { type: String, default: '' },
+  timeZone: { type: String, required: true, default: 'UTC' },
   venueName: { type: String, default: '' },
   location: { type: String, required: true },
   artists: [{ type: objectId, ref: 'Artist' }],

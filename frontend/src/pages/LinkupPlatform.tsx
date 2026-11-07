@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import { linkupPlatformApi } from '../services/api';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
+import EmailSettingsPanel from '../components/linkup/EmailSettingsPanel';
 
 type RecordItem = Record<string, any> & { _id: string };
 type Field = { key: string; label: string; type?: string; required?: boolean; options?: [string,string][]; resource?: string; multiple?: boolean; help?: string };
@@ -11,11 +12,19 @@ type Section = { key: string; label: string; icon: React.ReactNode; fields?: Fie
 const PAGE_SIZE = 25;
 
 const statusOptions = (values: string[]): [string,string][] => values.map(value => [value, value.replaceAll('_', ' ').replace(/\b\w/g, c => c.toUpperCase())]);
+const browserTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+const supportedTimeZones = (() => {
+  const zones = typeof (Intl as any).supportedValuesOf === 'function'
+    ? (Intl as any).supportedValuesOf('timeZone') as string[]
+    : ['UTC', 'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'Europe/London', 'Europe/Paris', 'Asia/Colombo', 'Asia/Dubai', 'Asia/Singapore', 'Asia/Tokyo', 'Australia/Sydney'];
+  return [...new Set(['UTC', browserTimeZone, ...zones])].map((zone): [string,string] => [zone, zone.replaceAll('_', ' ')]);
+})();
 const sections: Section[] = [
   { key: 'overview', label: 'Overview', icon: <BarChart3 size={17}/> },
   { key: 'events', label: 'Events', icon: <CalendarDays size={17}/>, columns: ['banner','title','eventDate','venueName','status'], fields: [
     {key:'title',label:'Event name',required:true},{key:'description',label:'Description',type:'textarea'},{key:'banner',label:'Event cover image',type:'image',help:'Recommended: 1600 × 900 pixels'},{key:'category',label:'Category'},
     {key:'eventDate',label:'Event date',type:'date',required:true},{key:'startTime',label:'Start time',type:'time'},{key:'endTime',label:'End time',type:'time'},
+    {key:'timeZone',label:'Event time zone',type:'select',options:supportedTimeZones,required:true,help:'Select the venue location time zone. Emails and reminders use this zone, including daylight-saving changes.'},
     {key:'venueName',label:'Venue name'},{key:'location',label:'Address / location',required:true},{key:'bookingOpensAt',label:'Booking opens',type:'datetime-local'},
     {key:'bookingClosesAt',label:'Booking closes',type:'datetime-local'},{key:'status',label:'Status',type:'select',options:statusOptions(['draft','published','sold_out','completed','cancelled'])},{key:'ageRestricted',label:'Alcohol / age restricted event',type:'checkbox'} ] },
   { key: 'slots', label: 'Performance Slots', icon: <Mic2 size={17}/>, columns: ['title','event','scheduledAt','price','availableQuantity','status'], fields: [
@@ -70,6 +79,13 @@ const show = (value: any) => {
 const localDateValue = (date = new Date()) => {
   const offset = date.getTimezoneOffset() * 60_000;
   return new Date(date.getTime() - offset).toISOString().slice(0, 10);
+};
+
+const dateValueInTimeZone = (timeZone = browserTimeZone, date = new Date()) => {
+  try {
+    const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone, year:'numeric', month:'2-digit', day:'2-digit' }).formatToParts(date).filter(part=>part.type!=='literal').map(part=>[part.type,part.value]));
+    return `${parts.year}-${parts.month}-${parts.day}`;
+  } catch { return localDateValue(date); }
 };
 
 const localDateTimeValue = (date = new Date()) => {
@@ -138,12 +154,12 @@ const LinkupPlatform: React.FC = () => {
   useEffect(() => {
     if (!formOpen || editing) return;
     const timer = window.setTimeout(() => {
-      document.querySelectorAll<HTMLInputElement>('input[type="date"]').forEach(input => { input.min = localDateValue(); });
+      document.querySelectorAll<HTMLInputElement>('input[type="date"]').forEach(input => { input.min = active === 'events' ? dateValueInTimeZone(form.timeZone) : localDateValue(); });
       document.querySelectorAll<HTMLInputElement>('input[type="datetime-local"]').forEach(input => { input.min = localDateTimeValue(); });
       document.querySelectorAll<HTMLInputElement>('input[type="number"]').forEach(input => { input.min = '0'; });
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [formOpen, editing, active]);
+  }, [formOpen, editing, active, form.timeZone]);
 
   const load = async () => {
     setLoading(true);
@@ -164,7 +180,7 @@ const LinkupPlatform: React.FC = () => {
       else if (field.multiple) next[field.key] = (raw || []).map((item:any) => String(item?._id || item)).filter(Boolean);
       else if (field.type === 'date' && raw) next[field.key] = String(raw).slice(0,10);
       else if (field.type === 'datetime-local' && raw) next[field.key] = String(raw).slice(0,16);
-      else next[field.key] = raw?._id ?? raw ?? (field.type === 'checkbox' ? true : '');
+      else next[field.key] = raw?._id ?? raw ?? (field.key === 'timeZone' ? browserTimeZone : field.type === 'checkbox' ? true : '');
     }
     const resourcesToLoad=[...new Set([
       ...(section.fields || []).filter(field=>field.type==='relation'&&field.resource).map(field=>field.resource!),
@@ -216,7 +232,7 @@ const LinkupPlatform: React.FC = () => {
           try { const url = new URL(String(raw)); if (!['http:','https:'].includes(url.protocol)) throw new Error(); }
           catch { throw new Error(`${field.label} must be a valid http or https URL.`); }
         }
-        if (!editing && raw && field.type === 'date' && String(raw) < localDateValue()) throw new Error(`${field.label} cannot be in the past.`);
+        if (!editing && raw && field.type === 'date' && String(raw) < (active === 'events' ? dateValueInTimeZone(payload.timeZone) : localDateValue())) throw new Error(`${field.label} cannot be in the past at the selected location.`);
         if (!editing && raw && field.type === 'datetime-local' && String(raw) < localDateTimeValue()) throw new Error(`${field.label} cannot be in the past.`);
       }
       if (payload.startTime && payload.endTime && payload.endTime <= payload.startTime) throw new Error('End time must be later than start time.');
@@ -309,7 +325,7 @@ const LinkupPlatform: React.FC = () => {
     {loading ? <div className="flex min-h-72 flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm"><span className="grid h-12 w-12 place-items-center rounded-2xl bg-violet-50"><RefreshCw className="animate-spin text-violet-600"/></span><p className="mt-3 text-sm font-semibold text-slate-600">Loading {section.label.toLowerCase()}…</p><p className="mt-1 text-xs text-slate-400">Preparing the latest information</p></div> : active==='overview' ? <>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{stats.map(([label,value],index)=><div key={String(label)} className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-lg hover:shadow-violet-100/60"><div className="flex items-center justify-between"><div className="text-[11px] font-bold uppercase tracking-[.12em] text-slate-500">{label}</div><span className={`h-2.5 w-2.5 rounded-full ${index===5?'bg-amber-400':index===6?'bg-emerald-400':'bg-violet-400'}`} /></div><div className="mt-3 text-3xl font-black tracking-tight text-slate-900">{label==='Verified Revenue'?`$${Number(value||0).toLocaleString()}`:Number(value||0).toLocaleString()}</div></div>)}</div>
       <div className="flex flex-col justify-between gap-5 rounded-2xl border border-violet-200 bg-gradient-to-r from-violet-50 to-fuchsia-50 p-6 md:flex-row md:items-center"><div><h2 className="text-xl font-extrabold text-slate-900">Build your next event</h2><p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">Create the event first, then configure seating, vendors and menu options. Build packages last so every offer connects to live inventory and accepted bank accounts.</p></div><button onClick={()=>switchSection('events')} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-violet-200 transition hover:bg-violet-700"><Plus size={16}/> Create an event</button></div>
-    </> : active==='settings' ? <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8"><div className="mb-5 grid h-12 w-12 place-items-center rounded-xl bg-violet-100 text-violet-700"><Settings size={22}/></div><h2 className="text-xl font-extrabold text-slate-900">Platform defaults</h2><p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Chair and table prices are configured per seating record. Taxes, service fees, payment deadlines and accepted methods are configured per package, keeping every public price database-driven.</p></div> : <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    </> : active==='settings' ? <EmailSettingsPanel/> : <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="flex flex-col gap-4 border-b border-slate-200 bg-slate-50/60 p-5 md:flex-row md:items-center md:justify-between"><div><div className="flex items-center gap-2"><span className="text-violet-700">{section.icon}</span><h2 className="text-lg font-extrabold text-slate-900">{section.label}</h2></div><p className="mt-1 text-xs font-medium text-slate-500">{visibleRecords.length} {visibleRecords.length===1?'record':'records'} available</p></div><div className="flex w-full flex-col gap-2 sm:flex-row md:w-auto"><label className="relative min-w-0 sm:min-w-64"><Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder={`Search ${section.label.toLowerCase()}…`} className="h-11 w-full rounded-xl border border-slate-300 bg-white pl-9 pr-3 text-sm outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-100"/></label>{active==='bookings'&&<button onClick={exportBookings} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 transition hover:border-violet-300 hover:text-violet-700"><Download size={16}/> Export CSV</button>}{!section.readOnly&&<button onClick={()=>openForm()} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 text-sm font-bold text-white shadow-md shadow-violet-200 transition hover:-translate-y-0.5 hover:shadow-lg"><Plus size={16}/> Add {section.label.replace(/s$/, '')}</button>}</div></div>
       <div className="overflow-x-auto"><table className="w-full text-sm"><thead className="border-b border-slate-200 bg-white text-[11px] font-bold uppercase tracking-wider text-slate-500"><tr>{section.columns?.map(column=><th key={column} className="px-5 py-4 text-left">{['banner','logo','image'].includes(column)?'Image':column.replace(/([A-Z])/g,' $1')}</th>)}<th className="px-5 py-4 text-right">Actions</th></tr></thead><tbody className="divide-y divide-slate-100">{paginatedRecords.map(record=><tr key={record._id} className="transition hover:bg-violet-50/30">{section.columns?.map(column=><td key={column} className="max-w-[260px] truncate whitespace-nowrap px-5 py-4 font-medium text-slate-700">{['banner','logo','image'].includes(column)?(record[column]?<img src={record[column]} alt="" className="h-12 w-16 rounded-xl border border-slate-200 object-cover shadow-sm"/>:<span className="grid h-12 w-16 place-items-center rounded-xl bg-slate-100 text-slate-400"><ImagePlus size={18}/></span>):column.toLowerCase().includes('amount')||column.toLowerCase().includes('price')?`${record.currency||'$'} ${Number(record[column]||0).toFixed(2)}`:show(record[column])}</td>)}<td className="px-5 py-3"><div className="flex flex-wrap justify-end gap-2">{active==='transfers'&&<button onClick={()=>downloadReceipt(record)} className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-bold text-violet-700"><Download size={14}/> Receipt</button>}{active==='transfers'&&record.verificationStatus==='awaiting_verification'&&<><button onClick={()=>requestVerification(record,'approve')} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700"><Check size={14}/> Approve</button><button onClick={()=>requestVerification(record,'reject')} className="inline-flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-2 text-xs font-bold text-red-700"><X size={14}/> Reject</button><button onClick={()=>requestVerification(record,'request_information')} className="rounded-lg bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700">Request info</button></>}{active==='bookings'&&!['cancelled','completed','expired'].includes(record.bookingStatus)&&<button onClick={()=>setSensitiveAction({kind:'booking',record,action:'cancel'})} className="rounded-lg bg-red-50 px-3 py-2 text-xs font-bold text-red-700">Cancel booking</button>}{!section.readOnly&&<><button onClick={()=>openForm(record)} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700"><Pencil size={14}/> Edit</button><button onClick={()=>setDeleteId(record._id)} className="inline-flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-2 text-xs font-bold text-red-700"><Trash2 size={14}/> Delete</button></>}</div></td></tr>)}</tbody></table>{!visibleRecords.length&&<div className="flex min-h-64 flex-col items-center justify-center px-5 py-12 text-center"><div className="mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-violet-100 text-violet-700">{section.icon}</div><h3 className="text-base font-extrabold text-slate-900">No {section.label.toLowerCase()} yet</h3><p className="mt-1 max-w-sm text-sm text-slate-500">{search?'No records match your current search. Try another keyword.':'Create your first record to start managing this section.'}</p>{!section.readOnly&&!search&&<button onClick={()=>openForm()} className="mt-5 inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-violet-200"><Plus size={16}/> Add {section.label.replace(/s$/, '')}</button>}</div>}</div>
       {visibleRecords.length>PAGE_SIZE&&<div className="flex flex-col gap-3 border-t border-slate-200 bg-slate-50/70 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"><p className="text-xs font-semibold text-slate-500">Showing <span className="text-slate-800">{(page-1)*PAGE_SIZE+1}–{Math.min(page*PAGE_SIZE,visibleRecords.length)}</span> of <span className="text-slate-800">{visibleRecords.length}</span> records</p><div className="flex items-center gap-2"><button type="button" disabled={page===1} onClick={()=>setPage(current=>Math.max(1,current-1))} className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 text-sm font-bold text-slate-700 shadow-sm transition hover:border-violet-300 hover:text-violet-700 disabled:cursor-not-allowed disabled:opacity-40"><ChevronLeft size={16}/> Previous</button><span className="min-w-24 text-center text-xs font-bold text-slate-500">Page {page} of {totalPages}</span><button type="button" disabled={page===totalPages} onClick={()=>setPage(current=>Math.min(totalPages,current+1))} className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 text-sm font-bold text-slate-700 shadow-sm transition hover:border-violet-300 hover:text-violet-700 disabled:cursor-not-allowed disabled:opacity-40">Next <ChevronRight size={16}/></button></div></div>}

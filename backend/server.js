@@ -133,9 +133,10 @@ const listen = () => httpServer.listen(PORT, HOST, () => {
 const start = async () => {
   try {
     const sequelize = await connectDB();
-    const srv = listen();
     const { ensureSchema } = require('./lib/ensureSchema');
-    ensureSchema(sequelize).catch(error => console.error(`MySQL schema sync warning: ${error.message}`));
+    await ensureSchema(sequelize);
+    require('./services/emailService').startEmailWorkers();
+    const srv = listen();
     const holdTimer = setInterval(() => {
       require('./controllers/linkupPlatformController').expireHolds().catch(error => console.error(`Linkup hold expiry warning: ${error.message}`));
     }, Math.max(60000, Number(process.env.LINKUP_HOLD_SWEEP_MS || 300000)));

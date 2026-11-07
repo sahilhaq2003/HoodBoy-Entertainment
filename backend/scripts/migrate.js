@@ -10,6 +10,8 @@ const migrations = [
   require('../migrations/005_linkup_booking_platform'),
   require('../migrations/006_google_customer_auth'),
   require('../migrations/007_enforce_google_customer_roles'),
+  require('../migrations/008_email_notification_system'),
+  require('../migrations/009_event_timezones'),
 ];
 const command = process.argv[2] || 'up';
 

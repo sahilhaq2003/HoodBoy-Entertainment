@@ -5,6 +5,7 @@ const ctrl = require('../controllers/lnkUpController');
 const platform = require('../controllers/linkupPlatformController');
 const receiptUpload = require('../middleware/linkupReceiptUpload');
 const imageUpload = require('../middleware/linkupImageUpload');
+const emailNotifications = require('../controllers/emailNotificationController');
 
 // Public storefront. These routes expose only published inventory and the
 // minimum bank details needed to complete a manual transfer.
@@ -19,6 +20,10 @@ router.get('/public/bookings/:reference/status', protect, platform.bookingStatus
 
 router.use(protect);
 router.get('/platform/overview', checkPermission('theLnkUp', 'read'), platform.overview);
+router.get('/platform/email/settings', emailNotifications.requireAdmin, emailNotifications.getConfiguration);
+router.put('/platform/email/settings', emailNotifications.requireAdmin, emailNotifications.updateConfiguration);
+router.post('/platform/email/test', emailNotifications.requireAdmin, emailNotifications.testEmail);
+router.post('/platform/email/:id/retry', emailNotifications.requireAdmin, emailNotifications.retry);
 router.post('/platform/upload-image', checkPermission('theLnkUp', 'write'), imageUpload.single('image'), platform.uploadImage);
 router.get('/platform/bookings-export.csv', checkPermission('theLnkUp', 'export'), platform.exportBookings);
 router.post('/platform/transfers/:id/verify', checkPermission('theLnkUp', 'write'), (req, res, next) => req.user.role === 'admin' ? next() : res.status(403).json({ success: false, message: 'Only administrators can verify payments' }), platform.verifyTransfer);

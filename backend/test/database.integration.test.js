@@ -12,6 +12,9 @@ const RoyaltyLedger = require('../models/RoyaltyLedger');
 const Ownership = require('../models/Ownership');
 const SongMetadata = require('../models/SongMetadata');
 const File = require('../models/File');
+const EmailNotification = require('../models/EmailNotification');
+const EmailSettings = require('../models/EmailSettings');
+const emailService = require('../services/emailService');
 const { LinkupEvent, LinkupSeating, LinkupBankAccount, LinkupPackage, LinkupBooking, LinkupFoodVendor, LinkupFoodItem } = require('../models/LinkupPlatform');
 const { _priceBooking, _preparePackageCheckout } = require('../controllers/linkupPlatformController');
 
@@ -19,12 +22,17 @@ const runId = `AUTOMATED_TEST_${crypto.randomUUID()}`;
 const createdIds = { artists: [], finances: [], royalties: [], ownerships: [], metadata: [], files: [], linkupEvents: [], linkupSeating: [], linkupBanks: [], linkupPackages: [], linkupVendors: [], linkupFood: [] };
 const sourceTotal = (value) => ({ streaming: value, publishing: 0, mechanical: 0, performance: 0, sync: 0, merchandise: 0, other: 0 });
 let testArtist;
+let originalEmailSettings;
+let originalEmailEnvironment;
 const hasDb = ['DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASSWORD'].every(key => process.env[key]);
 const dbtest = hasDb ? test : test.skip;
 
 test.before(async () => {
   if (!hasDb) return;
   await connectDB();
+  originalEmailEnvironment = process.env.EMAIL_NOTIFICATIONS_ENABLED;
+  const currentEmailSettings = await EmailSettings.findOne({ key: 'global' });
+  originalEmailSettings = currentEmailSettings?.toObject() || null;
   testArtist = await Artist.create({ legalName: `${runId} Legal`, artistName: `${runId} Artist`, email: `${runId.toLowerCase()}@example.test`, status: 'active' });
   createdIds.artists.push(testArtist._id);
 });
@@ -46,7 +54,14 @@ test.after(async () => {
     LinkupSeating.deleteMany({ _id: { $in: createdIds.linkupSeating } }),
     LinkupBankAccount.deleteMany({ _id: { $in: createdIds.linkupBanks } }),
     LinkupEvent.deleteMany({ _id: { $in: createdIds.linkupEvents } }),
+    EmailNotification.deleteMany({ relatedEntityId: runId }),
   ]);
+  process.env.EMAIL_NOTIFICATIONS_ENABLED = originalEmailEnvironment;
+  if (originalEmailSettings) {
+    const settings = await EmailSettings.findOne({ key: 'global' });
+    Object.assign(settings, originalEmailSettings);
+    await settings.save();
+  } else await EmailSettings.deleteMany({ key: 'global' });
   await orm.disconnect();
 });
 
@@ -124,4 +139,35 @@ dbtest('Linkup package pricing is server-derived and package bank accounts persi
   assert.equal(quote.taxAmount, 16.5);
   assert.equal(quote.serviceFeeAmount, 8.25);
   assert.equal(quote.totalAmount, 189.75);
+});
+
+dbtest('email queue is idempotent and records SMTP acceptance without sending real email', async () => {
+  process.env.EMAIL_NOTIFICATIONS_ENABLED = 'true';
+  process.env.SMTP_HOST ||= 'smtp.test.invalid';
+  process.env.SMTP_USER ||= 'test@example.test';
+  process.env.SMTP_PASSWORD ||= 'not-a-real-password';
+  let settings = await EmailSettings.findOne({ key: 'global' });
+  if (!settings) settings = new EmailSettings({ key: 'global' });
+  settings.enabled = true;
+  settings.bookingNotifications = true;
+  settings.adminRecipients = ['admin@example.test'];
+  await settings.save();
+  let sendCount = 0;
+  emailService._setTransporterForTest({
+    verify: async () => true,
+    sendMail: async () => { sendCount += 1; return { messageId: `mock-${runId}` }; },
+  });
+  const input = { recipientEmail: 'customer@example.test', notificationType: 'booking_created', templateName: 'booking_created', templateData: { customerName: 'Customer', bookingReference: runId }, relatedEntityType: 'booking', relatedEntityId: runId, dedupeKey: `email-test:${runId}`, category: 'booking' };
+  const first = await emailService.queueEmail(input);
+  const duplicate = await emailService.queueEmail(input);
+  assert.equal(String(first._id), String(duplicate._id));
+  await emailService.processQueue(5);
+  let sent = await EmailNotification.findById(first._id);
+  for (let attempt = 0; sent.deliveryStatus !== 'sent' && attempt < 20; attempt += 1) {
+    await new Promise(resolve => setTimeout(resolve, 20));
+    sent = await EmailNotification.findById(first._id);
+  }
+  assert.equal(sent.deliveryStatus, 'sent');
+  assert.equal(sendCount, 1);
+  assert.match(sent.providerMessageId, /^mock-/);
 });

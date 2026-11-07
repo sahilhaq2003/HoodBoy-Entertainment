@@ -4,8 +4,10 @@ const fs = require('node:fs');
 const connectDB = require('../config/db');
 const orm = require('../lib/mysql-orm');
 const { decryptField } = require('../lib/fieldEncryption');
+const { validTimeZone, calendarDateInZone } = require('../lib/eventTime');
 const User = require('../models/User');
 const { createNotification, createBulkNotifications } = require('../services/notificationService');
+const { notifyBooking, queueAdmin } = require('../services/emailService');
 const {
   LinkupEvent, LinkupPerformanceSlot, LinkupSeating, LinkupFoodVendor, LinkupFoodItem,
   LinkupAlcoholOption, LinkupBankAccount, LinkupPackage, LinkupBooking,
@@ -26,7 +28,7 @@ const population = {
   transfers: [['booking', 'bookingReference customerName email totalAmount currency'], ['bankAccount', 'bankName accountHolderName accountNumber currency']],
 };
 const editableFields = {
-  events: ['title','description','banner','gallery','category','eventDate','startTime','endTime','venueName','location','artists','bookingOpensAt','bookingClosesAt','status','ageRestricted'],
+  events: ['title','description','banner','gallery','category','eventDate','startTime','endTime','timeZone','venueName','location','artists','bookingOpensAt','bookingClosesAt','status','ageRestricted'],
   slots: ['event','title','description','durationMinutes','scheduledAt','price','totalQuantity','availableQuantity','bookingDeadline','status','bankTransferEnabled','bankAccounts','currency','paymentInstructions'],
   seating: ['event','name','seatingType','capacity','price','totalQuantity','availableQuantity','description','isActive'],
   vendors: ['name','contactPerson','phone','email','description','logo','address','events','isActive'],
@@ -45,6 +47,11 @@ const notifyAdmins = async notification => {
     if (admins.length) await createBulkNotifications(admins.map(admin => ({ userId: admin._id, ...notification })));
   } catch (error) { console.error(`Linkup notification warning: ${error.message}`); }
 };
+const eventCalendarDate = event => {
+  const date = new Date(event?.eventDate);
+  return Number.isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 10);
+};
+const isCurrentOrUpcomingEvent = event => eventCalendarDate(event) >= calendarDateInZone(event?.timeZone);
 const bankView = doc => {
   const value = doc?.toJSON ? doc.toJSON() : { ...doc };
   for (const field of ['accountNumber','routingNumber','swiftCode','iban']) value[field] = decryptField(value[field]);
@@ -125,6 +132,13 @@ const create = async (req, res) => {
     const Model = resources[name];
     if (!Model || !editableFields[name]) return fail(res, 404, 'Unknown Linkup resource');
     let input = pick(req.body, editableFields[name]);
+    if (name === 'events') {
+      if (!validTimeZone(input.timeZone)) throw new Error('Select a valid event time zone');
+      const parsedEventDate = input.eventDate ? new Date(input.eventDate) : null;
+      if (parsedEventDate && Number.isNaN(parsedEventDate.getTime())) throw new Error('Enter a valid event date');
+      const eventDate = parsedEventDate ? parsedEventDate.toISOString().slice(0, 10) : '';
+      if (eventDate && eventDate < calendarDateInZone(input.timeZone)) throw new Error('Event date cannot be in the past at the venue location');
+    }
     if (name === 'packages') input = await validatePackageData(input);
     const data = await Model.create(input);
     await LinkupAuditLog.create({ actor: req.user._id, action: 'create', entityType: name, entityId: data._id, details: { name: data.name || data.title || '' } });
@@ -139,6 +153,7 @@ const update = async (req, res) => {
     const Model = resources[name];
     if (!Model || !editableFields[name]) return fail(res, 404, 'Unknown Linkup resource');
     let input = pick(req.body, editableFields[name]);
+    if (name === 'events' && input.timeZone !== undefined && !validTimeZone(input.timeZone)) throw new Error('Select a valid event time zone');
     if (name === 'packages') {
       const current = await Model.findById(req.params.id);
       if (!current) return fail(res, 404, 'Record not found');
@@ -173,20 +188,20 @@ const remove = async (req, res) => {
 
 const overview = async (_req, res) => {
   try {
-    const [totalEvents, upcomingEvents, activePackages, totalBookings, confirmedBookings, pendingVerifications, slots, paid] = await Promise.all([
-      LinkupEvent.countDocuments({}), LinkupEvent.countDocuments({ status: 'published', eventDate: { $gte: new Date() } }),
+    const [totalEvents, publishedEvents, activePackages, totalBookings, confirmedBookings, pendingVerifications, slots, paid] = await Promise.all([
+      LinkupEvent.countDocuments({}), LinkupEvent.find({ status: 'published', eventDate: { $gte: new Date(Date.now() - 2 * 86400000) } }),
       LinkupPackage.countDocuments({ status: 'published' }), LinkupBooking.countDocuments({}), LinkupBooking.countDocuments({ bookingStatus: 'confirmed' }),
       LinkupBankTransfer.countDocuments({ verificationStatus: 'awaiting_verification' }), LinkupPerformanceSlot.countDocuments({ status: 'available' }),
       LinkupBooking.find({ paymentStatus: 'paid' }).lean(),
     ]);
+    const upcomingEvents = publishedEvents.filter(isCurrentOrUpcomingEvent).length;
     res.json({ success: true, data: { totalEvents, upcomingEvents, activePackages, totalBookings, confirmedBookings, pendingVerifications, availablePerformanceSlots: slots, verifiedRevenue: paid.reduce((sum, item) => sum + Number(item.totalAmount || 0), 0) } });
   } catch (error) { fail(res, 500, error.message); }
 };
 
 const publicEvents = async (_req, res) => {
   try {
-    const now = new Date();
-    const events = await LinkupEvent.find({ status: 'published', eventDate: { $gte: now } }).populate('artists', 'artistName legalName stageName').sort({ eventDate: 1 });
+    const events = (await LinkupEvent.find({ status: 'published', eventDate: { $gte: new Date(Date.now() - 2 * 86400000) } }).populate('artists', 'artistName legalName stageName').sort({ eventDate: 1 })).filter(isCurrentOrUpcomingEvent);
     const packages = await LinkupPackage.find({ status: 'published', availableQuantity: { $gt: 0 } }).populate('seating', 'name seatingType capacity price');
     const data = events.map(event => ({ ...event.toJSON(), packages: packages.filter(pkg => String(pkg.event) === String(event._id)).map(publicPackageSummary) }));
     res.json({ success: true, data });
@@ -210,7 +225,7 @@ const publicEvent = async (req, res) => {
 
 const publicPackage = async (req, res) => {
   try {
-    const pkg = await LinkupPackage.findOne({ _id: req.params.id, status: 'published', availableQuantity: { $gt: 0 } }).populate('event', 'title eventDate location ageRestricted').populate('seating', 'name seatingType capacity price');
+    const pkg = await LinkupPackage.findOne({ _id: req.params.id, status: 'published', availableQuantity: { $gt: 0 } }).populate('event', 'title eventDate startTime endTime timeZone venueName location ageRestricted').populate('seating', 'name seatingType capacity price');
     if (!pkg) return fail(res, 404, 'Package not found');
     const bankAccounts = pkg.bankTransferEnabled ? await LinkupBankAccount.find({ _id: { $in: pkg.bankAccounts || [] }, isActive: true }).select('bankName accountHolderName accountNumber branchName routingNumber swiftCode iban country currency instructions') : [];
     res.json({ success: true, data: { ...publicPackageSummary(pkg), includedItems: pkg.includedItems, optionalItems: pkg.optionalItems, taxRate: pkg.taxRate, serviceFeeRate: pkg.serviceFeeRate, paymentDeadlineHours: pkg.paymentDeadlineHours, otherPaymentMethods: pkg.otherPaymentMethods, bankTransferEnabled: pkg.bankTransferEnabled, bankTransferAvailable: pkg.bankTransferEnabled && bankAccounts.length > 0 } });
@@ -320,6 +335,18 @@ const completePackageBooking = async (req, res) => {
       return { booking, transfer };
     });
     await notifyAdmins({ type: 'approval_needed', title: 'Linkup payment awaiting verification', message: `${result.booking.bookingReference} submitted a bank transfer receipt`, link: '/the-lnk-up', priority: 'high', metadata: { bookingId: result.booking._id, transferId: result.transfer._id } });
+    await notifyBooking(result.booking, 'booking_created', { transitionKey: 'created' });
+    await notifyBooking(result.booking, 'receipt_submitted', { transitionKey: String(result.transfer._id), bankAccount: bankView(account) });
+    const refreshedPackage = await LinkupPackage.findById(pkg._id);
+    if (Number(refreshedPackage?.availableQuantity || 0) === 0) {
+      await queueAdmin({ notificationType: 'package_sold_out', templateData: { title: 'Linkup package sold out', message: `${pkg.name} has reached zero available inventory.`, actionPath: '/the-lnk-up' }, relatedEntityType: 'package', relatedEntityId: pkg._id, dedupeKey: `package:${pkg._id}:sold_out`, category: 'booking' }).catch(() => {});
+      const remaining = await LinkupPackage.countDocuments({ event: pkg.event, status: 'published', availableQuantity: { $gt: 0 } });
+      if (!remaining) {
+        const soldOutEvent = await LinkupEvent.findById(pkg.event);
+        if (soldOutEvent && soldOutEvent.status === 'published') { soldOutEvent.status = 'sold_out'; await soldOutEvent.save(); }
+        await queueAdmin({ notificationType: 'event_sold_out', templateData: { title: 'Linkup event sold out', message: `${soldOutEvent?.title || 'An event'} has no remaining package inventory.`, actionPath: '/the-lnk-up' }, relatedEntityType: 'event', relatedEntityId: pkg.event, dedupeKey: `event:${pkg.event}:sold_out`, category: 'booking' }).catch(() => {});
+      }
+    }
     res.status(201).json({ success: true, data: result, message: 'Payment submitted. Your booking is pending verification.' });
   } catch (error) { cleanup(); fail(res, /sold out|unavailable/i.test(error.message) ? 409 : 400, error.message); }
 };
@@ -342,6 +369,8 @@ const createSlotBooking = async (req, res) => {
       const doc = new LinkupBooking({ bookingReference: `ART-${crypto.randomBytes(5).toString('hex').toUpperCase()}`, customer: req.user._id, event: slot.event, performanceSlot: slot._id, bookingType: 'performance_slot', customerName: req.body.artistName, email: req.user.email, phone: req.body.phone, artistDetails: { performanceCategory: req.body.performanceCategory, performanceDescription: req.body.performanceDescription, portfolioUrl: req.body.portfolioUrl || '' }, items: [{ itemType: 'performance_slot', itemId: String(slot._id), name: slot.title, quantity: 1, unitPrice: slot.price, totalPrice: slot.price }], subtotal: slot.price, totalAmount: slot.price, currency: slot.currency || 'USD', paymentMethod: req.body.paymentMethod || 'bank_transfer', bookingStatus: 'awaiting_payment', paymentStatus: 'unpaid', holdExpiresAt: new Date(Date.now() + 30 * 60000), paymentDueAt: new Date(Date.now() + 24 * 3600000) });
       await doc.save({ transaction }); return doc;
     });
+    await notifyBooking(booking, 'booking_created', { transitionKey: 'created' });
+    await notifyBooking(booking, 'payment_pending', { transitionKey: 'initial', bankAccount: accounts[0] ? bankView(accounts[0]) : undefined, message: slot.paymentInstructions || '' });
     res.status(201).json({ success: true, data: { booking, bankAccounts: accounts.map(bankView), paymentInstructions: slot.paymentInstructions } });
   } catch (error) { fail(res, 409, error.message); }
 };
@@ -360,6 +389,7 @@ const submitReceipt = async (req, res) => {
     const transfer = await LinkupBankTransfer.create({ booking: booking._id, bankAccount: account._id, transferReference: req.body.transferReference, receiptFile: req.file.filename, originalFileName: path.basename(req.file.originalname), paymentDate: req.body.paymentDate, amount: booking.totalAmount, currency: booking.currency, notes: req.body.notes || '', auditHistory: [{ action: 'submitted', at: new Date().toISOString() }] });
     booking.bookingStatus = 'pending_payment_verification'; booking.paymentStatus = 'awaiting_verification'; await booking.save();
     await notifyAdmins({ type: 'approval_needed', title: 'Linkup payment awaiting verification', message: `${booking.bookingReference} submitted a bank transfer receipt`, link: '/the-lnk-up', priority: 'high', metadata: { bookingId: booking._id, transferId: transfer._id } });
+    await notifyBooking(booking, 'receipt_submitted', { transitionKey: String(transfer._id) });
     res.status(201).json({ success: true, data: transfer, message: 'Your payment details have been submitted successfully. Your booking is pending payment verification. We will confirm your reservation once your payment has been approved.' });
   } catch (error) { cleanup(); fail(res, 400, error.message); }
 };
@@ -401,6 +431,11 @@ const verifyTransfer = async (req, res) => {
     if (reviewedBooking?.customer) {
       await createNotification({ userId: reviewedBooking.customer, type: 'system', title: action === 'approve' ? 'Linkup booking confirmed' : action === 'reject' ? 'Linkup payment rejected' : 'Linkup payment information requested', message: action === 'approve' ? `${reviewedBooking.bookingReference} is confirmed` : (req.body.reason || 'Please review your payment submission'), link: '/linkup', priority: action === 'approve' ? 'medium' : 'high', metadata: { bookingId: reviewedBooking._id } }).catch(error => console.error(`Linkup customer notification warning: ${error.message}`));
     }
+    if (reviewedBooking) {
+      const template = action === 'approve' ? 'payment_approved' : action === 'reject' ? 'payment_rejected' : 'payment_information_requested';
+      await notifyBooking(reviewedBooking, template, { transitionKey: `${req.params.id}:${action}`, reason: req.body.reason || '' });
+      if (action === 'approve') await notifyBooking(reviewedBooking, 'booking_confirmed', { transitionKey: String(req.params.id) });
+    }
     res.json({ success: true, data: result });
   } catch (error) { fail(res, /not found/i.test(error.message) ? 404 : 409, error.message); }
 };
@@ -435,6 +470,7 @@ const releaseBookingInventory = async (bookingId, nextStatus = 'cancelled', acto
 const cancelBooking = async (req, res) => {
   try {
     const booking = await releaseBookingInventory(req.params.id, 'cancelled', req.user._id);
+    await notifyBooking(booking, 'booking_cancelled', { transitionKey: String(booking.updatedAt || Date.now()) });
     res.json({ success: true, data: booking });
   } catch (error) { fail(res, /not found/i.test(error.message) ? 404 : 409, error.message); }
 };

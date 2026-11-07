@@ -495,6 +495,10 @@ export const linkupPlatformApi = {
   bookSlot: (id: string, data: object) => api.post(`/lnk-up/public/slots/${id}/book`, data),
   submitReceipt: (reference: string, data: FormData) => api.post(`/lnk-up/public/bookings/${reference}/receipt`, data, { headers: { 'Content-Type': 'multipart/form-data' } }),
   bookingStatus: (reference: string, email: string) => api.get(`/lnk-up/public/bookings/${reference}/status`, { params: { email } }),
+  getEmailSettings: () => api.get('/lnk-up/platform/email/settings'),
+  updateEmailSettings: (data: object) => api.put('/lnk-up/platform/email/settings', data),
+  sendTestEmail: (recipient: string) => api.post('/lnk-up/platform/email/test', { recipient }),
+  retryEmail: (id: string) => api.post(`/lnk-up/platform/email/${id}/retry`),
 };
 
 // Artist Balances

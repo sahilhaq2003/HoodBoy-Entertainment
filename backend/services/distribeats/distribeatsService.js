@@ -6,6 +6,7 @@ const policy = require('./distribeatsPolicy');
 const { validateRelease, validateMappedPayload } = require('./distribeatsValidation');
 const { planParts, MAX_PART } = require('../../lib/mediaValidation');
 const { ISO_TERRITORIES } = require('../../lib/isoTerritories');
+const { notifyDistribution, notifySystemAlert } = require('../emailService');
 
 const client = new DistribeatsClient();
 const cache = new Map();
@@ -98,6 +99,7 @@ const uploadFile = async (releaseId, fileId, filePath, contentType, targetUrl, {
 const validationFailure = errors => new DistribeatsError('Release metadata does not meet DistriBeats requirements.', { code: 'DISTRIBEATS_VALIDATION_ERROR', status: 422, details: { errors } });
 
 const submitRelease = async (release, artist) => {
+  const previousStatus = release.status;
   // Fail closed BEFORE any state change or network call: missing/invalid key -> 503, live key under TEST policy -> 403.
   policy.assertKeyAllowed(client.token);
   const catalogue = await getCatalogue();
@@ -196,6 +198,7 @@ const submitRelease = async (release, artist) => {
     release.syncErrors = [];
     release.providerPayload = submitted;
     await release.save();
+    await notifyDistribution(release, previousStatus);
     log('release_submitted', { localReleaseId: String(release._id), distribeatsReleaseId: release.distribeatsReleaseId });
     return release;
   } catch (error) {
@@ -203,11 +206,14 @@ const submitRelease = async (release, artist) => {
     release.lastSyncError = error.message;
     release.syncErrors.push({ message: error.message, code: error.code || 'DISTRIBEATS_ERROR' });
     await release.save();
+    await notifyDistribution(release, previousStatus, { reason: error.message });
+    await notifySystemAlert({ code: 'distribeats_submit_failed', title: 'DistriBeats submission failed', message: `Release ${release._id} could not be submitted: ${error.message}`, entityId: String(release._id) });
     throw error;
   }
 };
 
 const syncReleaseStatus = async release => {
+  const previousStatus = release.status;
   if (!release.distribeatsReleaseId) throw new DistribeatsError('Release has not been submitted to Distribeats.', { code: 'DISTRIBEATS_RELEASE_NOT_SYNCED', status: 409 });
   const remote = await client.get(`/releases/${release.distribeatsReleaseId}`);
   release.distribeatsRawStatus = remote.status || release.distribeatsRawStatus;
@@ -221,16 +227,19 @@ const syncReleaseStatus = async release => {
   if (release.status === 'delivered') release.deliveredAt ||= new Date();
   if (release.status === 'live') release.liveAt ||= new Date();
   await release.save();
+  await notifyDistribution(release, previousStatus);
   return release;
 };
 
 const requestTakedown = async (release, reason) => {
+  const previousStatus = release.status;
   if (!release.distribeatsReleaseId) throw new DistribeatsError('Release has not been submitted to Distribeats.', { status: 409 });
   const result = await client.post(`/releases/${release.distribeatsReleaseId}/takedown`, { reason });
   release.status = 'takedown_requested';
   release.providerPayload = result;
   release.lastSyncedAt = new Date();
   await release.save();
+  await notifyDistribution(release, previousStatus, { reason });
   return release;
 };
 
