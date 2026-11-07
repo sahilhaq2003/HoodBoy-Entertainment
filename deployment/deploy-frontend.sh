@@ -16,6 +16,7 @@ cd "$FRONTEND_DIR"
 npm ci
 VITE_API_URL="${VITE_API_URL:-https://api.hbe.lol/api}" \
 VITE_SOCKET_URL="${VITE_SOCKET_URL:-https://api.hbe.lol}" \
+VITE_GOOGLE_CLIENT_ID="${VITE_GOOGLE_CLIENT_ID:-111047480510-rvjqvr7tnuk0dq7465iunjl175qtqn1k.apps.googleusercontent.com}" \
 npm run build
 command -v pm2 >/dev/null 2>&1 || npm install --global pm2@latest
 pm2 startOrReload ecosystem.config.cjs --env production

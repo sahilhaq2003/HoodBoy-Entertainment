@@ -20,7 +20,10 @@ Production uses two CloudPanel Node.js sites on one VPS:
 8. Add `VPS_HOST`, `FRONTEND_VPS_USER`, `FRONTEND_SSH_KEY`,
    `BACKEND_VPS_USER`, and `BACKEND_SSH_KEY` as GitHub Actions secrets.
 
-The frontend deployment embeds `https://api.hbe.lol/api` as its public API URL.
+The frontend deployment embeds `https://api.hbe.lol/api` as its public API URL
+and the public Google OAuth client identifier used by Google Identity Services.
+The OAuth client secret remains backend-only and must never be included in the
+frontend build or GitHub repository.
 The backend environment should allow `https://hbe.lol` and
 `https://www.hbe.lol` through CORS.
 
