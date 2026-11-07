@@ -67,6 +67,7 @@ const Royalties: React.FC<RoyaltiesProps> = ({ embedded = false }) => {
   const [selectedEntry, setSelectedEntry] = useState<RoyaltyEntry | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [approveTarget, setApproveTarget] = useState<string | null>(null);
 
   const [filterArtist, setFilterArtist] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
@@ -605,7 +606,7 @@ const Royalties: React.FC<RoyaltiesProps> = ({ embedded = false }) => {
                               </button>
                             )}
                             {canWriteRoyalties && entry.status === 'calculated' && (
-                              <button onClick={() => handleApprove(entry._id)} title="Approve statement" className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"><CheckCircle size={15} /></button>
+                              <button onClick={() => setApproveTarget(entry._id)} title="Approve statement" className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"><CheckCircle size={15} /></button>
                             )}
                             {canWriteRoyalties && entry.status === 'approved' && entry.remainingBalance > 0 && (
                               <button onClick={() => handleRecordPayment(entry)} title="Record payment" className="p-1.5 rounded-lg text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/20"><DollarSign size={15} /></button>
@@ -1158,6 +1159,15 @@ const Royalties: React.FC<RoyaltiesProps> = ({ embedded = false }) => {
       )}
 
       {/* Delete Confirmation */}
+      <ConfirmDialog
+        isOpen={!!approveTarget}
+        title="Approve Royalty Statement?"
+        message="Are you sure the income, deductions, splits, and balances are correct? The statement will become available for payment processing."
+        confirmLabel="Yes, approve"
+        variant="info"
+        onConfirm={() => { if (approveTarget) handleApprove(approveTarget); setApproveTarget(null); }}
+        onCancel={() => setApproveTarget(null)}
+      />
       <ConfirmDialog
         isOpen={!!deleteTarget}
         title="Delete Royalty Entry"

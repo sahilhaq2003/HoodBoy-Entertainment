@@ -12,9 +12,11 @@ const RoyaltyLedger = require('../models/RoyaltyLedger');
 const Ownership = require('../models/Ownership');
 const SongMetadata = require('../models/SongMetadata');
 const File = require('../models/File');
+const { LinkupEvent, LinkupSeating, LinkupBankAccount, LinkupPackage, LinkupBooking, LinkupFoodVendor, LinkupFoodItem } = require('../models/LinkupPlatform');
+const { _priceBooking, _preparePackageCheckout } = require('../controllers/linkupPlatformController');
 
 const runId = `AUTOMATED_TEST_${crypto.randomUUID()}`;
-const createdIds = { artists: [], finances: [], royalties: [], ownerships: [], metadata: [], files: [] };
+const createdIds = { artists: [], finances: [], royalties: [], ownerships: [], metadata: [], files: [], linkupEvents: [], linkupSeating: [], linkupBanks: [], linkupPackages: [], linkupVendors: [], linkupFood: [] };
 const sourceTotal = (value) => ({ streaming: value, publishing: 0, mechanical: 0, performance: 0, sync: 0, merchandise: 0, other: 0 });
 let testArtist;
 const hasDb = ['DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASSWORD'].every(key => process.env[key]);
@@ -36,6 +38,14 @@ test.after(async () => {
     Ownership.deleteMany({ _id: { $in: createdIds.ownerships } }),
     SongMetadata.deleteMany({ _id: { $in: createdIds.metadata } }),
     File.deleteMany({ _id: { $in: createdIds.files } }),
+    LinkupPackage.deleteMany({ _id: { $in: createdIds.linkupPackages } }),
+    LinkupFoodItem.deleteMany({ _id: { $in: createdIds.linkupFood } }),
+    LinkupFoodVendor.deleteMany({ _id: { $in: createdIds.linkupVendors } }),
+  ]);
+  await Promise.all([
+    LinkupSeating.deleteMany({ _id: { $in: createdIds.linkupSeating } }),
+    LinkupBankAccount.deleteMany({ _id: { $in: createdIds.linkupBanks } }),
+    LinkupEvent.deleteMany({ _id: { $in: createdIds.linkupEvents } }),
   ]);
   await orm.disconnect();
 });
@@ -82,4 +92,36 @@ dbtest('MySQL stores relational links without requiring physical file access', a
   const loaded = await File.findById(file._id).populate('artistId', 'artistName');
   assert.equal(loaded.artistId.artistName, `${runId} Artist`);
   assert.equal(String(loaded.royaltyId), String(royalty._id));
+});
+
+dbtest('Linkup package pricing is server-derived and package bank accounts persist relationally', async () => {
+  const event = await LinkupEvent.create({ title: `${runId} Live`, eventDate: new Date('2027-01-20'), location: 'Test Venue', status: 'published', ageRestricted: true });
+  createdIds.linkupEvents.push(event._id);
+  const seating = await LinkupSeating.create({ event: event._id, name: 'Four Guest Table', seatingType: 'table', capacity: 4, price: 125, totalQuantity: 5, availableQuantity: 5 });
+  createdIds.linkupSeating.push(seating._id);
+  const bank = await LinkupBankAccount.create({ bankName: 'Test Bank', accountHolderName: runId, accountNumber: 'TEST-001', currency: 'USD' });
+  createdIds.linkupBanks.push(bank._id);
+  await LinkupBankAccount._ready();
+  const storedBank = await LinkupBankAccount._sql.findByPk(String(bank._id), { raw: true });
+  assert.match(storedBank.accountNumber, /^enc:/, 'bank account number must be encrypted at rest');
+  const vendor = await LinkupFoodVendor.create({ name: `${runId} Catering`, events: [event._id] });
+  createdIds.linkupVendors.push(vendor._id);
+  const meal = await LinkupFoodItem.create({ vendor: vendor._id, events: [event._id], category: 'Chicken', name: 'Chicken Meal', price: 20, availableQuantity: 20 });
+  createdIds.linkupFood.push(meal._id);
+  const pkg = await LinkupPackage.create({ event: event._id, name: `${runId} Custom Table`, packageType: 'customizable', seating: seating._id, basePrice: 125, totalQuantity: 5, availableQuantity: 5, status: 'published', bankTransferEnabled: true, bankAccounts: ['', bank._id, ''], taxRate: 10, serviceFeeRate: 5, currency: 'USD' });
+  createdIds.linkupPackages.push(pkg._id);
+
+  const reloaded = await LinkupPackage.findById(pkg._id).populate('bankAccounts', 'bankName currency');
+  assert.equal(reloaded.bankAccounts.length, 1);
+  assert.equal(reloaded.bankAccounts[0].bankName, 'Test Bank');
+  const bookingsBeforePayment = await LinkupBooking.countDocuments({ package: pkg._id });
+  const prepared = await _preparePackageCheckout({ _id: '000000000000000000000001', role: 'customer' }, pkg._id, { phone: '555-0100', guestCount: 1, foodItems: [{ itemId: meal._id, quantity: 1 }] });
+  assert.equal(prepared.quote.totalAmount, 166.75);
+  assert.equal(await LinkupBooking.countDocuments({ package: pkg._id }), bookingsBeforePayment, 'preparing payment must not create a booking');
+  assert.equal((await LinkupPackage.findById(pkg._id)).availableQuantity, 5, 'preparing payment must not deduct inventory');
+  const quote = await _priceBooking(pkg, { foodItems: [{ itemId: meal._id, quantity: 2 }] });
+  assert.equal(quote.subtotal, 165);
+  assert.equal(quote.taxAmount, 16.5);
+  assert.equal(quote.serviceFeeAmount, 8.25);
+  assert.equal(quote.totalAmount, 189.75);
 });

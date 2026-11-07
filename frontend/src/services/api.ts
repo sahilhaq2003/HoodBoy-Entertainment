@@ -97,7 +97,7 @@ api.interceptors.response.use(
     // only an authenticated resource 401 means the stored session has expired.
     const requestUrl = String(error.config?.url || '');
     const credentialEndpoint = [
-      '/auth/login', '/auth/login/2fa', '/auth/password', '/auth/2fa/disable',
+      '/auth/login', '/auth/google', '/auth/login/2fa', '/auth/password', '/auth/2fa/disable',
       '/auth/reset-password', '/auth/forgot-password',
     ].some(path => requestUrl === path);
     if (error.response?.status === 401 && !credentialEndpoint) {
@@ -113,6 +113,7 @@ api.interceptors.response.use(
 // Auth
 export const authApi = {
   login: (email: string, password: string) => api.post('/auth/login', { email, password }),
+  googleLogin: (credential: string) => api.post('/auth/google', { credential }),
   verifyTwoFactor: (challengeToken: string, code: string) => api.post('/auth/login/2fa', { challengeToken, code }),
   forgotPassword: (email: string) => api.post('/auth/forgot-password', { email }),
   resetPassword: (token: string, newPassword: string) => api.post('/auth/reset-password', { token, newPassword }),
@@ -471,6 +472,29 @@ export const lnkUpApi = {
   create: (data: object) => api.post('/lnk-up', data),
   update: (id: string, data: object) => api.put(`/lnk-up/${id}`, data),
   delete: (id: string) => api.delete(`/lnk-up/${id}`),
+};
+
+export const linkupPlatformApi = {
+  overview: () => api.get('/lnk-up/platform/overview'),
+  list: (resource: string, params?: object) => api.get(`/lnk-up/platform/${resource}`, { params }),
+  get: (resource: string, id: string) => api.get(`/lnk-up/platform/${resource}/${id}`),
+  create: (resource: string, data: object) => api.post(`/lnk-up/platform/${resource}`, data),
+  update: (resource: string, id: string, data: object) => api.put(`/lnk-up/platform/${resource}/${id}`, data),
+  delete: (resource: string, id: string) => api.delete(`/lnk-up/platform/${resource}/${id}`),
+  uploadImage: (data: FormData) => api.post('/lnk-up/platform/upload-image', data, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  verifyTransfer: (id: string, data: object) => api.post(`/lnk-up/platform/transfers/${id}/verify`, data),
+  cancelBooking: (id: string) => api.post(`/lnk-up/platform/bookings/${id}/cancel`),
+  downloadReceipt: (id: string) => api.get(`/lnk-up/platform/transfers/${id}/receipt`, { responseType: 'blob' }),
+  exportBookings: () => api.get('/lnk-up/platform/bookings-export.csv', { responseType: 'blob' }),
+  receiptUrl: (id: string) => `/lnk-up/platform/transfers/${id}/receipt`,
+  publicEvents: () => api.get('/lnk-up/public/events'),
+  publicEvent: (id: string) => api.get(`/lnk-up/public/events/${id}`),
+  publicPackage: (id: string) => api.get(`/lnk-up/public/packages/${id}`),
+  bookPackage: (id: string, data: object) => api.post(`/lnk-up/public/packages/${id}/book`, data),
+  completePackageBooking: (id: string, data: FormData) => api.post(`/lnk-up/public/packages/${id}/complete`, data, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  bookSlot: (id: string, data: object) => api.post(`/lnk-up/public/slots/${id}/book`, data),
+  submitReceipt: (reference: string, data: FormData) => api.post(`/lnk-up/public/bookings/${reference}/receipt`, data, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  bookingStatus: (reference: string, email: string) => api.get(`/lnk-up/public/bookings/${reference}/status`, { params: { email } }),
 };
 
 // Artist Balances

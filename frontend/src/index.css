@@ -932,6 +932,129 @@ body { background: var(--hbe-bg); }
   animation: route-page-enter 260ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+@keyframes linkup-section-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-14px);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes linkup-section-loading {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.linkup-section-enter {
+  animation: linkup-section-enter 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  transform-origin: top center;
+  will-change: opacity, transform, filter;
+}
+
+.linkup-section-loading {
+  animation: linkup-section-loading 180ms ease-out both;
+  min-height: 18rem;
+}
+
+@keyframes linkup-route-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.linkup-route-enter {
+  min-height: 100vh;
+  background: #050817;
+}
+
+@keyframes linkup-loader-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.linkup-loader-enter {
+  opacity: 1;
+}
+
+@keyframes linkup-content-reveal {
+  from {
+    opacity: 0.16;
+    transform: translateY(-18px);
+    clip-path: inset(0 0 18% 0 round 12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    clip-path: inset(0 0 0 0 round 0);
+  }
+}
+
+.linkup-content-ready > header,
+.linkup-content-ready > section,
+.linkup-content-ready > main,
+.linkup-content-ready > div {
+  opacity: 0;
+  animation: linkup-content-reveal 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: opacity, transform, clip-path;
+}
+
+.linkup-content-ready > :nth-child(1) { animation-delay: 20ms; }
+.linkup-content-ready > :nth-child(2) { animation-delay: 110ms; }
+.linkup-content-ready > :nth-child(3) { animation-delay: 210ms; }
+.linkup-content-ready > :nth-child(4) { animation-delay: 300ms; }
+.linkup-content-ready > :nth-child(n+5) { animation-delay: 360ms; }
+
+.linkup-content-ready > main > section {
+  opacity: 0;
+  animation: linkup-content-reveal 560ms cubic-bezier(0.16, 1, 0.3, 1) 300ms both;
+}
+
+.linkup-content-ready > main > section:nth-of-type(2) { animation-delay: 390ms; }
+.linkup-content-ready > main > section:nth-of-type(3) { animation-delay: 480ms; }
+
+@media (max-width: 640px) {
+  .linkup-content-ready > header,
+  .linkup-content-ready > section,
+  .linkup-content-ready > main,
+  .linkup-content-ready > div {
+    animation-duration: 480ms;
+  }
+}
+
+@keyframes linkup-route-progress {
+  0% { transform: scaleX(0); opacity: 1; }
+  45% { transform: scaleX(0.72); opacity: 1; }
+  100% { transform: scaleX(1); opacity: 0; }
+}
+
+.linkup-route-progress {
+  position: fixed;
+  z-index: 100;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  pointer-events: none;
+  transform-origin: left;
+  background: linear-gradient(90deg, #8b5cf6 0%, #d946ef 55%, #6ee7b7 100%);
+  box-shadow: 0 0 18px rgba(168, 85, 247, 0.7);
+  animation: linkup-route-progress 720ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 @keyframes hbe-rise {
   from {
     opacity: 0;
@@ -969,6 +1092,24 @@ body { background: var(--hbe-bg); }
 }
 
 /* ── Login music visual ─────────────────────────────────────── */
+@keyframes login-access-enter {
+  from { opacity: 0; transform: translateY(10px) scale(0.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.login-access-panel {
+  animation: login-access-enter 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes login-copy-enter {
+  from { opacity: 0; transform: translateX(-12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.login-access-copy {
+  animation: login-copy-enter 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 @keyframes hbe-eq {
   0%, 100% { transform: scaleY(0.25); }
   30% { transform: scaleY(1); }
@@ -1014,13 +1155,29 @@ body { background: var(--hbe-bg); }
   .mobile-sidebar-shell .nav-item,
   .anim-rise,
   .route-page-enter,
+  .linkup-section-enter,
+  .linkup-section-loading,
+  .linkup-route-enter,
+  .linkup-loader-enter,
+  .linkup-content-ready,
+  .linkup-route-progress,
   .metric-card,
   .quick-action-card,
+  .login-access-panel,
+  .login-access-copy,
   .eq-bar,
   .note-float,
   .note-bg-float,
   .anim-float {
     animation: none;
     transition: none;
+  }
+
+  .linkup-content-ready > *,
+  .linkup-content-ready > main > section {
+    opacity: 1;
+    animation: none;
+    transform: none;
+    clip-path: none;
   }
 }

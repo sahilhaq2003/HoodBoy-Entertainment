@@ -7,7 +7,9 @@ const pick = (obj, keys) => keys.reduce((o, k) => { if (obj[k] !== undefined) o[
 const getUsers = async (req, res) => {
   try {
     const { search, role, isActive, department, page = 1, limit = 50 } = req.query;
-    const query = {};
+    // Team Management is for workspace staff. Linkup customers are managed by
+    // the booking platform and must never appear as team members.
+    const query = { role: { $ne: 'customer' } };
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
@@ -15,7 +17,7 @@ const getUsers = async (req, res) => {
         { department: { $regex: search, $options: 'i' } },
       ];
     }
-    if (role) query.role = role;
+    if (role && role !== 'customer') query.role = role;
     if (isActive !== undefined) query.isActive = isActive === 'true';
     if (department) query.department = { $regex: department, $options: 'i' };
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -32,7 +34,7 @@ const getUsers = async (req, res) => {
 const getUserById = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
-    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    if (!user || user.role === 'customer') return res.status(404).json({ success: false, message: 'Team member not found' });
     res.json({ success: true, data: user });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -69,7 +71,7 @@ const createUser = async (req, res) => {
 const updateUser = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
-    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    if (!user || user.role === 'customer') return res.status(404).json({ success: false, message: 'Team member not found' });
     const allowed = pick(req.body, ['name', 'email', 'role', 'department', 'phone', 'avatar', 'isActive']);
     if (allowed.email && allowed.email !== user.email) {
       const existing = await User.findOne({ email: allowed.email.toLowerCase() });
@@ -95,7 +97,7 @@ const updateUser = async (req, res) => {
 const deleteUser = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
-    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    if (!user || user.role === 'customer') return res.status(404).json({ success: false, message: 'Team member not found' });
     if (user.role === 'admin') {
       const adminCount = await User.countDocuments({ role: 'admin' });
       if (adminCount <= 1) {
@@ -115,7 +117,7 @@ const deleteUser = async (req, res) => {
 const toggleActive = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
-    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    if (!user || user.role === 'customer') return res.status(404).json({ success: false, message: 'Team member not found' });
     if (user._id.toString() === req.user._id.toString()) {
       return res.status(400).json({ success: false, message: 'You cannot deactivate your own account' });
     }
@@ -134,7 +136,7 @@ const resetPassword = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
     }
     const user = await User.findById(req.params.id);
-    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    if (!user || user.role === 'customer') return res.status(404).json({ success: false, message: 'Team member not found' });
     user.password = newPassword;
     await user.save();
     res.json({ success: true, message: 'Password reset successfully' });
@@ -146,12 +148,12 @@ const resetPassword = async (req, res) => {
 const getTeamStats = async (req, res) => {
   try {
     const [total, byRole, activeCount, inactiveCount, byDepartment] = await Promise.all([
-      User.countDocuments(),
-      User.aggregate([{ $group: { _id: '$role', count: { $sum: 1 } } }, { $sort: { count: -1 } }]),
-      User.countDocuments({ isActive: true }),
-      User.countDocuments({ isActive: false }),
+      User.countDocuments({ role: { $ne: 'customer' } }),
+      User.aggregate([{ $match: { role: { $ne: 'customer' } } }, { $group: { _id: '$role', count: { $sum: 1 } } }, { $sort: { count: -1 } }]),
+      User.countDocuments({ role: { $ne: 'customer' }, isActive: true }),
+      User.countDocuments({ role: { $ne: 'customer' }, isActive: false }),
       User.aggregate([
-        { $match: { department: { $ne: '' } } },
+        { $match: { role: { $ne: 'customer' }, department: { $ne: '' } } },
         { $group: { _id: '$department', count: { $sum: 1 } } },
         { $sort: { count: -1 } },
       ]),

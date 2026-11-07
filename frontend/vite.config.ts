@@ -9,6 +9,11 @@ export default defineConfig({
   ],
   server: {
     port: 5173,
+    headers: {
+      // Google Identity Services uses a popup that communicates back with
+      // window.postMessage; this policy preserves isolation while allowing it.
+      'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:5000',

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const {
-  login, getMe, updateProfile, changePassword,
+  login, googleLogin, getMe, updateProfile, changePassword,
   verifyTwoFactorLogin, setupTwoFactor, confirmTwoFactor, disableTwoFactor,
   requestPasswordReset, resetPassword, uploadAvatar, removeAvatar,
 } = require('../controllers/authController');
@@ -9,6 +9,7 @@ const { protect } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 
 router.post('/login', login);
+router.post('/google', googleLogin);
 router.post('/login/2fa', verifyTwoFactorLogin);
 router.post('/forgot-password', requestPasswordReset);
 router.post('/reset-password', resetPassword);

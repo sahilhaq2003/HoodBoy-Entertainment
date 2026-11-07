@@ -7,10 +7,12 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true, minlength: 6 },
   role: {
     type: String,
-    enum: ['admin', 'manager', 'artist', 'finance', 'marketing'],
+    enum: ['admin', 'manager', 'artist', 'finance', 'marketing', 'customer'],
     default: 'manager'
   },
   avatar: { type: String, default: '' },
+  googleId: { type: String, default: '' },
+  authProvider: { type: String, enum: ['local', 'google'], default: 'local' },
   department: { type: String, default: '' },
   phone: { type: String, default: '' },
   notificationPreferences: [{
@@ -50,6 +52,7 @@ userSchema.methods.toJSON = function () {
   delete obj.twoFactorSecret;
   delete obj.passwordResetToken;
   delete obj.passwordResetExpires;
+  delete obj.googleId;
   return obj;
 };
 

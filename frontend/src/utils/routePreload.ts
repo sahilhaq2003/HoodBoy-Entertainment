@@ -2,6 +2,10 @@ type PageModule = { default: unknown };
 type PageLoader = () => Promise<PageModule>;
 
 const loaders: Record<string, PageLoader> = {
+  '/home': () => import('../pages/Landing'),
+  '/linkup': () => import('../pages/LinkupPublic'),
+  '/linkup/packages': () => import('../pages/LinkupPackages'),
+  '/linkup/checkout': () => import('../pages/LinkupCheckout'),
   '/': () => import('../pages/AdminDashboard'),
   '/manager-dashboard': () => import('../pages/ManagerDashboard'),
   '/artist-dashboard': () => import('../pages/ArtistDashboard'),
@@ -12,7 +16,7 @@ const loaders: Record<string, PageLoader> = {
   '/releases': () => import('../pages/Releases'),
   '/distribution': () => import('../pages/Distribution'),
   '/system-health': () => import('../pages/SystemHealth'),
-  '/the-lnk-up': () => import('../pages/LnkUp'),
+  '/the-lnk-up': () => import('../pages/LinkupPlatform'),
   '/projects': () => import('../pages/Projects'),
   '/development': () => import('../pages/Development'),
   '/files': () => import('../pages/FileManager'),
@@ -47,6 +51,8 @@ const normalizeRoute = (path: string) => {
   if (clean.startsWith('/distribution/')) return '/distribution';
   if (clean.startsWith('/development/')) return '/development';
   if (clean.startsWith('/files/')) return '/files';
+  if (clean.startsWith('/linkup/events/')) return '/linkup';
+  if (clean.startsWith('/linkup/checkout/')) return '/linkup/checkout';
   return clean === '//' ? '/' : clean;
 };
 

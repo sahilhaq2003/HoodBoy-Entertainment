@@ -17,6 +17,7 @@ const { _totp, _verifyTotp } = require('../controllers/authController');
 const { DistribeatsClient } = require('../services/distribeats/distribeatsClient');
 const { mapRelease, normalizeStatus, PERFORMER_ROLES } = require('../services/distribeats/distribeatsMapper');
 const { verifyWebhook } = require('../services/distribeats/distribeatsWebhook');
+const { verifyGoogleCredential, _resetGoogleKeyCache } = require('../services/googleIdentityService');
 
 const validSources = (amount) => ({
   streaming: amount, publishing: 0, mechanical: 0, performance: 0,
@@ -260,4 +261,25 @@ test('Distribeats webhook verification checks HMAC and signed timestamp', () => 
   const digest = crypto.createHmac('sha256', secret).update(`${timestamp}.`).update(raw).digest('hex');
   assert.equal(verifyWebhook(raw, { signature: `sha256=${digest}`, timestamp }, secret).data.release.id, 'rel_12');
   assert.throws(() => verifyWebhook(raw, { signature: `sha256=${'0'.repeat(64)}`, timestamp }, secret), /Invalid Distribeats webhook signature/);
+});
+
+test('Google customer authentication verifies signature, issuer, audience, expiry, and verified email', async () => {
+  const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+  const jwk = publicKey.export({ format: 'jwk' });
+  const originalFetch = global.fetch;
+  const originalClientId = process.env.GOOGLE_CLIENT_ID;
+  process.env.GOOGLE_CLIENT_ID = 'test-client.apps.googleusercontent.com';
+  global.fetch = async () => ({ ok: true, json: async () => ({ keys: [{ ...jwk, kid: 'test-key', alg: 'RS256', use: 'sig' }] }), headers: { get: () => 'public, max-age=3600' } });
+  _resetGoogleKeyCache();
+  try {
+    const token = require('jsonwebtoken').sign({ sub: 'google-user-1', email: 'buyer@example.test', email_verified: true, name: 'Package Buyer' }, privateKey, { algorithm: 'RS256', keyid: 'test-key', issuer: 'https://accounts.google.com', audience: process.env.GOOGLE_CLIENT_ID, expiresIn: '5m' });
+    const payload = await verifyGoogleCredential(token);
+    assert.equal(payload.email, 'buyer@example.test');
+    const wrongAudience = require('jsonwebtoken').sign({ sub: 'google-user-1', email: 'buyer@example.test', email_verified: true }, privateKey, { algorithm: 'RS256', keyid: 'test-key', issuer: 'https://accounts.google.com', audience: 'wrong-client', expiresIn: '5m' });
+    await assert.rejects(verifyGoogleCredential(wrongAudience), /audience/);
+  } finally {
+    global.fetch = originalFetch;
+    if (originalClientId === undefined) delete process.env.GOOGLE_CLIENT_ID; else process.env.GOOGLE_CLIENT_ID = originalClientId;
+    _resetGoogleKeyCache();
+  }
 });

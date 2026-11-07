@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, ArrowUpRight, BarChart3, Disc3, FileCheck2, Play, Volume2, VolumeX, UsersRound } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ArrowUpRight, BarChart3, CalendarDays, Disc3, FileCheck2, LogOut, Package, Volume2, VolumeX, UsersRound } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import './Landing.css';
 
 const stories = [
@@ -20,67 +21,6 @@ const AMBIENT_CHORDS: number[][] = [
 
 const CHIME_NOTES = [523.25, 587.33, 659.25, 783.99, 880.0, 1046.5]; // C5 pentatonic
 
-/**
- * Generates an in-memory seamless calm ambient WAV blob URL so <audio autoPlay loop>
- * can begin playing immediately on page load in browsers that allow media element autoplay.
- */
-function buildCalmLoopBlobUrl(): string {
-  const sampleRate = 22050;
-  const durationSec = 16; // 4 chords x 4 seconds each, seamless loop
-  const numSamples = sampleRate * durationSec;
-  const numChannels = 2;
-  const dataSize = numSamples * numChannels * 2;
-  const buf = new ArrayBuffer(44 + dataSize);
-  const view = new DataView(buf);
-  const writeStr = (off: number, s: string) => {
-    for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i));
-  };
-  writeStr(0, 'RIFF');
-  view.setUint32(4, 36 + dataSize, true);
-  writeStr(8, 'WAVE');
-  writeStr(12, 'fmt ');
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, numChannels, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * numChannels * 2, true);
-  view.setUint16(32, numChannels * 2, true);
-  view.setUint16(34, 16, true);
-  writeStr(36, 'data');
-  view.setUint32(40, dataSize, true);
-
-  const chordLen = sampleRate * 4;
-  for (let i = 0; i < numSamples; i++) {
-    const t = i / sampleRate;
-    const cIdx = Math.floor(i / chordLen) % AMBIENT_CHORDS.length;
-    const posInChord = (i % chordLen) / chordLen; // 0..1
-    // Smooth sine-squared envelope per chord so transitions are silky smooth
-    const env = 0.25 + 0.75 * Math.sin(Math.PI * posInChord) ** 2;
-    const chord = AMBIENT_CHORDS[cIdx];
-
-    let left = 0;
-    let right = 0;
-    for (let n = 0; n < chord.length; n++) {
-      const f = chord[n];
-      const w = n === 0 ? 0.32 : 0.16;
-      left += Math.sin(2 * Math.PI * f * t) * w;
-      right += Math.sin(2 * Math.PI * (f * 1.002) * t + 0.4) * w;
-    }
-    // Gentle high chime note every 2 seconds
-    const chimePos = (t % 2) / 2;
-    const chimeFreq = CHIME_NOTES[(cIdx * 2 + Math.floor(t / 2)) % CHIME_NOTES.length];
-    const chimeEnv = Math.exp(-chimePos * 5.5) * Math.min(1, chimePos * 35) * 0.08;
-    const chime = Math.sin(2 * Math.PI * chimeFreq * t) * chimeEnv;
-
-    const lSample = Math.max(-1, Math.min(1, (left * env * 0.35 + chime)));
-    const rSample = Math.max(-1, Math.min(1, (right * env * 0.35 + chime)));
-    const offset = 44 + i * 4;
-    view.setInt16(offset, Math.round(lSample * 28000), true);
-    view.setInt16(offset + 2, Math.round(rSample * 28000), true);
-  }
-  return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
-}
-
 interface CalmSynthController {
   start: () => Promise<boolean>;
   setMuted: (muted: boolean) => void;
@@ -93,7 +33,7 @@ function createCalmAmbientSynth(): CalmSynthController {
   let chordTimer: number | null = null;
   let chimeTimer: number | null = null;
   let chordIndex = 0;
-  let isMuted = false;
+  let isMuted = true;
   let loopsStarted = false;
 
   const playPadChord = (freqs: number[]) => {
@@ -256,99 +196,30 @@ function createCalmAmbientSynth(): CalmSynthController {
 }
 
 const Landing: React.FC = () => {
+  const { user, logout } = useAuth();
   const [active, setActive] = useState(0);
-  // Default is PLAYING mode (On / unmuted)
-  const [isPlayingMode, setIsPlayingMode] = useState(true);
+  // Web Audio starts only after the visitor deliberately presses the control.
+  const [isPlayingMode, setIsPlayingMode] = useState(false);
   const synthRef = useRef<CalmSynthController | null>(null);
-  const audioElRef = useRef<HTMLAudioElement | null>(null);
-  const isPlayingModeRef = useRef(true);
 
   const move = (direction: number) => setActive((current) => (current + direction + stories.length) % stories.length);
 
-  useEffect(() => {
-    const synth = createCalmAmbientSynth();
-    synthRef.current = synth;
-
-    // Create an in-memory <audio autoPlay loop> fallback so browsers that permit HTMLMediaElement
-    // autoplay start playing immediately on page open, and switch seamlessly to the Web Audio synth.
-    const blobUrl = buildCalmLoopBlobUrl();
-    const audioEl = new Audio(blobUrl);
-    audioEl.loop = true;
-    audioEl.volume = 0.45;
-    audioEl.autoplay = true;
-    audioElRef.current = audioEl;
-
-    let webAudioActive = false;
-
-    const tryStartAudio = async () => {
-      if (!isPlayingModeRef.current) return;
-      if (!webAudioActive) {
-        const started = await synth.start();
-        if (started) {
-          webAudioActive = true;
-          audioEl.pause();
-          return;
-        }
-      }
-      if (audioEl.paused && isPlayingModeRef.current) {
-        audioEl.play().catch(() => {});
-      }
-    };
-
-    tryStartAudio();
-
-    const unlockEvents = ['pointerdown', 'pointermove', 'mousemove', 'wheel', 'touchstart', 'keydown', 'click'];
-    const onUnlock = () => {
-      if (!isPlayingModeRef.current) return;
-      if (!webAudioActive) {
-        synth.start().then((ok) => {
-          if (ok) {
-            webAudioActive = true;
-            audioEl.pause();
-          } else if (audioEl.paused) {
-            audioEl.play().catch(() => {});
-          }
-        });
-      }
-    };
-
-    unlockEvents.forEach((evt) => window.addEventListener(evt, onUnlock, { passive: true }));
-
-    return () => {
-      unlockEvents.forEach((evt) => window.removeEventListener(evt, onUnlock));
-      audioEl.pause();
-      audioElRef.current = null;
-      URL.revokeObjectURL(blobUrl);
-      synth.stop();
-    };
-  }, []);
+  useEffect(() => () => synthRef.current?.stop(), []);
 
   const toggleCalmAudio = async () => {
     const nextPlaying = !isPlayingMode;
-    isPlayingModeRef.current = nextPlaying;
     setIsPlayingMode(nextPlaying);
 
-    const synth = synthRef.current;
-    const audioEl = audioElRef.current;
-
     if (nextPlaying) {
+      const synth = synthRef.current || createCalmAmbientSynth();
+      synthRef.current = synth;
       if (synth) {
         synth.setMuted(false);
-        const ok = await synth.start();
-        if (ok) {
-          audioEl?.pause();
-          return;
-        }
-      }
-      if (audioEl) {
-        audioEl.muted = false;
-        audioEl.play().catch(() => {});
+        const started = await synth.start();
+        if (!started) setIsPlayingMode(false);
       }
     } else {
-      synth?.setMuted(true);
-      if (audioEl) {
-        audioEl.pause();
-      }
+      synthRef.current?.setMuted(true);
     }
   };
 
@@ -368,8 +239,7 @@ const Landing: React.FC = () => {
   }, [active]);
 
   const story = stories[active];
-  const StoryIcon = story.icon;
-
+  const initials = String(user?.name||'Customer').split(/\s+/).slice(0,2).map(part=>part[0]).join('').toUpperCase();
   return (
     <main className="grow-landing">
       <section className="grow-stage" aria-label="HoodBoy Entertainment Lnkup platform" style={{ '--hero-position': story.position } as React.CSSProperties}>
@@ -390,14 +260,14 @@ const Landing: React.FC = () => {
               title={isPlayingMode ? 'Mute AI Calm Music' : 'Play AI Calm Music'}
             >
               {isPlayingMode ? <Volume2 size={14} /> : <VolumeX size={14} />}
-              <span>{isPlayingMode ? 'AI Calm Music · Playing' : 'AI Calm Music · Muted'}</span>
+              <span>{isPlayingMode ? 'Calm Music · Playing' : 'Play Calm Music'}</span>
               {isPlayingMode && (
                 <span className="grow-audio-bars" aria-hidden="true">
                   <i /><i /><i />
                 </span>
               )}
             </button>
-            <Link className="grow-login" to="/login">Sign in <ArrowUpRight size={14} /></Link>
+            {user?<div className="grow-customer-session"><Link className="grow-customer-profile" to="/linkup" aria-label={`Open ${user.name}'s Linkup profile`}>{user.avatar?<img src={user.avatar} alt="" referrerPolicy="no-referrer"/>:<span>{initials}</span>}<span className="grow-customer-copy"><strong>{user.name}</strong><small>{user.role==='customer'?'Google customer':'Signed in'}</small></span></Link><button type="button" className="grow-logout" onClick={logout} aria-label="Sign out" title="Sign out"><LogOut size={14}/><span>Sign out</span></button></div>:<Link className="grow-login" to="/login">Sign in <ArrowUpRight size={14} /></Link>}
           </div>
         </header>
 
@@ -410,16 +280,14 @@ const Landing: React.FC = () => {
             <h1 key={`title-${active}`}>{story.title}</h1>
           </div>
           <p className="grow-summary" key={`summary-${active}`}>{story.summary}</p>
-          <Link className="grow-cta" to="/login">Enter the platform <ArrowUpRight size={16} /></Link>
+          <div className="grow-cta-row"><Link className="grow-cta" to="/linkup">Browse events <ArrowUpRight size={16} /></Link><Link className="grow-cta grow-cta-secondary" to="/linkup/packages">View packages <Package size={15} /></Link></div>
         </div>
 
-        <div className="grow-preview" aria-label={`${story.label}: ${story.detail}`}>
-          <span className="grow-preview-photo" style={{ backgroundPosition: story.position }} aria-hidden="true" />
-          <span className="grow-preview-shade" aria-hidden="true" />
-          <span className="grow-preview-copy"><small>{story.label}</small><strong>{story.detail}</strong></span>
-          <span className="grow-preview-icon" aria-hidden="true"><StoryIcon size={14} /></span>
-          <button type="button" className="grow-play" onClick={() => move(1)} aria-label="Show next platform story"><Play size={14} fill="currentColor" /></button>
-        </div>
+        <aside className="grow-discovery" aria-label="Explore Linkup events and packages">
+          <p className="grow-discovery-kicker">Live entertainment</p><h2>Choose your experience</h2><p className="grow-discovery-intro">Reserve seats, compare packages, and complete your night with food and drinks.</p>
+          <Link to="/linkup" className="grow-discovery-card"><span className="grow-discovery-icon"><CalendarDays size={18}/></span><span><small>Upcoming</small><strong>Browse live events</strong></span><ArrowRight size={17}/></Link>
+          <Link to="/linkup/packages" className="grow-discovery-card grow-discovery-card-featured"><span className="grow-discovery-icon"><Package size={18}/></span><span><small>Seating · food · drinks</small><strong>Explore packages</strong></span><ArrowRight size={17}/></Link>
+        </aside>
 
         <div className="grow-bottom">
           <div className="grow-topics" aria-label="Platform coverage"><span>Artists</span><i /><span>Catalog</span><i /><span>Rights</span><i /><span>Royalties</span></div>

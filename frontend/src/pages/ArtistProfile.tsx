@@ -58,6 +58,8 @@ const ArtistProfile: React.FC = () => {
   const [approveNotes, setApproveNotes] = useState('');
   const [uploadingImage, setUploadingImage] = useState<string | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [approveConfirmOpen, setApproveConfirmOpen] = useState(false);
+  const [rejectConfirmOpen, setRejectConfirmOpen] = useState(false);
   const [createdLogin, setCreatedLogin] = useState<{ _id: string; name: string; email: string; tempPassword: string } | null>(null);
   const [syncingDistribeats, setSyncingDistribeats] = useState(false);
   const [bioExpanded, setBioExpanded] = useState(false);
@@ -340,7 +342,7 @@ const ArtistProfile: React.FC = () => {
 
           <div className="flex items-center gap-3">
             <button
-              onClick={handleApprove}
+              onClick={() => setApproveConfirmOpen(true)}
               disabled={actionLoading}
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors"
             >
@@ -702,7 +704,7 @@ const ArtistProfile: React.FC = () => {
             <div className="flex items-center gap-3 justify-end">
               <button onClick={() => setShowRejectModal(false)} className="px-4 py-2 bg-white text-gray-600 font-medium rounded-lg text-sm border border-gray-200 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300 transition-all duration-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-100">Cancel</button>
               <button
-                onClick={handleReject}
+                onClick={() => setRejectConfirmOpen(true)}
                 disabled={actionLoading || !rejectNotes.trim()}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-red-600 bg-red-50 border border-red-200 hover:bg-red-100 transition-colors disabled:opacity-50 dark:text-red-400 dark:bg-red-500/10 dark:border-red-800 dark:hover:bg-red-500/20"
               >
@@ -741,6 +743,24 @@ const ArtistProfile: React.FC = () => {
       )}
 
       {/* Delete Confirmation */}
+      <ConfirmDialog
+        isOpen={approveConfirmOpen}
+        title="Approve Artist Onboarding?"
+        message="Are you sure you want to approve this artist? This may create their login account and grant platform access."
+        confirmLabel="Yes, approve"
+        variant="info"
+        onConfirm={() => { setApproveConfirmOpen(false); handleApprove(); }}
+        onCancel={() => setApproveConfirmOpen(false)}
+      />
+      <ConfirmDialog
+        isOpen={rejectConfirmOpen}
+        title="Reject Artist Onboarding?"
+        message="Are you sure you want to reject this artist onboarding? The rejection reason will be saved and shown to the artist."
+        confirmLabel="Yes, reject"
+        variant="danger"
+        onConfirm={() => { setRejectConfirmOpen(false); handleReject(); }}
+        onCancel={() => setRejectConfirmOpen(false)}
+      />
       <ConfirmDialog
         isOpen={deleteConfirmOpen}
         title="Delete Artist"

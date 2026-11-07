@@ -9,7 +9,7 @@ interface TeamUser {
   _id: string;
   name: string;
   email: string;
-  role: 'admin' | 'manager' | 'artist' | 'finance' | 'marketing';
+  role: 'admin' | 'manager' | 'artist' | 'finance' | 'marketing' | 'customer';
   department: string;
   phone: string;
   avatar: string;
@@ -47,6 +47,7 @@ const TeamManagement: React.FC = () => {
   const [passwordUserId, setPasswordUserId] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<TeamUser | null>(null);
+  const [statusTarget, setStatusTarget] = useState<TeamUser | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   const [formName, setFormName] = useState('');
@@ -63,7 +64,7 @@ const TeamManagement: React.FC = () => {
       if (filterRole) params.role = filterRole;
       if (filterStatus) params.isActive = filterStatus;
       const res = await usersApi.getAll(params);
-      setUsers(res.data.data);
+      setUsers((res.data.data || []).filter((member: TeamUser) => member.role !== 'customer'));
     } catch {
       toast.error('Failed to load team members');
     }
@@ -271,7 +272,7 @@ const TeamManagement: React.FC = () => {
                     <button onClick={() => { setPasswordUserId(u._id); setShowPasswordModal(true); setNewPassword(''); }} title="Reset Password" className="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors">
                       <Key size={14} />
                     </button>
-                    <button onClick={() => handleToggleActive(u)} title={u.isActive ? 'Deactivate' : 'Activate'} className={`p-1.5 rounded-lg transition-colors ${u.isActive ? 'text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10' : 'text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-500/10'}`}>
+                    <button onClick={() => setStatusTarget(u)} title={u.isActive ? 'Deactivate' : 'Activate'} className={`p-1.5 rounded-lg transition-colors ${u.isActive ? 'text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10' : 'text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-500/10'}`}>
                       {u.isActive ? <PowerOff size={14} /> : <Power size={14} />}
                     </button>
                     <button onClick={() => setDeleteTarget(u)} title="Delete" className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
@@ -369,6 +370,17 @@ const TeamManagement: React.FC = () => {
       )}
 
       {/* Delete Confirmation */}
+      <ConfirmDialog
+        isOpen={!!statusTarget}
+        onCancel={() => setStatusTarget(null)}
+        onConfirm={() => { if (statusTarget) handleToggleActive(statusTarget); setStatusTarget(null); }}
+        title={statusTarget?.isActive ? 'Deactivate Team Member?' : 'Activate Team Member?'}
+        message={statusTarget?.isActive
+          ? `Are you sure you want to deactivate ${statusTarget?.name}? They will no longer be able to access the admin panel.`
+          : `Are you sure you want to reactivate ${statusTarget?.name}? Their admin-panel access will be restored.`}
+        confirmLabel={statusTarget?.isActive ? 'Yes, deactivate' : 'Yes, activate'}
+        variant={statusTarget?.isActive ? 'danger' : 'info'}
+      />
       <ConfirmDialog
         isOpen={!!deleteTarget}
         onCancel={() => setDeleteTarget(null)}

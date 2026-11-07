@@ -7,6 +7,9 @@ const migrations = [
   require('../migrations/002_fix_embedded_type_objects'),
   require('../migrations/003_distribeats_columns'),
   require('../migrations/004_upload_storage_fixes'),
+  require('../migrations/005_linkup_booking_platform'),
+  require('../migrations/006_google_customer_auth'),
+  require('../migrations/007_enforce_google_customer_roles'),
 ];
 const command = process.argv[2] || 'up';
 

@@ -21,6 +21,7 @@ interface AuthContextType {
   nav: NavItem[];
   access: RoleAccess;
   login: (email: string, password: string, remember?: boolean) => Promise<{ requiresTwoFactor?: boolean; challengeToken?: string }>;
+  googleLogin: (credential: string, remember?: boolean) => Promise<void>;
   verifyTwoFactor: (challengeToken: string, code: string, remember?: boolean) => Promise<void>;
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
@@ -36,6 +37,7 @@ const DEFAULT_DASHBOARDS: Record<string, string> = {
   artist: '/artist-dashboard',
   finance: '/finance-dashboard',
   marketing: '/marketing-dashboard',
+  customer: '/linkup',
 };
 
 export const getDashboardPath = (role: string): string => {
@@ -105,6 +107,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const res = await authApi.verifyTwoFactor(challengeToken, code);
     storeAuthResponse(res.data, remember);
   };
+  const googleLogin = async (credential: string, remember = true) => {
+    const res = await authApi.googleLogin(credential);
+    storeAuthResponse(res.data, remember);
+  };
 
   const updateUser = (updates: Partial<User>) => {
     setUser(prev => {
@@ -148,7 +154,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, roleDescription, dashboardPath, nav, access, login, verifyTwoFactor, logout, updateUser, canAccess, isLoading }}>
+    <AuthContext.Provider value={{ user, token, roleDescription, dashboardPath, nav, access, login, googleLogin, verifyTwoFactor, logout, updateUser, canAccess, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

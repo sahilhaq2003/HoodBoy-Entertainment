@@ -14,4 +14,5 @@ coverage/
 
 *.log
 backend/migration-report.json
+backend/private_uploads/
 .tools/

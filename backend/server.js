@@ -136,6 +136,10 @@ const start = async () => {
     const srv = listen();
     const { ensureSchema } = require('./lib/ensureSchema');
     ensureSchema(sequelize).catch(error => console.error(`MySQL schema sync warning: ${error.message}`));
+    const holdTimer = setInterval(() => {
+      require('./controllers/linkupPlatformController').expireHolds().catch(error => console.error(`Linkup hold expiry warning: ${error.message}`));
+    }, Math.max(60000, Number(process.env.LINKUP_HOLD_SWEEP_MS || 300000)));
+    holdTimer.unref();
     return srv;
   } catch (error) {
     console.error(`MySQL startup failed: ${error.message}`);

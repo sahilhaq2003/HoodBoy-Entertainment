@@ -22,6 +22,7 @@ const OwnershipTracker: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [approveTarget, setApproveTarget] = useState<string | null>(null);
   const [selectedSong, setSelectedSong] = useState('');
   const [form, setForm] = useState({
     masterOwner: '', producer: '', producerPercentage: 0,
@@ -460,7 +461,7 @@ const OwnershipTracker: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <button onClick={() => setDeleteTarget(o.songId?._id)} className="px-3 py-2 bg-white border border-red-200 rounded-lg text-xs text-red-600 hover:bg-red-50">Delete</button>
                     {!o.releaseApproved && (
-                      <button onClick={() => handleApprove(o.songId?._id)} disabled={!o.isReadyForRelease} className="px-3 py-2 bg-green-600 text-white rounded-lg text-xs font-semibold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1">
+                      <button onClick={() => setApproveTarget(o.songId?._id)} disabled={!o.isReadyForRelease} className="px-3 py-2 bg-green-600 text-white rounded-lg text-xs font-semibold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1">
                         <Award size={12} /> Approve for Release
                       </button>
                     )}
@@ -505,6 +506,15 @@ const OwnershipTracker: React.FC = () => {
       )}
 
       {/* Delete Confirmation */}
+      <ConfirmDialog
+        isOpen={!!approveTarget}
+        title="Approve Ownership for Release?"
+        message="Are you sure all ownership percentages, signatures, licences, and clearances are correct? This will mark the song as approved for release."
+        confirmLabel="Yes, approve"
+        variant="info"
+        onConfirm={() => { if (approveTarget) handleApprove(approveTarget); setApproveTarget(null); }}
+        onCancel={() => setApproveTarget(null)}
+      />
       <ConfirmDialog
         isOpen={!!deleteTarget}
         title="Delete Ownership Record"

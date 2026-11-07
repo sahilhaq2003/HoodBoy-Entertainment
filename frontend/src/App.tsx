@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth, getDashboardPath } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
 import ErrorBoundary from './components/ui/ErrorBoundary';
+import LinkupPageLoader from './components/linkup/LinkupPageLoader';
 import { applyAppearance, getAppearance } from './utils/appearance';
 
 // Load only the page needed for the current route. This keeps the initial bundle
@@ -47,15 +48,21 @@ const OwnershipTracker = lazy(() => import('./pages/OwnershipTracker'));
 const WeeklyReport = lazy(() => import('./pages/WeeklyReport'));
 const CampaignManager = lazy(() => import('./pages/CampaignManager'));
 const MetadataManager = lazy(() => import('./pages/MetadataManager'));
-const LnkUp = lazy(() => import('./pages/LnkUp'));
+const LinkupPlatform = lazy(() => import('./pages/LinkupPlatform'));
+const LinkupPublic = lazy(() => import('./pages/LinkupPublic'));
+const LinkupPackages = lazy(() => import('./pages/LinkupPackages'));
+const LinkupCheckout = lazy(() => import('./pages/LinkupCheckout'));
 const TeamManagement = lazy(() => import('./pages/TeamManagement'));
 const SystemHealth = lazy(() => import('./pages/SystemHealth'));
 
-const PageLoader = () => (
-  <div className="flex min-h-64 items-center justify-center" role="status" aria-label="Loading page">
-    <div className="h-9 w-9 animate-spin rounded-full border-2 border-purple-200 border-t-purple-600" />
-  </div>
-);
+const PageLoader = () => {
+  const { pathname } = useLocation();
+  if (pathname.startsWith('/linkup/checkout/')) return <LinkupPageLoader variant="checkout" />;
+  if (pathname === '/linkup/packages') return <LinkupPageLoader variant="packages" />;
+  if (pathname.startsWith('/linkup/events/')) return <LinkupPageLoader variant="detail" />;
+  if (pathname === '/linkup') return <LinkupPageLoader variant="events" />;
+  return <div className="flex min-h-64 items-center justify-center" role="status" aria-label="Loading page"><div className="h-9 w-9 animate-spin rounded-full border-2 border-purple-200 border-t-purple-600" /></div>;
+};
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isLoading } = useAuth();
@@ -105,11 +112,24 @@ const RoleConditional: React.FC<{ artist: React.ReactNode; staff: React.ReactNod
 const AppRoutes: React.FC = () => {
   const { user } = useAuth();
   const dashPath = getDashboardPath(user?.role || '');
+  const location = useLocation();
+  const isPublicExperience = location.pathname === '/home' || location.pathname.startsWith('/linkup');
+
+  useEffect(() => {
+    if (isPublicExperience) window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [location.pathname, isPublicExperience]);
 
   return (
     <Suspense fallback={<PageLoader />}>
-    <Routes>
+    <div className={isPublicExperience?'linkup-route-enter':''}>
+    {isPublicExperience&&<div key={location.pathname} className="linkup-route-progress" aria-hidden="true"/>}
+    <Routes location={location}>
+      <Route path="/home" element={<Landing />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/linkup" element={<LinkupPublic />} />
+      <Route path="/linkup/packages" element={<LinkupPackages />} />
+      <Route path="/linkup/checkout/:packageId" element={<LinkupCheckout />} />
+      <Route path="/linkup/events/:id" element={<LinkupPublic />} />
       <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         {/* Role-specific dashboards */}
         <Route index element={
@@ -118,6 +138,7 @@ const AppRoutes: React.FC = () => {
           user?.role === 'artist' ? <ArtistDashboard /> :
           user?.role === 'finance' ? <FinanceDashboard /> :
           user?.role === 'marketing' ? <MarketingDashboard /> :
+          user?.role === 'customer' ? <Navigate to="/linkup" replace /> :
           <Dashboard />
         } />
         <Route path="manager-dashboard" element={<RoleGuard roles={['manager']}><ManagerDashboard /></RoleGuard>} />
@@ -135,7 +156,7 @@ const AppRoutes: React.FC = () => {
         <Route path="distribution" element={<AccessGuard resource="distribution"><Distribution /></AccessGuard>} />
         <Route path="distribution/:id" element={<AccessGuard resource="distribution"><DistributionDetail /></AccessGuard>} />
         <Route path="system-health" element={<AccessGuard resource="distribution"><SystemHealth /></AccessGuard>} />
-        <Route path="the-lnk-up" element={<AccessGuard resource="theLnkUp"><LnkUp /></AccessGuard>} />
+        <Route path="the-lnk-up" element={<AccessGuard resource="theLnkUp"><LinkupPlatform /></AccessGuard>} />
         <Route path="projects" element={<AccessGuard resource="projects"><Projects /></AccessGuard>} />
         <Route path="development" element={<AccessGuard resource="development"><Development /></AccessGuard>} />
         <Route path="development/artist/:artistId" element={<AccessGuard resource="development"><ArtistScorecard /></AccessGuard>} />
@@ -174,6 +195,7 @@ const AppRoutes: React.FC = () => {
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </div>
     </Suspense>
   );
 };

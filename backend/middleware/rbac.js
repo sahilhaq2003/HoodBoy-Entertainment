@@ -4,6 +4,7 @@ const ROLE_DESCRIPTIONS = {
   artist: 'View own profile, songs, releases, royalties, and tasks.',
   finance: 'Full access to finances, budgets, royalties, and reports.',
   marketing: 'Manage campaigns, contacts, content, and social media.',
+  customer: 'Browse Linkup events, purchase packages, and manage booking payments.',
 };
 
 const ROLE_DASHBOARDS = {
@@ -12,6 +13,7 @@ const ROLE_DASHBOARDS = {
   artist: '/artist-dashboard',
   finance: '/finance-dashboard',
   marketing: '/marketing-dashboard',
+  customer: '/linkup',
 };
 
 const ROLE_NAV = {
@@ -86,6 +88,7 @@ const ROLE_NAV = {
     { path: '/analytics', label: 'Analytics' },
     { path: '/song-analytics', label: 'Song Analytics' },
   ],
+  customer: [],
 };
 
 const ROLE_ACCESS = {
@@ -230,6 +233,11 @@ const ROLE_ACCESS = {
     weeklyReports: { read: false, write: false },
     notifications: { read: true, write: false },
     activity: { read: false },
+    settings: false,
+  },
+  customer: {
+    dashboard: false,
+    notifications: { read: true, write: false },
     settings: false,
   },
 };

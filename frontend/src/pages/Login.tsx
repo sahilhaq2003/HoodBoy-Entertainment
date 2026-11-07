@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, AlertCircle, ArrowLeft, ArrowRight, CheckCircle2, KeyRound } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, AlertCircle, ArrowLeft, ArrowRight, CheckCircle2, KeyRound, TicketCheck } from 'lucide-react';
 import { useAuth, getDashboardPath } from '../contexts/AuthContext';
 import { authApi } from '../services/api';
+import GoogleSignInButton from '../components/auth/GoogleSignInButton';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -18,8 +19,9 @@ const Login: React.FC = () => {
   const [twoFactorCode, setTwoFactorCode] = useState('');
   const [resetToken, setResetToken] = useState(() => new URLSearchParams(window.location.search).get('resetToken') || '');
   const [message, setMessage] = useState('');
+  const [accessType, setAccessType] = useState<'customer' | 'staff'>(() => new URLSearchParams(window.location.search).get('access') === 'staff' ? 'staff' : 'customer');
   const hasRedirected = useRef(false);
-  const { login, verifyTwoFactor, user } = useAuth();
+  const { login, googleLogin, verifyTwoFactor, user } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -69,6 +71,13 @@ const Login: React.FC = () => {
   };
 
   const changeMode = (next: typeof mode) => { setMode(next); setError(''); setMessage(''); setChallengeToken(''); setPassword(''); };
+  const selectAccess = (next: typeof accessType) => {
+    setAccessType(next);
+    setMode('login');
+    setError('');
+    setMessage('');
+    if (next === 'customer') { setChallengeToken(''); setTwoFactorCode(''); }
+  };
 
   useEffect(() => {
     if (user && !hasRedirected.current) {
@@ -78,6 +87,21 @@ const Login: React.FC = () => {
       navigate(getDashboardPath(user.role), { replace: true });
     }
   }, [user, navigate]);
+
+  const visualAccess: 'customer' | 'staff' = mode === 'login' && !challengeToken ? accessType : 'staff';
+  const accessCopy = visualAccess === 'customer' ? {
+    badge: 'Live Entertainment Access',
+    title: <>Your night,<br />your experience.</>,
+    description: 'Discover events, choose the right package and complete your booking securely.',
+    benefits: ['Browse upcoming live events', 'Compare seating, food & drink packages', 'Secure booking with your Google account'],
+    security: 'Google-Secured Access',
+  } : {
+    badge: 'Music Label Platform',
+    title: <>Hello,<br />welcome back!</>,
+    description: 'Manage your workspace securely and access your HoodBoy dashboard.',
+    benefits: ['Role-based dashboard access', 'Real-time artist & revenue analytics', 'Bank-grade account security'],
+    security: 'Secure Staff Sign-In',
+  };
 
   return (
     <div className="login-shell min-h-screen flex items-center justify-center p-4 md:p-8">
@@ -132,25 +156,19 @@ const Login: React.FC = () => {
               </div>
             </div>
 
-            <div>
+            <div key={visualAccess} className="login-access-copy">
               <span className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-purple-100 mb-6">
-                Music Label Platform
+                {accessCopy.badge}
               </span>
               <h1 className="text-3xl xl:text-4xl font-bold text-white leading-tight tracking-tight mb-4">
-                Hello,
-                <br />
-                Welcome!
+                {accessCopy.title}
               </h1>
               <p className="text-purple-100/90 text-sm leading-relaxed max-w-xs mb-9">
-                Manage your account securely and access your dashboard.
+                {accessCopy.description}
               </p>
 
               <div className="space-y-3.5">
-                {[
-                  'Role-based dashboard access',
-                  'Real-time artist & revenue analytics',
-                  'Bank-grade account security',
-                ].map((item, i) => (
+                {accessCopy.benefits.map((item, i) => (
                   <div key={i} className="flex items-center gap-3">
                     <span className="w-5 h-5 rounded-full bg-white/15 border border-white/20 flex items-center justify-center flex-shrink-0">
                       <CheckCircle2 size={12} className="text-white" />
@@ -166,14 +184,14 @@ const Login: React.FC = () => {
           <div className="relative z-10 mt-10 flex items-center justify-between">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[10.5px] font-semibold text-purple-100">
               <Lock size={10} />
-              Secure Sign-In
+              {accessCopy.security}
             </span>
             <span className="text-[11px] text-purple-200/60 font-medium">v1.0</span>
           </div>
         </div>
 
         {/* ------------------------- RIGHT - Form ------------------------- */}
-        <div className="relative bg-white p-6 sm:p-10 xl:p-12 flex flex-col justify-center dark:bg-gray-800">
+        <div className="relative bg-white p-6 sm:p-10 xl:p-12 flex flex-col justify-start dark:bg-gray-800">
           {/* Mobile branding banner */}
           <div className="lg:hidden mb-8 rounded-2xl relative overflow-hidden p-6 text-white bg-gradient-to-br from-[#4C1D95] via-[#7C3AED] to-[#C084FC]">
             <div className="absolute -top-10 -right-10 w-36 h-36 rounded-full bg-white/10 blur-xl" />
@@ -186,8 +204,8 @@ const Login: React.FC = () => {
               </div>
             </div>
             <div className="relative z-10">
-              <h1 className="text-xl font-bold tracking-tight mb-1">Hello, Welcome!</h1>
-              <p className="text-purple-100/90 text-xs leading-relaxed">Manage your account securely and access your dashboard.</p>
+              <div key={visualAccess} className="login-access-copy"><h1 className="text-xl font-bold tracking-tight mb-1">{visualAccess==='customer'?'Your night, your experience.':'Hello, welcome back!'}</h1>
+              <p className="text-purple-100/90 text-xs leading-relaxed">{accessCopy.description}</p></div>
             </div>
           </div>
 
@@ -214,14 +232,18 @@ const Login: React.FC = () => {
             ) : (
               <>
                 {/* Login form */}
-                <div className="mb-7">
+                <div className="mb-7 min-h-[72px]">
                   <h2 className="text-2xl font-bold text-gray-900 tracking-tight dark:text-gray-100">
-                    {challengeToken ? 'Verify your identity' : mode === 'forgot' ? 'Recover your account' : mode === 'reset' ? 'Choose a new password' : 'Welcome back'}
+                    {challengeToken ? 'Verify your identity' : mode === 'forgot' ? 'Recover your account' : mode === 'reset' ? 'Choose a new password' : accessType === 'customer' ? 'Join The Lnk Up' : 'Welcome back'}
                   </h2>
                   <p className="text-sm text-gray-500 mt-1.5 dark:text-gray-400">
-                    {challengeToken ? 'Enter the current 6-digit code from your authenticator app.' : mode === 'forgot' ? 'We will send a time-limited reset link.' : mode === 'reset' ? 'The recovery link expires after 15 minutes.' : 'Sign in to your account to continue'}
+                    {challengeToken ? 'Enter the current 6-digit code from your authenticator app.' : mode === 'forgot' ? 'We will send a time-limited reset link.' : mode === 'reset' ? 'The recovery link expires after 15 minutes.' : accessType === 'customer' ? 'Use your Google account to browse events and securely book packages.' : 'Sign in with your HoodBoy workspace account.'}
                   </p>
                 </div>
+
+                {mode === 'login' && !challengeToken && <div className="relative mb-7 grid h-14 grid-cols-2 gap-2 rounded-2xl border border-gray-200 bg-gray-100/80 p-1.5 dark:border-gray-700 dark:bg-gray-900/40" role="tablist" aria-label="Choose sign-in type"><span aria-hidden="true" className={`pointer-events-none absolute bottom-1.5 left-1.5 top-1.5 w-[calc(50%-0.625rem)] rounded-xl bg-white shadow-md shadow-violet-950/10 ring-1 ring-violet-200 transition-transform duration-500 ease-[cubic-bezier(.16,1,.3,1)] dark:bg-violet-600 dark:ring-violet-500 ${accessType==='staff'?'translate-x-[calc(100%+0.5rem)]':'translate-x-0'}`}/><button type="button" role="tab" aria-selected={accessType==='customer'} onClick={()=>selectAccess('customer')} className={`relative z-10 flex h-11 items-center justify-center gap-2 rounded-xl text-sm font-bold transition-colors duration-300 ${accessType==='customer'?'text-violet-700 dark:text-white':'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'}`}><TicketCheck size={17}/> Customer</button><button type="button" role="tab" aria-selected={accessType==='staff'} onClick={()=>selectAccess('staff')} className={`relative z-10 flex h-11 items-center justify-center gap-2 rounded-xl text-sm font-bold transition-colors duration-300 ${accessType==='staff'?'text-violet-700 dark:text-white':'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'}`}><KeyRound size={17}/> Staff</button></div>}
+
+                {mode === 'login' && accessType === 'customer' && !challengeToken && <div key="customer-access" className="login-access-panel mb-7 rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-fuchsia-50 p-5 shadow-sm dark:border-violet-800/60 dark:from-violet-950/40 dark:to-fuchsia-950/30"><div className="mb-5 flex items-start gap-3"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-violet-600 text-white shadow-md shadow-violet-200 dark:shadow-none"><TicketCheck size={20}/></span><div><h3 className="text-sm font-extrabold text-gray-900 dark:text-white">Customer access</h3><p className="mt-1 text-xs leading-5 text-gray-600 dark:text-gray-300">Sign in with Google to browse events, select packages and complete bookings securely.</p></div></div><GoogleSignInButton onCredential={async credential=>{setLoading(true);setError('');try{await googleLogin(credential,true)}catch(err:any){setError(err.response?.data?.message||'Google sign-in failed');setLoading(false)}}} onError={setError}/><p className="mt-3 text-center text-[10px] font-medium text-violet-600 dark:text-violet-300">Customer bookings use Google sign-in only.</p></div>}
 
                 {error && (
                   <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl mb-5 text-sm font-medium text-red-700 bg-red-50 border border-red-200 animate-in slide-in-from-top-2 duration-300 dark:text-red-400 dark:bg-red-500/10 dark:border-red-800">
@@ -232,7 +254,7 @@ const Login: React.FC = () => {
 
                 {message && <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl mb-5 text-sm font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 dark:text-emerald-400 dark:bg-emerald-500/10 dark:border-emerald-800"><CheckCircle2 size={16} /><span>{message}</span></div>}
 
-                {mode === 'login' && <form onSubmit={handleSubmit} className="space-y-5">
+                {mode === 'login' && (accessType === 'staff' || challengeToken) && <form key={challengeToken?'staff-verify':'staff-access'} onSubmit={handleSubmit} className="login-access-panel space-y-5">
                   {challengeToken ? <div>
                     <label className="block text-[13px] font-semibold text-gray-700 mb-1.5 dark:text-gray-200">Authenticator code</label>
                     <div className="relative"><KeyRound size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" /><input value={twoFactorCode} onChange={e => setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" required className="w-full h-12 pl-11 pr-4 bg-gray-100/70 border border-gray-200 rounded-xl text-sm tracking-[0.3em] dark:bg-gray-700/50 dark:border-gray-600 dark:text-gray-100" placeholder="000000" /></div>
@@ -315,9 +337,9 @@ const Login: React.FC = () => {
                   </button>
                 </form>}
 
-                {mode === 'forgot' && <form onSubmit={handleForgot} className="space-y-4"><div><label className="block text-[13px] font-semibold text-gray-700 mb-1.5 dark:text-gray-200">Account email</label><input type="email" value={email} onChange={e => setEmail(e.target.value)} required autoFocus className="w-full h-12 px-4 bg-gray-100/70 border border-gray-200 rounded-xl text-sm dark:bg-gray-700/50 dark:border-gray-600 dark:text-gray-100" /></div><button type="submit" disabled={loading} className="w-full h-12 bg-purple-600 text-white font-semibold rounded-xl text-sm disabled:opacity-60">{loading ? 'Sending...' : 'Send Reset Link'}</button></form>}
+                {mode === 'forgot' && <form onSubmit={handleForgot} className="login-access-panel space-y-4"><div><label className="block text-[13px] font-semibold text-gray-700 mb-1.5 dark:text-gray-200">Account email</label><input type="email" value={email} onChange={e => setEmail(e.target.value)} required autoFocus className="w-full h-12 px-4 bg-gray-100/70 border border-gray-200 rounded-xl text-sm dark:bg-gray-700/50 dark:border-gray-600 dark:text-gray-100" /></div><button type="submit" disabled={loading} className="w-full h-12 bg-purple-600 text-white font-semibold rounded-xl text-sm disabled:opacity-60">{loading ? 'Sending...' : 'Send Reset Link'}</button></form>}
 
-                {mode === 'reset' && <form onSubmit={handleReset} className="space-y-4"><input type="hidden" value={resetToken} /><div><label className="block text-xs font-semibold mb-1 dark:text-gray-200">New password</label><input type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={8} autoFocus className="w-full h-12 px-4 bg-gray-100/70 border border-gray-200 rounded-xl text-sm dark:bg-gray-700/50 dark:border-gray-600 dark:text-gray-100" /></div><button type="submit" disabled={loading || !resetToken} className="w-full h-12 bg-purple-600 text-white font-semibold rounded-xl text-sm disabled:opacity-60">{loading ? 'Resetting...' : 'Reset Password'}</button></form>}
+                {mode === 'reset' && <form onSubmit={handleReset} className="login-access-panel space-y-4"><input type="hidden" value={resetToken} /><div><label className="block text-xs font-semibold mb-1 dark:text-gray-200">New password</label><input type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={8} autoFocus className="w-full h-12 px-4 bg-gray-100/70 border border-gray-200 rounded-xl text-sm dark:bg-gray-700/50 dark:border-gray-600 dark:text-gray-100" /></div><button type="submit" disabled={loading || !resetToken} className="w-full h-12 bg-purple-600 text-white font-semibold rounded-xl text-sm disabled:opacity-60">{loading ? 'Resetting...' : 'Reset Password'}</button></form>}
               </>
             )}
 

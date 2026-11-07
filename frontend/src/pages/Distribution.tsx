@@ -9,6 +9,7 @@ import { useSocket, type DistribeatsReleaseUpdate } from '../contexts/SocketCont
 import { formatCurrency } from '../utils/helpers';
 import BulkReleaseImport from '../components/distribution/BulkReleaseImport';
 import SystemHealthPanel from '../components/distribution/SystemHealthPanel';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
 import Royalties from './Royalties';
 
 const statusColors: Record<string, string> = {
@@ -159,6 +160,7 @@ const Distribution: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [actionBusy, setActionBusy] = useState('');
+  const [qcAction, setQcAction] = useState<{ release: DistributionRelease; action: 'approve' | 'reject' } | null>(null);
   const [selectedReleaseIds, setSelectedReleaseIds] = useState<string[]>([]);
   const [references, setReferences] = useState<any>(null);
   const [webhookEvents, setWebhookEvents] = useState<any[]>([]);
@@ -1543,8 +1545,8 @@ const Distribution: React.FC = () => {
                 <td className="py-3 capitalize font-bold text-amber-500">{(r.qcStatus || 'pending_qc').replace('_', ' ')}</td>
                 <td className="py-3">
                   <div className="flex gap-2">
-                    <button onClick={async () => { await distributionApi.updateQc(r._id, { qcStatus: 'ready_for_distribution', rightsStatus: 'approved' }); load(); toast.success('Approved'); }} className="rounded bg-emerald-500/20 text-emerald-500 px-3 py-1 text-xs font-bold hover:bg-emerald-500/30">Approve</button>
-                    <button onClick={async () => { await distributionApi.updateQc(r._id, { qcStatus: 'qc_failed', rightsStatus: 'rejected' }); load(); toast.error('Rejected'); }} className="rounded bg-red-500/20 text-red-500 px-3 py-1 text-xs font-bold hover:bg-red-500/30">Reject</button>
+                    <button onClick={() => setQcAction({ release: r, action: 'approve' })} className="rounded bg-emerald-500/20 text-emerald-500 px-3 py-1 text-xs font-bold hover:bg-emerald-500/30">Approve</button>
+                    <button onClick={() => setQcAction({ release: r, action: 'reject' })} className="rounded bg-red-500/20 text-red-500 px-3 py-1 text-xs font-bold hover:bg-red-500/30">Reject</button>
                   </div>
                 </td>
               </tr>
@@ -1556,6 +1558,30 @@ const Distribution: React.FC = () => {
         </table></div>
       </div>
     )}
+    <ConfirmDialog
+      isOpen={!!qcAction}
+      title={qcAction?.action === 'approve' ? 'Approve Release QC?' : 'Reject Release QC?'}
+      message={qcAction?.action === 'approve'
+        ? `Are you sure you want to approve “${qcAction?.release.title || 'this release'}”? Confirm that all content, rights, and metadata checks are complete.`
+        : `Are you sure you want to reject “${qcAction?.release.title || 'this release'}”? It will be marked as failed QC and cannot be submitted until corrected.`}
+      confirmLabel={qcAction?.action === 'approve' ? 'Yes, approve' : 'Yes, reject'}
+      variant={qcAction?.action === 'approve' ? 'info' : 'danger'}
+      onCancel={() => setQcAction(null)}
+      onConfirm={async () => {
+        if (!qcAction) return;
+        try {
+          const approved = qcAction.action === 'approve';
+          await distributionApi.updateQc(qcAction.release._id, approved
+            ? { qcStatus: 'ready_for_distribution', rightsStatus: 'approved' }
+            : { qcStatus: 'qc_failed', rightsStatus: 'rejected' });
+          toast[approved ? 'success' : 'error'](approved ? 'Approved' : 'Rejected');
+          setQcAction(null);
+          load();
+        } catch (error: any) {
+          toast.error(error.response?.data?.message || 'QC review could not be updated');
+        }
+      }}
+    />
   </div>;
 };
 

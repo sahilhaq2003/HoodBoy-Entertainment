@@ -2,7 +2,7 @@ export interface User {
   _id: string;
   name: string;
   email: string;
-  role: 'admin' | 'manager' | 'artist' | 'finance' | 'marketing';
+  role: 'admin' | 'manager' | 'artist' | 'finance' | 'marketing' | 'customer';
   avatar?: string;
   phone?: string;
   notificationPreferences?: Array<{ key: string; enabled: boolean }>;

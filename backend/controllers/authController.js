@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const User = require('../models/User');
+const { verifyGoogleCredential } = require('../services/googleIdentityService');
 
 const removePreviousAvatar = async (avatarUrl) => {
   if (!avatarUrl || !String(avatarUrl).startsWith('/uploads/images/')) return;
@@ -89,9 +90,51 @@ const login = async (req, res) => {
   }
 };
 
+const googleLogin = async (req, res) => {
+  try {
+    const payload = await verifyGoogleCredential(req.body.credential);
+    const email = String(payload.email).toLowerCase().trim();
+    let user = await User.findOne({ googleId: String(payload.sub) });
+    if (!user) {
+      const existing = await User.findOne({ email });
+      if (existing && existing.role !== 'customer') {
+        return res.status(409).json({ success: false, message: 'This email belongs to an existing staff account. Use the staff sign-in method.' });
+      }
+      user = existing;
+    }
+    if (!user) {
+      user = await User.create({
+        name: String(payload.name || email.split('@')[0]).slice(0, 191), email,
+        password: crypto.randomBytes(32).toString('hex'), role: 'customer',
+        avatar: /^https:\/\//i.test(String(payload.picture || '')) ? String(payload.picture).slice(0, 512) : '',
+        googleId: String(payload.sub), authProvider: 'google', isActive: true,
+      });
+    } else {
+      if (user.isActive === false) return res.status(403).json({ success: false, message: 'Account is deactivated. Contact support.' });
+      if (user.googleId && user.googleId !== String(payload.sub)) return res.status(409).json({ success: false, message: 'This email is linked to another Google account.' });
+      user.googleId = String(payload.sub);
+      user.authProvider = 'google';
+      // This endpoint is exclusively for public Linkup customer access. A
+      // legacy Google-linked account must never retain a workspace staff role.
+      user.role = 'customer';
+      user.department = '';
+      if (!user.avatar && /^https:\/\//i.test(String(payload.picture || ''))) user.avatar = String(payload.picture).slice(0, 512);
+      await user.save();
+    }
+    res.json(authPayload(user, generateToken(user._id)));
+  } catch (error) {
+    res.status(401).json({ success: false, message: error.message || 'Google sign-in failed' });
+  }
+};
+
 const getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
+    if (user?.authProvider === 'google' && user.role !== 'customer') {
+      user.role = 'customer';
+      user.department = '';
+      await user.save();
+    }
     res.json(authPayload(user, undefined));
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -307,7 +350,7 @@ const resetPassword = async (req, res) => {
 };
 
 module.exports = {
-  login, getMe, updateProfile, changePassword,
+  login, googleLogin, getMe, updateProfile, changePassword,
   verifyTwoFactorLogin, setupTwoFactor, confirmTwoFactor, disableTwoFactor,
   requestPasswordReset, resetPassword, uploadAvatar, removeAvatar,
 };
