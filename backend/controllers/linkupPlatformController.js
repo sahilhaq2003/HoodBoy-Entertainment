@@ -144,9 +144,6 @@ const create = async (req, res) => {
     if (name === 'bank-accounts' && req.user.role !== 'admin') return fail(res, 403, 'Only administrators can manage bank accounts');
     const Model = resources[name];
     if (!Model || !editableFields[name]) return fail(res, 404, 'Unknown Linkup resource');
-    const current = await Model.findById(req.params.id);
-    if (!current) return fail(res, 404, 'Record not found');
-    const previousImages = recordImageUrls(name, current);
     let input = pick(req.body, editableFields[name]);
     if (name === 'events') {
       if (!validTimeZone(input.timeZone)) throw new Error('Select a valid event time zone');
@@ -168,6 +165,9 @@ const update = async (req, res) => {
     if (name === 'bank-accounts' && req.user.role !== 'admin') return fail(res, 403, 'Only administrators can manage bank accounts');
     const Model = resources[name];
     if (!Model || !editableFields[name]) return fail(res, 404, 'Unknown Linkup resource');
+    const current = await Model.findById(req.params.id);
+    if (!current) return fail(res, 404, 'Record not found');
+    const previousImages = recordImageUrls(name, current);
     let input = pick(req.body, editableFields[name]);
     if (name === 'events' && input.timeZone !== undefined && !validTimeZone(input.timeZone)) throw new Error('Select a valid event time zone');
     if (name === 'packages') {
