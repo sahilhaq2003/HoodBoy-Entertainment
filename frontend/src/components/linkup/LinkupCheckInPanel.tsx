@@ -54,17 +54,22 @@ const LinkupCheckInPanel: React.FC = () => {
     setError(''); setDetails(null); scanLocked.current = false;
     try {
       await stopScanner();
-      const { Html5Qrcode } = await import('html5-qrcode');
-      const scanner = new Html5Qrcode('linkup-entry-reader');
+      const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode');
+      const scanner = new Html5Qrcode('linkup-entry-reader', {
+        formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+        useBarCodeDetectorIfSupported: true,
+        verbose: false,
+      });
       scannerRef.current = scanner;
       setScanning(true);
       await scanner.start(
         { facingMode: 'environment' },
-        { fps: 10, qrbox: (width:number,height:number) => { const size=Math.max(50,Math.floor(Math.min(width,height)*0.9)); return { width:size, height:size }; }, aspectRatio: 1 },
+        { fps: 20, qrbox: (width:number,height:number) => { const size=Math.max(50,Math.floor(Math.min(width,height)*0.9)); return { width:size, height:size }; }, aspectRatio: 1, disableFlip: true },
         decodedText => {
           if (scanLocked.current) return;
           scanLocked.current = true;
-          void stopScanner().then(() => lookup(decodedText));
+          void lookup(decodedText);
+          void stopScanner();
         },
         () => {},
       );

@@ -521,7 +521,6 @@ const verifyTransfer = async (req, res) => {
     if (reviewedBooking) {
       const template = action === 'approve' ? 'payment_approved' : action === 'reject' ? 'payment_rejected' : 'payment_information_requested';
       await notifyBooking(reviewedBooking, template, { transitionKey: `${req.params.id}:${action}`, reason: req.body.reason || '' });
-      if (action === 'approve') await notifyBooking(reviewedBooking, 'booking_confirmed', { transitionKey: String(req.params.id) });
     }
     res.json({ success: true, data: result });
   } catch (error) { fail(res, /not found/i.test(error.message) ? 404 : 409, error.message); }
