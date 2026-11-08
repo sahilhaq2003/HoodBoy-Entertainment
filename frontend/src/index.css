@@ -901,8 +901,23 @@ body { background: var(--hbe-bg); }
 
 /* ───────────────────────── Responsive ──────────────────────── */
 @media (max-width: 767px) {
+  .app-shell,
+  .app-workspace,
   .app-content {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .app-content {
+    overflow-x: hidden;
     padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+  }
+
+  .app-content > .route-page-enter {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
   }
 
   .app-content > div > div > .flex.items-center.justify-between {
