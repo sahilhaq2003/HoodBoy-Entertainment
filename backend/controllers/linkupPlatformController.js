@@ -8,6 +8,7 @@ const { validTimeZone, calendarDateInZone } = require('../lib/eventTime');
 const User = require('../models/User');
 const { createNotification, createBulkNotifications } = require('../services/notificationService');
 const { notifyBooking, queueAdmin } = require('../services/emailService');
+const { optimizeImageBuffer } = require('../services/imageOptimizationService');
 const {
   LinkupEvent, LinkupPerformanceSlot, LinkupSeating, LinkupFoodVendor, LinkupFoodItem,
   LinkupAlcoholOption, LinkupBankAccount, LinkupPackage, LinkupBooking,
@@ -521,11 +522,24 @@ const exportBookings = async (req, res) => {
 
 const uploadImage = async (req, res) => {
   if (!req.file) return fail(res, 400, 'Select an image to upload.');
-  return res.status(201).json({
-    success: true,
-    message: 'Image uploaded successfully',
-    data: { url: `/uploads/linkup/${req.file.filename}` },
-  });
+  try {
+    const optimized = await optimizeImageBuffer(req.file.buffer);
+    const destination = path.join(__dirname, '..', 'uploads', 'linkup');
+    await fs.promises.mkdir(destination, { recursive: true });
+    const filename = `${Date.now()}-${crypto.randomBytes(10).toString('hex')}.webp`;
+    await fs.promises.writeFile(path.join(destination, filename), optimized.buffer, { flag: 'wx' });
+    return res.status(201).json({
+      success: true,
+      message: 'Image optimized and uploaded successfully',
+      data: {
+        url: `/uploads/linkup/${filename}`,
+        width: optimized.width,
+        height: optimized.height,
+        originalBytes: optimized.originalBytes,
+        optimizedBytes: optimized.optimizedBytes,
+      },
+    });
+  } catch (error) { return fail(res, 400, error.message || 'Image optimization failed'); }
 };
 
 module.exports = { list, getOne, create, update, remove, overview, publicEvents, publicEvent, publicPackage, createBooking, completePackageBooking, createSlotBooking, submitReceipt, verifyTransfer, cancelBooking, expireHolds, exportBookings, receipt, bookingStatus, uploadImage, _priceBooking: priceBooking, _preparePackageCheckout: preparePackageCheckout, _releaseBookingInventory: releaseBookingInventory };

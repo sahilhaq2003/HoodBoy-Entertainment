@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { linkupPlatformApi } from '../services/api';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import EmailSettingsPanel from '../components/linkup/EmailSettingsPanel';
+import { compressImageForUpload } from '../utils/imageCompression';
 
 type RecordItem = Record<string, any> & { _id: string };
 type Field = { key: string; label: string; type?: string; required?: boolean; options?: [string,string][]; resource?: string; multiple?: boolean; help?: string };
@@ -199,10 +200,12 @@ const LinkupPlatform: React.FC = () => {
     if (file.size > 5 * 1024 * 1024) return setFormError('Image must be smaller than 5 MB.');
     setFormError(''); setUploadingImage(field.key);
     try {
-      const data = new FormData(); data.append('image', file);
+      const optimizedFile = await compressImageForUpload(file);
+      const data = new FormData(); data.append('image', optimizedFile);
       const response = await linkupPlatformApi.uploadImage(data);
       setForm(current => ({ ...current, [field.key]: response.data.data.url }));
-      toast.success('Image uploaded successfully');
+      const saved = file.size - Number(response.data.data.optimizedBytes || optimizedFile.size);
+      toast.success(saved > 0 ? `Image optimized · ${Math.round(saved / 1024)} KB saved` : 'Image optimized and uploaded');
     } catch (error:any) {
       const message = error.response?.data?.message || 'Image upload failed. Please try again.';
       setFormError(message); toast.error(message);
