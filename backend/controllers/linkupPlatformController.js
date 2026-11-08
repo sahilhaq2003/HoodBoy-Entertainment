@@ -250,7 +250,7 @@ const remove = async (req, res) => {
     const current = await Model.findById(req.params.id);
     if (!current) return fail(res, 404, 'Record not found');
     if (name === 'bookings') {
-      if (!current.inventoryReleased) await releaseBookingInventory(current);
+      if (!current.inventoryReleased) await releaseBookingInventory(current._id);
       const transfers = await LinkupBankTransfer.find({ booking: current._id });
       await removeReceiptFiles(transfers);
       await LinkupBankTransfer.deleteMany({ booking: current._id });

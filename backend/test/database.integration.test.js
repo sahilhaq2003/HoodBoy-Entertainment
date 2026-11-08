@@ -15,11 +15,11 @@ const File = require('../models/File');
 const EmailNotification = require('../models/EmailNotification');
 const EmailSettings = require('../models/EmailSettings');
 const emailService = require('../services/emailService');
-const { LinkupEvent, LinkupSeating, LinkupBankAccount, LinkupPackage, LinkupBooking, LinkupFoodVendor, LinkupFoodItem } = require('../models/LinkupPlatform');
-const { _priceBooking, _preparePackageCheckout } = require('../controllers/linkupPlatformController');
+const { LinkupEvent, LinkupSeating, LinkupBankAccount, LinkupPackage, LinkupBooking, LinkupFoodVendor, LinkupFoodItem, LinkupAuditLog } = require('../models/LinkupPlatform');
+const { remove, _priceBooking, _preparePackageCheckout } = require('../controllers/linkupPlatformController');
 
 const runId = `AUTOMATED_TEST_${crypto.randomUUID()}`;
-const createdIds = { artists: [], finances: [], royalties: [], ownerships: [], metadata: [], files: [], linkupEvents: [], linkupSeating: [], linkupBanks: [], linkupPackages: [], linkupVendors: [], linkupFood: [] };
+const createdIds = { artists: [], finances: [], royalties: [], ownerships: [], metadata: [], files: [], linkupEvents: [], linkupSeating: [], linkupBanks: [], linkupPackages: [], linkupBookings: [], linkupVendors: [], linkupFood: [] };
 const sourceTotal = (value) => ({ streaming: value, publishing: 0, mechanical: 0, performance: 0, sync: 0, merchandise: 0, other: 0 });
 let testArtist;
 let originalEmailSettings;
@@ -46,6 +46,8 @@ test.after(async () => {
     Ownership.deleteMany({ _id: { $in: createdIds.ownerships } }),
     SongMetadata.deleteMany({ _id: { $in: createdIds.metadata } }),
     File.deleteMany({ _id: { $in: createdIds.files } }),
+    LinkupBooking.deleteMany({ _id: { $in: createdIds.linkupBookings } }),
+    LinkupAuditLog.deleteMany({ entityId: { $in: createdIds.linkupBookings.map(String) } }),
     LinkupPackage.deleteMany({ _id: { $in: createdIds.linkupPackages } }),
     LinkupFoodItem.deleteMany({ _id: { $in: createdIds.linkupFood } }),
     LinkupFoodVendor.deleteMany({ _id: { $in: createdIds.linkupVendors } }),
@@ -139,6 +141,27 @@ dbtest('Linkup package pricing is server-derived and package bank accounts persi
   assert.equal(quote.taxAmount, 16.5);
   assert.equal(quote.serviceFeeAmount, 8.25);
   assert.equal(quote.totalAmount, 189.75);
+
+  const booking = await LinkupBooking.create({
+    bookingReference: `${runId}-DELETE`, customer: '000000000000000000000001', event: event._id, package: pkg._id,
+    customerName: 'Delete Test', email: 'delete@example.test', phone: '555-0101', guestCount: 1,
+    items: [{ itemType: 'seating', itemId: seating._id, name: seating.name, quantity: 1 }, { itemType: 'food', itemId: meal._id, name: meal.name, quantity: 2 }],
+    totalAmount: 165, bookingStatus: 'confirmed', paymentStatus: 'paid', inventoryReleased: false,
+  });
+  createdIds.linkupBookings.push(booking._id);
+  await LinkupPackage.findByIdAndUpdate(pkg._id, { $inc: { availableQuantity: -1 } });
+  await LinkupSeating.findByIdAndUpdate(seating._id, { $inc: { availableQuantity: -1 } });
+  await LinkupFoodItem.findByIdAndUpdate(meal._id, { $inc: { availableQuantity: -2 } });
+  let deleteResponse;
+  await remove(
+    { params: { resource: 'bookings', id: booking._id }, user: { _id: '000000000000000000000002', role: 'admin' } },
+    { status() { return this; }, json(body) { deleteResponse = body; return this; } },
+  );
+  assert.equal(deleteResponse.success, true);
+  assert.equal(await LinkupBooking.findById(booking._id), null);
+  assert.equal((await LinkupPackage.findById(pkg._id)).availableQuantity, 5);
+  assert.equal((await LinkupSeating.findById(seating._id)).availableQuantity, 5);
+  assert.equal((await LinkupFoodItem.findById(meal._id)).availableQuantity, 20);
 });
 
 dbtest('email queue is idempotent and records SMTP acceptance without sending real email', async () => {
