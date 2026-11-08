@@ -60,7 +60,7 @@ const LinkupCheckInPanel: React.FC = () => {
       setScanning(true);
       await scanner.start(
         { facingMode: 'environment' },
-        { fps: 10, qrbox: (width:number,height:number) => { const size=Math.max(180,Math.min(280,Math.floor(Math.min(width,height)*0.72))); return { width:size, height:size }; }, aspectRatio: 1 },
+        { fps: 10, qrbox: (width:number,height:number) => { const size=Math.max(50,Math.floor(Math.min(width,height)*0.9)); return { width:size, height:size }; }, aspectRatio: 1 },
         decodedText => {
           if (scanLocked.current) return;
           scanLocked.current = true;
@@ -94,7 +94,7 @@ const LinkupCheckInPanel: React.FC = () => {
       <div className="border-b border-slate-200 bg-gradient-to-r from-violet-50 to-fuchsia-50 p-4 sm:p-6"><div className="flex items-start gap-3 sm:gap-4"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-violet-600 text-white shadow-lg shadow-violet-200 sm:h-12 sm:w-12"><QrCode size={23}/></span><div><p className="text-[10px] font-black uppercase tracking-[.2em] text-violet-600">Secure event entry</p><h2 className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">Scan customer QR pass</h2><p className="mt-2 max-w-xl text-sm leading-6 text-slate-600">Use the rear camera to verify a paid booking. Details appear before entry is confirmed.</p></div></div></div>
       <div className="p-5 sm:p-6">
         <div className={`relative mx-auto aspect-square w-full max-w-lg overflow-hidden rounded-3xl border-2 ${scanning?'border-violet-500 bg-slate-950':'border-dashed border-slate-300 bg-slate-50'}`}>
-          <div id="linkup-entry-reader" className="h-full w-full overflow-hidden"/>
+          <div id="linkup-entry-reader" className="h-full w-full overflow-hidden [&>div]:!h-full [&_video]:!h-full [&_video]:!w-full [&_video]:!object-cover"/>
           {!scanning&&<div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center"><span className="grid h-16 w-16 place-items-center rounded-2xl bg-violet-100 text-violet-700"><Camera size={28}/></span><h3 className="mt-5 text-lg font-black text-slate-900">Ready to scan</h3><p className="mt-2 max-w-xs text-sm leading-6 text-slate-500">Ask the customer to open the QR code from their approval email or My Bookings page.</p><button type="button" onClick={()=>void startScanner()} className="mt-6 inline-flex h-12 items-center gap-2 rounded-xl bg-violet-600 px-6 text-sm font-black text-white shadow-lg shadow-violet-200 transition hover:bg-violet-700"><Camera size={17}/> Open camera</button></div>}
         </div>
         {scanning&&<button type="button" onClick={()=>void stopScanner()} className="mx-auto mt-4 flex h-11 items-center gap-2 rounded-xl border border-slate-300 px-4 text-sm font-bold text-slate-700 hover:bg-slate-50">Stop camera</button>}
