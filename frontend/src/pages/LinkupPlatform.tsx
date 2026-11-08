@@ -1,16 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { BarChart3, CalendarDays, Armchair, Mic2, Store, Utensils, Wine, Package, Landmark, TicketCheck, BadgeDollarSign, Settings, Plus, Pencil, Trash2, RefreshCw, ExternalLink, Check, X, Search, Download, ArrowUpRight, ImagePlus, Loader2, MessageSquareText, ChevronLeft, ChevronRight } from 'lucide-react';
+import { BarChart3, CalendarDays, Armchair, Mic2, Store, Utensils, Wine, Package, Landmark, TicketCheck, BadgeDollarSign, Settings, Plus, Pencil, Trash2, RefreshCw, ExternalLink, Check, X, Search, Download, ArrowUpRight, ImagePlus, Loader2, MessageSquareText, ChevronLeft, ChevronRight, Cloud, WifiOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import { linkupPlatformApi } from '../services/api';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import EmailSettingsPanel from '../components/linkup/EmailSettingsPanel';
 import { compressImageForUpload } from '../utils/imageCompression';
+import { useAuth } from '../contexts/AuthContext';
 
 type RecordItem = Record<string, any> & { _id: string };
 type Field = { key: string; label: string; type?: string; required?: boolean; options?: [string,string][]; resource?: string; multiple?: boolean; help?: string };
 type Section = { key: string; label: string; icon: React.ReactNode; fields?: Field[]; columns?: string[]; readOnly?: boolean };
 const PAGE_SIZE = 25;
+const DRAFT_VERSION = 1;
 
 const statusOptions = (values: string[]): [string,string][] => values.map(value => [value, value.replaceAll('_', ' ').replace(/\b\w/g, c => c.toUpperCase())]);
 const browserTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
@@ -112,6 +114,7 @@ const PackageItemsEditor: React.FC<{ items:PackageSelection[]; food:RecordItem[]
 };
 
 const LinkupPlatform: React.FC = () => {
+  const { user } = useAuth();
   const [active, setActive] = useState('overview');
   const [records, setRecords] = useState<RecordItem[]>([]);
   const [overview, setOverview] = useState<Record<string,number>>({});
@@ -122,6 +125,8 @@ const LinkupPlatform: React.FC = () => {
   const [form, setForm] = useState<Record<string,any>>({});
   const [formError, setFormError] = useState('');
   const [uploadingImage, setUploadingImage] = useState('');
+  const [draftSavedAt, setDraftSavedAt] = useState<number|null>(null);
+  const [isOnline, setIsOnline] = useState(() => typeof navigator === 'undefined' ? true : navigator.onLine);
   const [deleteId, setDeleteId] = useState<string|null>(null);
   const [sensitiveAction, setSensitiveAction] = useState<{
     kind: 'transfer' | 'booking';
@@ -138,12 +143,41 @@ const LinkupPlatform: React.FC = () => {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const section = useMemo(() => sections.find(item => item.key === active)!, [active]);
+  const draftKey = useMemo(() => `hbe-linkup-draft:v${DRAFT_VERSION}:${user?._id || 'staff'}:${active}`, [user?._id, active]);
   const visibleRecords = useMemo(() => records.filter(record => !search || JSON.stringify(record).toLowerCase().includes(search.toLowerCase())), [records,search]);
   const totalPages = Math.max(1, Math.ceil(visibleRecords.length / PAGE_SIZE));
   const paginatedRecords = useMemo(() => visibleRecords.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [visibleRecords,page]);
 
   useEffect(() => { setPage(1); }, [active,search]);
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page,totalPages]);
+
+  useEffect(() => {
+    const updateConnection = () => setIsOnline(navigator.onLine);
+    window.addEventListener('online', updateConnection);
+    window.addEventListener('offline', updateConnection);
+    return () => {
+      window.removeEventListener('online', updateConnection);
+      window.removeEventListener('offline', updateConnection);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!formOpen || editing || !section.fields?.length) return;
+    try {
+      const allowed = new Set(section.fields.map(field => field.key));
+      const draftForm = Object.fromEntries(Object.entries(form).filter(([key]) => allowed.has(key)));
+      const savedAt = Date.now();
+      localStorage.setItem(draftKey, JSON.stringify({ version: DRAFT_VERSION, section: active, savedAt, form: draftForm }));
+      setDraftSavedAt(savedAt);
+    } catch {
+      setDraftSavedAt(null);
+    }
+  }, [form, formOpen, editing, section.fields, draftKey, active]);
+
+  const clearDraft = () => {
+    try { localStorage.removeItem(draftKey); } catch { /* Local storage may be unavailable. */ }
+    setDraftSavedAt(null);
+  };
 
   const switchSection = (key:string) => {
     if (key === active) return;
@@ -197,15 +231,31 @@ const LinkupPlatform: React.FC = () => {
       else if (field.type === 'datetime-local' && raw) next[field.key] = String(raw).slice(0,16);
       else next[field.key] = raw?._id ?? raw ?? (field.key === 'timeZone' ? browserTimeZone : field.type === 'checkbox' ? true : '');
     }
+    let restoredAt:number|null = null;
+    if (!source) {
+      try {
+        const saved = JSON.parse(localStorage.getItem(draftKey) || 'null');
+        if (saved?.version === DRAFT_VERSION && saved?.section === active && saved?.form && typeof saved.form === 'object') {
+          const allowed = new Set((section.fields || []).map(field => field.key));
+          Object.assign(next, Object.fromEntries(Object.entries(saved.form).filter(([key]) => allowed.has(key))));
+          restoredAt = Number(saved.savedAt) || null;
+        }
+      } catch { localStorage.removeItem(draftKey); }
+    }
     const resourcesToLoad=[...new Set([
       ...(section.fields || []).filter(field=>field.type==='relation'&&field.resource).map(field=>field.resource!),
       ...(section.key==='packages'?['food','alcohol']:[]),
     ])];
     if(resourcesToLoad.length){
-      const loaded=await Promise.all(resourcesToLoad.map(resource=>linkupPlatformApi.list(resource)));
-      setRelations(current=>({...current,...Object.fromEntries(resourcesToLoad.map((resource,index)=>[resource,loaded[index].data.data||[]]))}));
+      try {
+        const loaded=await Promise.all(resourcesToLoad.map(resource=>linkupPlatformApi.list(resource)));
+        setRelations(current=>({...current,...Object.fromEntries(resourcesToLoad.map((resource,index)=>[resource,loaded[index].data.data||[]]))}));
+      } catch (error:any) {
+        toast.error(!navigator.onLine ? 'You are offline. Your draft is available; linked options will refresh after reconnecting.' : error.response?.data?.message || 'Could not refresh linked options');
+      }
     }
-    setEditing(source || null); setForm(next); setFormError(''); setUploadingImage(''); setFormOpen(true);
+    setEditing(source || null); setForm(next); setFormError(''); setUploadingImage(''); setDraftSavedAt(restoredAt); setFormOpen(true);
+    if (restoredAt) toast.success('Your saved draft has been restored.');
   };
 
   const uploadFormImage = async (field: Field, file?: File) => {
@@ -259,6 +309,7 @@ const LinkupPlatform: React.FC = () => {
       if (payload.taxRate > 100 || payload.serviceFeeRate > 100) throw new Error('Tax and service fee rates cannot exceed 100%.');
       for (const key of ['banner','logo','image']) if (payload[key]) payload[key] = storedUploadUrl(payload[key]);
       if (editing) await linkupPlatformApi.update(active, editing._id, payload); else await linkupPlatformApi.create(active, payload);
+      if (!editing) clearDraft();
       toast.success(editing ? 'Updated successfully' : 'Created successfully'); setFormOpen(false); setEditing(null); load();
     } catch (error:any) {
       if (editing && error.response?.status === 404) {
@@ -267,7 +318,7 @@ const LinkupPlatform: React.FC = () => {
         await load();
         return;
       }
-      const message=error.response?.data?.message || error.message || 'Could not save'; setFormError(message); toast.error(message);
+      const message=!navigator.onLine || !error.response ? 'Network unavailable. Your work is saved locally as a draft and will be ready when you reconnect.' : error.response?.data?.message || error.message || 'Could not save'; setFormError(message); toast.error(message);
     }
   };
 
@@ -361,7 +412,7 @@ const LinkupPlatform: React.FC = () => {
     {formOpen&&<div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/65 p-4 backdrop-blur-sm">
       <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white shadow-2xl">
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white/95 p-5 backdrop-blur">
-          <div><p className="text-[10px] font-bold uppercase tracking-[.18em] text-violet-600">The Lnk Up</p><h2 className="mt-1 text-xl font-extrabold text-slate-900">{editing?'Edit':'Add'} {section.label}</h2></div>
+          <div><p className="text-[10px] font-bold uppercase tracking-[.18em] text-violet-600">The Lnk Up</p><h2 className="mt-1 text-xl font-extrabold text-slate-900">{editing?'Edit':'Add'} {section.label}</h2>{!editing&&<p className={`mt-1 inline-flex items-center gap-1.5 text-xs font-semibold ${isOnline?'text-emerald-600':'text-amber-600'}`}>{isOnline?<Cloud size={14}/>:<WifiOff size={14}/>} {isOnline?'Autosaved on this device':'Offline · changes are still saved locally'}</p>}</div>
           <button onClick={()=>{setFormOpen(false);setEditing(null);setFormError('')}} aria-label="Close" className="grid h-10 w-10 place-items-center rounded-xl bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900"><X size={19}/></button>
         </div>
         <div className="grid gap-4 p-5 md:grid-cols-2 md:p-6">{section.fields?.map(field=><div key={field.key} className={`${['textarea','json','image','package-items'].includes(field.type||'')?'md:col-span-2':''} text-sm font-bold text-slate-700`}>
@@ -375,7 +426,10 @@ const LinkupPlatform: React.FC = () => {
             :<input required={field.required} type={field.type||'text'} step={field.type==='number'?'0.01':undefined} value={form[field.key]??''} onChange={e=>setForm({...form,[field.key]:e.target.value})} className="mt-1.5 h-11 w-full rounded-xl border border-slate-300 px-3 font-normal outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-100"/>}
           </>}
         </div>)}</div>
-        <div className="sticky bottom-0 flex justify-end gap-3 border-t border-slate-200 bg-white/95 p-5 backdrop-blur"><button onClick={()=>{setFormOpen(false);setEditing(null);setFormError('')}} className="h-11 rounded-xl border border-slate-300 px-5 text-sm font-bold text-slate-700 hover:bg-slate-50">Cancel</button><button disabled={!!uploadingImage} onClick={save} className="h-11 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-6 text-sm font-bold text-white shadow-md shadow-violet-200 hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50">{uploadingImage?'Uploading…':editing?'Save changes':`Create ${section.label.replace(/s$/, '')}`}</button></div>
+        <div className="sticky bottom-0 flex flex-col gap-3 border-t border-slate-200 bg-white/95 p-5 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-h-5 text-xs font-semibold text-slate-500">{!editing&&draftSavedAt&&<span className="inline-flex items-center gap-1.5"><Cloud size={14} className={isOnline?'text-emerald-500':'text-amber-500'}/> Draft saved locally at {new Date(draftSavedAt).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}</span>}</div>
+          <div className="flex flex-wrap justify-end gap-3">{!editing&&draftSavedAt&&<button type="button" onClick={()=>{clearDraft();setFormOpen(false);setForm({});setFormError('')}} className="h-11 rounded-xl px-3 text-sm font-bold text-red-600 transition hover:bg-red-50">Discard draft</button>}<button onClick={()=>{setFormOpen(false);setEditing(null);setFormError('')}} className="h-11 rounded-xl border border-slate-300 px-5 text-sm font-bold text-slate-700 hover:bg-slate-50">Close</button><button disabled={!!uploadingImage||(!isOnline&&!editing)} onClick={save} className="h-11 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-6 text-sm font-bold text-white shadow-md shadow-violet-200 hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50">{uploadingImage?'Uploading…':!isOnline&&!editing?'Offline · draft saved':editing?'Save changes':`Create ${section.label.replace(/s$/, '')}`}</button></div>
+        </div>
       </div>
     </div>}
     {reasonAction&&<div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/65 p-4 backdrop-blur-sm" onMouseDown={event=>{if(event.target===event.currentTarget){setReasonAction(null);setReasonError('')}}}>
