@@ -6,6 +6,7 @@ const loaders: Record<string, PageLoader> = {
   '/linkup': () => import('../pages/LinkupPublic'),
   '/linkup/packages': () => import('../pages/LinkupPackages'),
   '/linkup/checkout': () => import('../pages/LinkupCheckout'),
+  '/linkup/bookings': () => import('../pages/LinkupBookings'),
   '/': () => import('../pages/AdminDashboard'),
   '/manager-dashboard': () => import('../pages/ManagerDashboard'),
   '/artist-dashboard': () => import('../pages/ArtistDashboard'),

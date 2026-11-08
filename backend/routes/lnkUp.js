@@ -15,6 +15,7 @@ router.get('/public/packages/:id', platform.publicPackage);
 router.post('/public/packages/:packageId/book', protect, platform.createBooking);
 router.post('/public/packages/:packageId/complete', protect, receiptUpload.single('receipt'), platform.completePackageBooking);
 router.post('/public/slots/:slotId/book', protect, platform.createSlotBooking);
+router.get('/public/bookings', protect, platform.customerBookings);
 router.post('/public/bookings/:reference/receipt', protect, receiptUpload.single('receipt'), platform.submitReceipt);
 router.get('/public/bookings/:reference/status', protect, platform.bookingStatus);
 

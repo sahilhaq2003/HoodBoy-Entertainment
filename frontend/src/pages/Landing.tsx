@@ -267,7 +267,7 @@ const Landing: React.FC = () => {
                 </span>
               )}
             </button>
-            {user?<div className="grow-customer-session"><Link className="grow-customer-profile" to="/linkup" aria-label={`Open ${user.name}'s Linkup profile`}>{user.avatar?<img src={user.avatar} alt="" referrerPolicy="no-referrer"/>:<span>{initials}</span>}<span className="grow-customer-copy"><strong>{user.name}</strong><small>{user.role==='customer'?'Google customer':'Signed in'}</small></span></Link><button type="button" className="grow-logout" onClick={logout} aria-label="Sign out" title="Sign out"><LogOut size={14}/><span>Sign out</span></button></div>:<Link className="grow-login" to="/login">Sign in <ArrowUpRight size={14} /></Link>}
+            {user?<div className="grow-customer-session"><Link className="grow-customer-profile" to={user.role==='customer'?'/linkup/bookings':'/linkup'} aria-label={user.role==='customer'?`Open ${user.name}'s bookings`:`Open ${user.name}'s Linkup profile`}>{user.avatar?<img src={user.avatar} alt="" referrerPolicy="no-referrer"/>:<span>{initials}</span>}<span className="grow-customer-copy"><strong>{user.name}</strong><small>{user.role==='customer'?'My bookings':'Signed in'}</small></span></Link><button type="button" className="grow-logout" onClick={logout} aria-label="Sign out" title="Sign out"><LogOut size={14}/><span>Sign out</span></button></div>:<Link className="grow-login" to="/login">Sign in <ArrowUpRight size={14} /></Link>}
           </div>
         </header>
 

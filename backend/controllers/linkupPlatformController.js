@@ -535,6 +535,53 @@ const bookingStatus = async (req, res) => {
   } catch (error) { fail(res, 500, error.message); }
 };
 
+const customerBookings = async (req, res) => {
+  try {
+    const bookings = await LinkupBooking.find({ customer: req.user._id })
+      .populate('event', 'title banner eventDate startTime endTime timeZone venueName location status')
+      .populate('package', 'name image packageType seatingCapacity')
+      .populate('performanceSlot', 'title scheduledAt durationMinutes')
+      .sort({ createdAt: -1 });
+    const bookingIds = bookings.map(booking => booking._id);
+    const transfers = bookingIds.length
+      ? await LinkupBankTransfer.find({ booking: { $in: bookingIds } })
+        .select('booking transferReference paymentDate verificationStatus rejectionReason createdAt')
+        .sort({ createdAt: -1 })
+      : [];
+    const transferByBooking = new Map();
+    for (const transfer of transfers) {
+      const bookingId = String(transfer.booking?._id || transfer.booking || '');
+      if (!transferByBooking.has(bookingId)) transferByBooking.set(bookingId, transfer.toJSON ? transfer.toJSON() : transfer);
+    }
+    const data = bookings.map(booking => {
+      const value = booking.toJSON ? booking.toJSON() : { ...booking };
+      return {
+        _id: value._id,
+        bookingReference: value.bookingReference,
+        bookingType: value.bookingType,
+        event: value.event,
+        package: value.package,
+        performanceSlot: value.performanceSlot,
+        customerName: value.customerName,
+        guestCount: value.guestCount,
+        items: value.items,
+        subtotal: value.subtotal,
+        taxAmount: value.taxAmount,
+        serviceFeeAmount: value.serviceFeeAmount,
+        totalAmount: value.totalAmount,
+        currency: value.currency,
+        bookingStatus: value.bookingStatus,
+        paymentStatus: value.paymentStatus,
+        paymentMethod: value.paymentMethod,
+        paymentDueAt: value.paymentDueAt,
+        createdAt: value.createdAt,
+        transfer: transferByBooking.get(String(value._id)) || null,
+      };
+    });
+    res.json({ success: true, data });
+  } catch (error) { fail(res, 500, error.message); }
+};
+
 const exportBookings = async (req, res) => {
   try {
     const filter = pick(req.query, ['event','package','bookingStatus','paymentStatus','paymentMethod']);
@@ -577,4 +624,4 @@ const uploadImage = async (req, res) => {
   } catch (error) { return fail(res, 400, error.message || 'Image optimization failed'); }
 };
 
-module.exports = { list, getOne, create, update, remove, overview, publicEvents, publicEvent, publicPackage, createBooking, completePackageBooking, createSlotBooking, submitReceipt, verifyTransfer, cancelBooking, expireHolds, exportBookings, receipt, bookingStatus, uploadImage, _priceBooking: priceBooking, _preparePackageCheckout: preparePackageCheckout, _releaseBookingInventory: releaseBookingInventory, _validateWholeNumbers: validateWholeNumbers };
+module.exports = { list, getOne, create, update, remove, overview, publicEvents, publicEvent, publicPackage, createBooking, completePackageBooking, createSlotBooking, submitReceipt, verifyTransfer, cancelBooking, expireHolds, exportBookings, receipt, bookingStatus, customerBookings, uploadImage, _priceBooking: priceBooking, _preparePackageCheckout: preparePackageCheckout, _releaseBookingInventory: releaseBookingInventory, _validateWholeNumbers: validateWholeNumbers };

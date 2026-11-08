@@ -52,12 +52,14 @@ const LinkupPlatform = lazy(() => import('./pages/LinkupPlatform'));
 const LinkupPublic = lazy(() => import('./pages/LinkupPublic'));
 const LinkupPackages = lazy(() => import('./pages/LinkupPackages'));
 const LinkupCheckout = lazy(() => import('./pages/LinkupCheckout'));
+const LinkupBookings = lazy(() => import('./pages/LinkupBookings'));
 const TeamManagement = lazy(() => import('./pages/TeamManagement'));
 const SystemHealth = lazy(() => import('./pages/SystemHealth'));
 
 const PageLoader = () => {
   const { pathname } = useLocation();
   if (pathname.startsWith('/linkup/checkout/')) return <LinkupPageLoader variant="checkout" />;
+  if (pathname === '/linkup/bookings') return <LinkupPageLoader variant="bookings" />;
   if (pathname === '/linkup/packages') return <LinkupPageLoader variant="packages" />;
   if (pathname.startsWith('/linkup/events/')) return <LinkupPageLoader variant="detail" />;
   if (pathname === '/linkup') return <LinkupPageLoader variant="events" />;
@@ -129,6 +131,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/linkup" element={<LinkupPublic />} />
       <Route path="/linkup/packages" element={<LinkupPackages />} />
       <Route path="/linkup/checkout/:packageId" element={<LinkupCheckout />} />
+      <Route path="/linkup/bookings" element={<LinkupBookings />} />
       <Route path="/linkup/events/:id" element={<LinkupPublic />} />
       <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         {/* Role-specific dashboards */}
