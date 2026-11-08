@@ -523,10 +523,12 @@ const exportBookings = async (req, res) => {
 const uploadImage = async (req, res) => {
   if (!req.file) return fail(res, 400, 'Select an image to upload.');
   try {
-    const optimized = await optimizeImageBuffer(req.file.buffer);
+    const fallbackFormat = req.file.mimetype === 'image/jpeg' ? 'jpeg' : req.file.mimetype === 'image/png' ? 'png' : 'webp';
+    const optimized = await optimizeImageBuffer(req.file.buffer, { fallbackFormat });
     const destination = path.join(__dirname, '..', 'uploads', 'linkup');
     await fs.promises.mkdir(destination, { recursive: true });
-    const filename = `${Date.now()}-${crypto.randomBytes(10).toString('hex')}.webp`;
+    const extension = optimized.format === 'jpeg' ? 'jpg' : optimized.format;
+    const filename = `${Date.now()}-${crypto.randomBytes(10).toString('hex')}.${extension}`;
     await fs.promises.writeFile(path.join(destination, filename), optimized.buffer, { flag: 'wx' });
     return res.status(201).json({
       success: true,
@@ -537,6 +539,7 @@ const uploadImage = async (req, res) => {
         height: optimized.height,
         originalBytes: optimized.originalBytes,
         optimizedBytes: optimized.optimizedBytes,
+        serverOptimized: optimized.serverOptimized,
       },
     });
   } catch (error) { return fail(res, 400, error.message || 'Image optimization failed'); }

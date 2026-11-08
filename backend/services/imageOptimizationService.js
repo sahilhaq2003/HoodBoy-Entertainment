@@ -1,11 +1,22 @@
-const sharp = require('sharp');
-
 const MAX_INPUT_PIXELS = 40_000_000;
 const DEFAULT_MAX_DIMENSION = 1920;
 const DEFAULT_QUALITY = 82;
+let sharpFactory;
+
+const getSharp = () => {
+  if (sharpFactory !== undefined) return sharpFactory;
+  try { sharpFactory = require('sharp'); }
+  catch { sharpFactory = null; }
+  return sharpFactory;
+};
 
 const optimizeImageBuffer = async (input, options = {}) => {
   if (!Buffer.isBuffer(input) || !input.length) throw new Error('The uploaded image is empty');
+  const sharp = getSharp();
+  if (!sharp) {
+    const format = ['jpeg', 'png', 'webp'].includes(options.fallbackFormat) ? options.fallbackFormat : 'webp';
+    return { buffer: input, width: null, height: null, format, originalBytes: input.length, optimizedBytes: input.length, serverOptimized: false };
+  }
   const maxDimension = Math.min(2560, Math.max(320, Number(options.maxDimension || DEFAULT_MAX_DIMENSION)));
   const quality = Math.min(90, Math.max(65, Number(options.quality || DEFAULT_QUALITY)));
   const source = sharp(input, { failOn: 'warning', limitInputPixels: MAX_INPUT_PIXELS });
@@ -26,6 +37,7 @@ const optimizeImageBuffer = async (input, options = {}) => {
     format: 'webp',
     originalBytes: input.length,
     optimizedBytes: buffer.length,
+    serverOptimized: true,
   };
 };
 
