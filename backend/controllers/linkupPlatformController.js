@@ -9,6 +9,7 @@ const User = require('../models/User');
 const { createNotification, createBulkNotifications } = require('../services/notificationService');
 const { notifyBooking, queueAdmin } = require('../services/emailService');
 const { optimizeImageBuffer } = require('../services/imageOptimizationService');
+const { removeLinkupImages } = require('../services/linkupImageCleanupService');
 const {
   LinkupEvent, LinkupPerformanceSlot, LinkupSeating, LinkupFoodVendor, LinkupFoodItem,
   LinkupAlcoholOption, LinkupBankAccount, LinkupPackage, LinkupBooking,
@@ -37,6 +38,17 @@ const editableFields = {
   alcohol: ['events','name','category','description','price','servingSize','image','availableQuantity','pricingMode','isActive','minimumAge'],
   'bank-accounts': ['bankName','accountHolderName','accountNumber','branchName','routingNumber','swiftCode','iban','country','currency','instructions','isActive'],
   packages: ['event','name','description','image','packageType','seating','seatingCapacity','basePrice','packagePrice','includedItems','optionalItems','totalQuantity','availableQuantity','status','bankTransferEnabled','bankAccounts','defaultBankAccount','paymentInstructions','paymentDeadlineHours','checkoutHoldMinutes','taxRate','serviceFeeRate','currency','otherPaymentMethods'],
+};
+const imageFields = {
+  events: ['banner', 'gallery'],
+  vendors: ['logo'],
+  food: ['image'],
+  alcohol: ['image'],
+  packages: ['image'],
+};
+const recordImageUrls = (name, record) => {
+  const value = record?.toJSON ? record.toJSON() : record || {};
+  return (imageFields[name] || []).flatMap(field => Array.isArray(value[field]) ? value[field] : [value[field]]).filter(url => typeof url === 'string' && url.startsWith('/uploads/linkup/'));
 };
 const pick = (source, fields) => Object.fromEntries(fields.filter(key => source[key] !== undefined).map(key => [key, source[key]]));
 const populate = (query, name) => (population[name] || []).reduce((result, [field, select]) => result.populate(field, select), query);
@@ -132,6 +144,9 @@ const create = async (req, res) => {
     if (name === 'bank-accounts' && req.user.role !== 'admin') return fail(res, 403, 'Only administrators can manage bank accounts');
     const Model = resources[name];
     if (!Model || !editableFields[name]) return fail(res, 404, 'Unknown Linkup resource');
+    const current = await Model.findById(req.params.id);
+    if (!current) return fail(res, 404, 'Record not found');
+    const previousImages = recordImageUrls(name, current);
     let input = pick(req.body, editableFields[name]);
     if (name === 'events') {
       if (!validTimeZone(input.timeZone)) throw new Error('Select a valid event time zone');
@@ -156,14 +171,14 @@ const update = async (req, res) => {
     let input = pick(req.body, editableFields[name]);
     if (name === 'events' && input.timeZone !== undefined && !validTimeZone(input.timeZone)) throw new Error('Select a valid event time zone');
     if (name === 'packages') {
-      const current = await Model.findById(req.params.id);
-      if (!current) return fail(res, 404, 'Record not found');
       const existing = current.toJSON ? current.toJSON() : { ...current };
       const validated = await validatePackageData({ ...existing, ...input });
       input = pick(validated, editableFields[name]);
     }
     const data = await Model.findByIdAndUpdate(req.params.id, input, { new: true, runValidators: true });
     if (!data) return fail(res, 404, 'Record not found');
+    const retainedImages = new Set(recordImageUrls(name, data));
+    await removeLinkupImages(previousImages.filter(url => !retainedImages.has(url)));
     await LinkupAuditLog.create({ actor: req.user._id, action: 'update', entityType: name, entityId: data._id });
     res.json({ success: true, data: name === 'bank-accounts' ? bankView(data) : data });
   } catch (error) { fail(res, 400, error.message); }
@@ -182,6 +197,7 @@ const remove = async (req, res) => {
     }
     const data = await Model.findByIdAndDelete(req.params.id);
     if (!data) return fail(res, 404, 'Record not found');
+    await removeLinkupImages(recordImageUrls(name, data));
     await LinkupAuditLog.create({ actor: req.user._id, action: 'delete', entityType: name, entityId: req.params.id });
     res.json({ success: true, message: 'Deleted' });
   } catch (error) { fail(res, 409, error.message); }
