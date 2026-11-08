@@ -18,6 +18,10 @@ let reminderTimer;
 const enabledByEnvironment = () => String(process.env.EMAIL_NOTIFICATIONS_ENABLED || 'false').toLowerCase() === 'true';
 const smtpConfigured = () => Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASSWORD);
 const safeError = error => String(error?.message || 'Email delivery failed').replace(/(password|pass|auth|token|secret)\s*[:=]\s*\S+/gi, '$1=[redacted]').slice(0, 1000);
+const withoutCustomerEntryPass = templateData => {
+  const { entryQrUrl, entryPassReady, ...adminData } = templateData || {};
+  return adminData;
+};
 
 const getTransporter = () => {
   if (transporter) return transporter;
@@ -90,7 +94,10 @@ const processQueue = async (limit = 10) => {
       job.deliveryStatus = 'processing';
       await job.save();
       try {
-        const rendered = renderEmail(job.templateName, job.templateData);
+        const templateData = String(job.notificationType || '').startsWith('admin_')
+          ? withoutCustomerEntryPass(job.templateData)
+          : job.templateData;
+        const rendered = renderEmail(job.templateName, templateData);
         const result = await getTransporter().sendMail({
           from: { name: process.env.SMTP_FROM_NAME || 'HBE Live', address: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER },
           to: job.recipientEmail,
@@ -131,7 +138,7 @@ const adminRecipients = async () => {
 };
 
 const queueAdmin = async ({ notificationType, templateName = 'admin_notification', templateData, relatedEntityType, relatedEntityId, dedupeKey, category = 'booking' }) => Promise.all((await adminRecipients()).map(email => queueEmail({
-  recipientEmail: email, notificationType, templateName, templateData: { ...templateData, customerName: 'HBE Live Administrator', actionLabel: templateData?.actionLabel || 'Open Admin Dashboard' }, relatedEntityType, relatedEntityId, dedupeKey: `${dedupeKey}:${email}`, category,
+  recipientEmail: email, notificationType, templateName, templateData: { ...withoutCustomerEntryPass(templateData), customerName: 'HBE Live Administrator', actionLabel: templateData?.actionLabel || 'Open Admin Dashboard' }, relatedEntityType, relatedEntityId, dedupeKey: `${dedupeKey}:${email}`, category,
 })));
 
 const bookingData = async (bookingOrId, extra = {}) => {
@@ -221,4 +228,4 @@ const startEmailWorkers = () => {
 
 const setTransporterForTest = value => { transporter = value; };
 
-module.exports = { queueEmail, queueAdmin, processQueue, notifyBooking, notifyDistribution, notifySystemAlert, sendBookingReminders, verifyConnection, getSettings, startEmailWorkers, safeError, _setTransporterForTest: setTransporterForTest };
+module.exports = { queueEmail, queueAdmin, processQueue, notifyBooking, notifyDistribution, notifySystemAlert, sendBookingReminders, verifyConnection, getSettings, startEmailWorkers, safeError, _withoutCustomerEntryPass: withoutCustomerEntryPass, _setTransporterForTest: setTransporterForTest };

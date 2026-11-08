@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { renderEmail, escapeHtml } = require('../services/emailTemplates');
-const { safeError } = require('../services/emailService');
+const { safeError, _withoutCustomerEntryPass } = require('../services/emailService');
 const { calendarDateInZone, eventStartInstant, formatEventDate, validTimeZone } = require('../lib/eventTime');
 
 test('HBE email templates render responsive HTML and plain-text alternatives safely', () => {
@@ -33,6 +33,19 @@ test('approved booking email includes the secure QR entry pass', () => {
   assert.match(rendered.html, /Booking entry QR code/);
   assert.match(rendered.html, /signed-token\/qr/);
   assert.match(rendered.text, /secure entry QR code/i);
+});
+
+test('administrator booking emails never include the customer entry QR pass', () => {
+  const adminData = _withoutCustomerEntryPass({
+    customerName: 'Guest', bookingReference: 'LNK-QR-ADMIN', entryPassReady: true,
+    entryQrUrl: 'https://api.hbe.lol/api/lnk-up/public/entry-pass/private-token/qr',
+  });
+  const rendered = renderEmail('admin_notification', adminData);
+  assert.equal(adminData.entryQrUrl, undefined);
+  assert.equal(adminData.entryPassReady, undefined);
+  assert.doesNotMatch(rendered.html, /private-token|Booking entry QR code|secure event entry pass/i);
+  assert.doesNotMatch(rendered.text, /secure entry QR code/i);
+  assert.match(rendered.html, /LNK-QR-ADMIN/);
 });
 
 test('email errors redact credential-like values before logging or API responses', () => {
