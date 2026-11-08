@@ -437,7 +437,7 @@ const LinkupPlatform: React.FC = () => {
     ['Confirmed',overview.confirmedBookings],['Pending Verification',overview.pendingVerifications],['Verified Revenue',overview.verifiedRevenue],['Available Slots',overview.availablePerformanceSlots],
   ];
 
-  return <div className="min-h-full bg-slate-50/70 p-4 md:p-6 lg:p-8">
+  return <div className="linkup-admin-page min-h-full bg-slate-50/70 p-4 md:p-6 lg:p-8">
     <div className="max-w-[1600px] mx-auto space-y-6">
     <section className="relative overflow-hidden rounded-3xl border border-violet-200/50 bg-gradient-to-br from-[#16112b] via-[#23134a] to-[#4c1d95] px-5 py-6 text-white shadow-[0_22px_55px_-30px_rgba(76,29,149,.75)] md:px-8 md:py-8">
       <div className="absolute -right-20 -top-24 h-72 w-72 rounded-full bg-fuchsia-400/20 blur-3xl" />

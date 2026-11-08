@@ -661,6 +661,89 @@ body { background: var(--hbe-bg); }
 .dark .app-shell .dark\:text-gray-400,
 .dark .app-shell .dark\:text-gray-500 { color: var(--hbe-muted) !important; }
 
+/* Linkup administration uses Tailwind's slate scale. Keep its light-theme
+   utilities readable when the workspace switches to the shared dark theme. */
+.dark .app-shell .linkup-admin-page {
+  background: var(--hbe-workspace) !important;
+  color: var(--hbe-text);
+}
+
+.dark .app-shell .linkup-admin-page .bg-slate-50,
+.dark .app-shell .linkup-admin-page .bg-slate-50\/60,
+.dark .app-shell .linkup-admin-page .bg-slate-50\/65,
+.dark .app-shell .linkup-admin-page .bg-slate-50\/70,
+.dark .app-shell .linkup-admin-page .bg-slate-100,
+.dark .app-shell .linkup-admin-page .bg-slate-200 {
+  background-color: var(--hbe-panel-soft) !important;
+}
+
+.dark .app-shell .linkup-admin-page .border-slate-100,
+.dark .app-shell .linkup-admin-page .border-slate-200,
+.dark .app-shell .linkup-admin-page .border-slate-300 {
+  border-color: var(--hbe-line) !important;
+}
+
+.dark .app-shell .linkup-admin-page .divide-slate-100 > :not(:last-child),
+.dark .app-shell .linkup-admin-page .divide-slate-200 > :not(:last-child) {
+  border-color: var(--hbe-line-soft) !important;
+}
+
+.dark .app-shell .linkup-admin-page .text-slate-950,
+.dark .app-shell .linkup-admin-page .text-slate-900,
+.dark .app-shell .linkup-admin-page .text-slate-800 {
+  color: var(--hbe-text) !important;
+}
+
+.dark .app-shell .linkup-admin-page .text-slate-700,
+.dark .app-shell .linkup-admin-page .text-slate-600 {
+  color: var(--hbe-text-soft) !important;
+}
+
+.dark .app-shell .linkup-admin-page .text-slate-500,
+.dark .app-shell .linkup-admin-page .text-slate-400 {
+  color: var(--hbe-muted) !important;
+}
+
+.dark .app-shell .linkup-admin-page .text-violet-950,
+.dark .app-shell .linkup-admin-page .text-violet-900 {
+  color: #EDE9FE !important;
+}
+
+.dark .app-shell .linkup-admin-page .text-violet-700,
+.dark .app-shell .linkup-admin-page .text-violet-600 {
+  color: #C4B5FD !important;
+}
+
+.dark .app-shell .linkup-admin-page .bg-violet-100 {
+  background-color: rgba(139, 92, 246, 0.16) !important;
+}
+
+.dark .app-shell .linkup-admin-page .bg-emerald-100 {
+  background-color: rgba(34, 197, 94, 0.14) !important;
+}
+
+.dark .app-shell .linkup-admin-page .text-emerald-700 { color: #4ADE80 !important; }
+.dark .app-shell .linkup-admin-page .text-red-700 { color: #FCA5A5 !important; }
+.dark .app-shell .linkup-admin-page .text-amber-700 { color: #FCD34D !important; }
+.dark .app-shell .linkup-admin-page .text-blue-700 { color: #93C5FD !important; }
+
+.dark .app-shell .linkup-admin-page .border-emerald-200 { border-color: rgba(74, 222, 128, 0.3) !important; }
+.dark .app-shell .linkup-admin-page .border-red-200 { border-color: rgba(248, 113, 113, 0.3) !important; }
+.dark .app-shell .linkup-admin-page .border-amber-200 { border-color: rgba(251, 191, 36, 0.3) !important; }
+.dark .app-shell .linkup-admin-page .border-violet-200 { border-color: rgba(167, 139, 250, 0.3) !important; }
+
+.dark .app-shell .linkup-admin-page .bg-gradient-to-r.from-violet-50.to-fuchsia-50 {
+  background: linear-gradient(110deg, rgba(76, 29, 149, 0.24), rgba(134, 25, 143, 0.12)) !important;
+}
+
+.dark .app-shell .linkup-admin-page .bg-gradient-to-br.from-slate-50.to-white {
+  background: linear-gradient(145deg, var(--hbe-panel-soft), var(--hbe-panel)) !important;
+}
+
+.dark .app-shell .linkup-admin-page .linkup-checkin-header {
+  background: linear-gradient(110deg, rgba(76, 29, 149, 0.24), rgba(134, 25, 143, 0.12)) !important;
+}
+
 /* Card rounding + shadow for the common `bg-white … rounded-*` pattern */
 .dark .app-shell .bg-white.rounded-xl,
 .dark .app-shell .dark\:bg-gray-800.rounded-xl,
