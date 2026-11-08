@@ -173,9 +173,23 @@ const LinkupPlatform: React.FC = () => {
   useEffect(() => { load(); }, [active]);
 
   const openForm = async (record?:RecordItem) => {
+    let source = record;
+    if (record?._id) {
+      try {
+        source = (await linkupPlatformApi.get(active, record._id)).data.data;
+      } catch (error:any) {
+        if (error.response?.status === 404) {
+          toast.error('This record no longer exists. The list has been refreshed.');
+          await load();
+          return;
+        }
+        toast.error(error.response?.data?.message || 'Could not load the latest record details');
+        return;
+      }
+    }
     const next:Record<string,any> = {};
     for (const field of section.fields || []) {
-      const raw = record?.[field.key];
+      const raw = source?.[field.key];
       if (field.type === 'json') next[field.key] = JSON.stringify(raw || [], null, 2);
       else if (field.type === 'package-items') next[field.key] = (Array.isArray(raw)?raw:[]).map((item:any)=>({itemType:item.itemType,itemId:String(item.itemId?._id||item.itemId||''),name:item.name||'',quantity:Number(item.quantity||1)}));
       else if (field.multiple) next[field.key] = (raw || []).map((item:any) => String(item?._id || item)).filter(Boolean);
@@ -191,7 +205,7 @@ const LinkupPlatform: React.FC = () => {
       const loaded=await Promise.all(resourcesToLoad.map(resource=>linkupPlatformApi.list(resource)));
       setRelations(current=>({...current,...Object.fromEntries(resourcesToLoad.map((resource,index)=>[resource,loaded[index].data.data||[]]))}));
     }
-    setEditing(record || null); setForm(next); setFormError(''); setUploadingImage(''); setFormOpen(true);
+    setEditing(source || null); setForm(next); setFormError(''); setUploadingImage(''); setFormOpen(true);
   };
 
   const uploadFormImage = async (field: Field, file?: File) => {
@@ -245,8 +259,16 @@ const LinkupPlatform: React.FC = () => {
       if (payload.taxRate > 100 || payload.serviceFeeRate > 100) throw new Error('Tax and service fee rates cannot exceed 100%.');
       for (const key of ['banner','logo','image']) if (payload[key]) payload[key] = storedUploadUrl(payload[key]);
       if (editing) await linkupPlatformApi.update(active, editing._id, payload); else await linkupPlatformApi.create(active, payload);
-      toast.success(editing ? 'Updated successfully' : 'Created successfully'); setFormOpen(false); load();
-    } catch (error:any) { const message=error.response?.data?.message || error.message || 'Could not save'; setFormError(message); toast.error(message); }
+      toast.success(editing ? 'Updated successfully' : 'Created successfully'); setFormOpen(false); setEditing(null); load();
+    } catch (error:any) {
+      if (editing && error.response?.status === 404) {
+        setFormOpen(false); setEditing(null); setFormError('');
+        toast.error('This record was removed or changed elsewhere. The list has been refreshed.');
+        await load();
+        return;
+      }
+      const message=error.response?.data?.message || error.message || 'Could not save'; setFormError(message); toast.error(message);
+    }
   };
 
   const requestVerification = (record:RecordItem, action:'approve'|'reject'|'request_information') => {
@@ -340,7 +362,7 @@ const LinkupPlatform: React.FC = () => {
       <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white shadow-2xl">
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white/95 p-5 backdrop-blur">
           <div><p className="text-[10px] font-bold uppercase tracking-[.18em] text-violet-600">The Lnk Up</p><h2 className="mt-1 text-xl font-extrabold text-slate-900">{editing?'Edit':'Add'} {section.label}</h2></div>
-          <button onClick={()=>setFormOpen(false)} aria-label="Close" className="grid h-10 w-10 place-items-center rounded-xl bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900"><X size={19}/></button>
+          <button onClick={()=>{setFormOpen(false);setEditing(null);setFormError('')}} aria-label="Close" className="grid h-10 w-10 place-items-center rounded-xl bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900"><X size={19}/></button>
         </div>
         <div className="grid gap-4 p-5 md:grid-cols-2 md:p-6">{section.fields?.map(field=><div key={field.key} className={`${['textarea','json','image','package-items'].includes(field.type||'')?'md:col-span-2':''} text-sm font-bold text-slate-700`}>
           {field.type==='checkbox'?<label className="mt-6 flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3"><input type="checkbox" checked={!!form[field.key]} onChange={e=>setForm({...form,[field.key]:e.target.checked})} className="h-4 w-4 accent-violet-600"/>{field.label}</label>:<>
@@ -353,7 +375,7 @@ const LinkupPlatform: React.FC = () => {
             :<input required={field.required} type={field.type||'text'} step={field.type==='number'?'0.01':undefined} value={form[field.key]??''} onChange={e=>setForm({...form,[field.key]:e.target.value})} className="mt-1.5 h-11 w-full rounded-xl border border-slate-300 px-3 font-normal outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-100"/>}
           </>}
         </div>)}</div>
-        <div className="sticky bottom-0 flex justify-end gap-3 border-t border-slate-200 bg-white/95 p-5 backdrop-blur"><button onClick={()=>setFormOpen(false)} className="h-11 rounded-xl border border-slate-300 px-5 text-sm font-bold text-slate-700 hover:bg-slate-50">Cancel</button><button disabled={!!uploadingImage} onClick={save} className="h-11 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-6 text-sm font-bold text-white shadow-md shadow-violet-200 hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50">{uploadingImage?'Uploading…':'Save changes'}</button></div>
+        <div className="sticky bottom-0 flex justify-end gap-3 border-t border-slate-200 bg-white/95 p-5 backdrop-blur"><button onClick={()=>{setFormOpen(false);setEditing(null);setFormError('')}} className="h-11 rounded-xl border border-slate-300 px-5 text-sm font-bold text-slate-700 hover:bg-slate-50">Cancel</button><button disabled={!!uploadingImage} onClick={save} className="h-11 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-6 text-sm font-bold text-white shadow-md shadow-violet-200 hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50">{uploadingImage?'Uploading…':editing?'Save changes':`Create ${section.label.replace(/s$/, '')}`}</button></div>
       </div>
     </div>}
     {reasonAction&&<div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/65 p-4 backdrop-blur-sm" onMouseDown={event=>{if(event.target===event.currentTarget){setReasonAction(null);setReasonError('')}}}>
