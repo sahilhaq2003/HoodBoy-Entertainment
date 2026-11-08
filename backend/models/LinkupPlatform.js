@@ -111,6 +111,7 @@ const bookingSchema = new mongoose.Schema({
   paymentStatus: { type: String, enum: ['unpaid', 'awaiting_verification', 'paid', 'rejected', 'refunded', 'partially_refunded'], default: 'unpaid' },
   paymentMethod: { type: String, enum: ['bank_transfer', 'online', 'other'], default: 'bank_transfer' },
   holdExpiresAt: { type: Date }, paymentDueAt: { type: Date }, inventoryReleased: { type: Boolean, default: false },
+  checkedInAt: { type: Date }, checkedInBy: { type: objectId, ref: 'User' },
 }, { timestamps: true, collection: 'linkup_bookings' });
 bookingSchema.index({ event: 1, bookingStatus: 1 });
 bookingSchema.index({ email: 1, bookingReference: 1 });

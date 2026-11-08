@@ -24,6 +24,17 @@ test('email template HTML escaping covers user-controlled characters', () => {
   assert.equal(escapeHtml(`<&>"'`), '&lt;&amp;&gt;&quot;&#39;');
 });
 
+test('approved booking email includes the secure QR entry pass', () => {
+  const rendered = renderEmail('payment_approved', {
+    customerName: 'Guest', bookingReference: 'LNK-QR-1',
+    entryQrUrl: 'https://api.hbe.lol/api/lnk-up/public/entry-pass/signed-token/qr',
+  });
+  assert.match(rendered.html, /secure event entry pass/i);
+  assert.match(rendered.html, /Booking entry QR code/);
+  assert.match(rendered.html, /signed-token\/qr/);
+  assert.match(rendered.text, /secure entry QR code/i);
+});
+
 test('email errors redact credential-like values before logging or API responses', () => {
   const message = safeError(new Error('auth token=super-secret password=hunter2 failed'));
   assert.doesNotMatch(message, /super-secret|hunter2/);

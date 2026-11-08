@@ -500,6 +500,8 @@ export const linkupPlatformApi = {
   updateEmailSettings: (data: object) => api.put('/lnk-up/platform/email/settings', data),
   sendTestEmail: (recipient: string) => api.post('/lnk-up/platform/email/test', { recipient }),
   retryEmail: (id: string) => api.post(`/lnk-up/platform/email/${id}/retry`),
+  lookupEntryPass: (token: string) => api.post('/lnk-up/platform/check-in/lookup', { token }),
+  confirmEntryPass: (token: string) => api.post('/lnk-up/platform/check-in/confirm', { token }),
 };
 
 // Artist Balances

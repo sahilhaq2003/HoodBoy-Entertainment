@@ -10,6 +10,7 @@ const { createNotification, createBulkNotifications } = require('../services/not
 const { notifyBooking, queueAdmin } = require('../services/emailService');
 const { optimizeImageBuffer } = require('../services/imageOptimizationService');
 const { removeLinkupImages } = require('../services/linkupImageCleanupService');
+const { verifyEntryPassToken, entryPassQrUrl, entryPassQrBuffer } = require('../services/entryPassService');
 const {
   LinkupEvent, LinkupPerformanceSlot, LinkupSeating, LinkupFoodVendor, LinkupFoodItem,
   LinkupAlcoholOption, LinkupBankAccount, LinkupPackage, LinkupBooking,
@@ -83,6 +84,29 @@ const bankView = doc => {
   const value = doc?.toJSON ? doc.toJSON() : { ...doc };
   for (const field of ['accountNumber','routingNumber','swiftCode','iban']) value[field] = decryptField(value[field]);
   return value;
+};
+const entryPassBooking = async rawToken => {
+  const pass = verifyEntryPassToken(rawToken);
+  const booking = await LinkupBooking.findById(pass.bookingId);
+  if (!booking || booking.bookingReference !== pass.bookingReference) throw new Error('Entry pass does not match a booking');
+  return { pass, booking };
+};
+const entryPassView = async booking => {
+  const [event, pkg] = await Promise.all([
+    booking.event ? LinkupEvent.findById(booking.event) : null,
+    booking.package ? LinkupPackage.findById(booking.package) : null,
+  ]);
+  const seating = (booking.items || []).find(item => item.itemType === 'seating');
+  const canCheckIn = booking.bookingStatus === 'confirmed' && booking.paymentStatus === 'paid' && !booking.checkedInAt;
+  return {
+    bookingId: booking._id, bookingReference: booking.bookingReference, customerName: booking.customerName,
+    bookingType: booking.bookingType, bookingStatus: booking.bookingStatus, paymentStatus: booking.paymentStatus,
+    guestCount: booking.guestCount, totalAmount: booking.totalAmount, currency: booking.currency,
+    event: event ? { _id: event._id, title: event.title, eventDate: event.eventDate, startTime: event.startTime, endTime: event.endTime, timeZone: event.timeZone, venueName: event.venueName, location: event.location } : null,
+    package: pkg ? { _id: pkg._id, name: pkg.name, seatingCapacity: pkg.seatingCapacity } : null,
+    seating: seating ? { name: seating.name, quantity: seating.quantity } : null,
+    checkedInAt: booking.checkedInAt || null, checkedInBy: booking.checkedInBy || null, canCheckIn,
+  };
 };
 
 const normalizePackageItems = async items => {
@@ -535,6 +559,50 @@ const bookingStatus = async (req, res) => {
   } catch (error) { fail(res, 500, error.message); }
 };
 
+const entryPassQr = async (req, res) => {
+  try {
+    const { pass, booking } = await entryPassBooking(req.params.token);
+    if (booking.bookingStatus !== 'confirmed' || booking.paymentStatus !== 'paid') return fail(res, 404, 'Active entry pass not found');
+    const image = await entryPassQrBuffer(pass.token);
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Content-Length', String(image.length));
+    res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+    res.send(image);
+  } catch { fail(res, 404, 'Active entry pass not found'); }
+};
+
+const lookupEntryPass = async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') return fail(res, 403, 'Only administrators can scan entry passes');
+    const { booking } = await entryPassBooking(req.body.token || req.body.code);
+    res.json({ success: true, data: await entryPassView(booking) });
+  } catch (error) { fail(res, 400, error.message || 'Invalid entry pass'); }
+};
+
+const confirmEntryPass = async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') return fail(res, 403, 'Only administrators can confirm entry');
+    const pass = verifyEntryPassToken(req.body.token || req.body.code);
+    const sequelize = connectDB.getSequelize();
+    const result = await sequelize.transaction(async transaction => {
+      await LinkupBooking._ready();
+      const row = await LinkupBooking._sql.findByPk(pass.bookingId, { transaction, lock: transaction.LOCK.UPDATE });
+      if (!row) throw new Error('Booking not found');
+      const booking = LinkupBooking._hydrate(row.get({ plain: true }));
+      if (booking.bookingReference !== pass.bookingReference) throw new Error('Entry pass does not match this booking');
+      if (booking.checkedInAt) return { booking, alreadyCheckedIn: true };
+      if (booking.bookingStatus !== 'confirmed' || booking.paymentStatus !== 'paid') throw new Error('This booking is not eligible for entry');
+      booking.checkedInAt = new Date(); booking.checkedInBy = req.user._id;
+      await booking.save({ transaction });
+      return { booking, alreadyCheckedIn: false };
+    });
+    const data = await entryPassView(result.booking);
+    if (result.alreadyCheckedIn) return res.status(409).json({ success: false, message: 'This entry pass has already been checked in', data });
+    await LinkupAuditLog.create({ actor: req.user._id, action: 'booking_checked_in', entityType: 'booking', entityId: result.booking._id, details: { bookingReference: result.booking.bookingReference } });
+    res.json({ success: true, message: 'Guest entry confirmed', data });
+  } catch (error) { fail(res, /not found/i.test(error.message) ? 404 : 409, error.message || 'Could not confirm entry'); }
+};
+
 const customerBookings = async (req, res) => {
   try {
     const bookings = await LinkupBooking.find({ customer: req.user._id })
@@ -574,8 +642,12 @@ const customerBookings = async (req, res) => {
         paymentStatus: value.paymentStatus,
         paymentMethod: value.paymentMethod,
         paymentDueAt: value.paymentDueAt,
+        checkedInAt: value.checkedInAt,
         createdAt: value.createdAt,
         transfer: transferByBooking.get(String(value._id)) || null,
+        entryQrUrl: value.bookingStatus === 'confirmed' && value.paymentStatus === 'paid' && process.env.JWT_SECRET
+          ? entryPassQrUrl(value)
+          : '',
       };
     });
     res.json({ success: true, data });
@@ -624,4 +696,4 @@ const uploadImage = async (req, res) => {
   } catch (error) { return fail(res, 400, error.message || 'Image optimization failed'); }
 };
 
-module.exports = { list, getOne, create, update, remove, overview, publicEvents, publicEvent, publicPackage, createBooking, completePackageBooking, createSlotBooking, submitReceipt, verifyTransfer, cancelBooking, expireHolds, exportBookings, receipt, bookingStatus, customerBookings, uploadImage, _priceBooking: priceBooking, _preparePackageCheckout: preparePackageCheckout, _releaseBookingInventory: releaseBookingInventory, _validateWholeNumbers: validateWholeNumbers };
+module.exports = { list, getOne, create, update, remove, overview, publicEvents, publicEvent, publicPackage, createBooking, completePackageBooking, createSlotBooking, submitReceipt, verifyTransfer, cancelBooking, expireHolds, exportBookings, receipt, bookingStatus, customerBookings, entryPassQr, lookupEntryPass, confirmEntryPass, uploadImage, _priceBooking: priceBooking, _preparePackageCheckout: preparePackageCheckout, _releaseBookingInventory: releaseBookingInventory, _validateWholeNumbers: validateWholeNumbers };

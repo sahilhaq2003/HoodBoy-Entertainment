@@ -7,6 +7,7 @@ const { LinkupBooking, LinkupEvent, LinkupPackage } = require('../models/LinkupP
 const { renderEmail } = require('./emailTemplates');
 const { formatEventDate, eventStartInstant } = require('../lib/eventTime');
 const { createBulkNotifications } = require('./notificationService');
+const { entryPassQrUrl } = require('./entryPassService');
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 let transporter;
@@ -140,12 +141,15 @@ const bookingData = async (bookingOrId, extra = {}) => {
     booking.event ? LinkupEvent.findById(booking.event) : null,
     booking.package ? LinkupPackage.findById(booking.package) : null,
   ]);
+  const hasEntryPass = booking.bookingStatus === 'confirmed' && booking.paymentStatus === 'paid';
   return { booking, data: {
     customerName: booking.customerName, bookingReference: booking.bookingReference,
     eventName: event?.title || 'HBE Live Event', venue: [event?.venueName, event?.location].filter(Boolean).join(' · '), eventDate: event?.eventDate, eventDateFormatted: event ? formatEventDate(event) : '',
     packageName: pkg?.name || (booking.bookingType === 'performance_slot' ? 'Performance Slot' : ''), guestCount: booking.guestCount,
     totalAmount: booking.totalAmount, currency: booking.currency, paymentStatus: booking.paymentStatus, paymentDueAt: booking.paymentDueAt,
-    actionPath: `/linkup/booking/${encodeURIComponent(booking.bookingReference)}`, ...extra,
+    actionPath: '/linkup/bookings', actionLabel: hasEntryPass ? 'View My Booking' : undefined,
+    entryQrUrl: hasEntryPass ? entryPassQrUrl(booking) : '', entryPassReady: hasEntryPass,
+    ...extra,
   } };
 };
 
