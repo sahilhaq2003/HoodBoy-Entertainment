@@ -739,18 +739,21 @@ const LinkupCheckout: React.FC = () => {
                               aria-label={`${item.name} quantity`}
                               type="number"
                               min="0"
+                              step="1"
+                              inputMode="numeric"
                               max={item.availableQuantity}
                               value={food[item._id] || 0}
+                              onWheel={(e) => e.currentTarget.blur()}
                               onChange={(e) =>
                                 setFood({
                                   ...food,
                                   [item._id]: Math.max(
                                     0,
-                                    Number(e.target.value) || 0,
+                                    Math.floor(Number(e.target.value)) || 0,
                                   ),
                                 })
                               }
-                              className="h-10 w-16 rounded-lg border border-white/10 bg-slate-950 px-2 text-center"
+                              className="h-10 w-16 rounded-lg border border-white/10 bg-slate-950 px-2 text-center [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                             />
                           </label>
                         ))}
@@ -780,18 +783,21 @@ const LinkupCheckout: React.FC = () => {
                               aria-label={`${item.name} quantity`}
                               type="number"
                               min="0"
+                              step="1"
+                              inputMode="numeric"
                               max={item.availableQuantity}
                               value={alcohol[item._id] || 0}
+                              onWheel={(e) => e.currentTarget.blur()}
                               onChange={(e) =>
                                 setAlcohol({
                                   ...alcohol,
                                   [item._id]: Math.max(
                                     0,
-                                    Number(e.target.value) || 0,
+                                    Math.floor(Number(e.target.value)) || 0,
                                   ),
                                 })
                               }
-                              className="h-10 w-16 rounded-lg border border-white/10 bg-slate-950 px-2 text-center"
+                              className="h-10 w-16 rounded-lg border border-white/10 bg-slate-950 px-2 text-center [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                             />
                           </label>
                         ))}
@@ -873,15 +879,18 @@ const LinkupCheckout: React.FC = () => {
                     <input
                       type="number"
                       min="1"
+                      step="1"
+                      inputMode="numeric"
                       max={maxGuests}
                       value={customer.guestCount}
+                      onWheel={(e) => e.currentTarget.blur()}
                       onChange={(e) =>
                         setCustomer({
                           ...customer,
-                          guestCount: Number(e.target.value),
+                          guestCount: Math.max(1, Math.floor(Number(e.target.value) || 1)),
                         })
                       }
-                      className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-slate-950 px-4 outline-none focus:border-violet-400"
+                      className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-slate-950 px-4 outline-none focus:border-violet-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                     />
                   </label>
                   <label className="md:col-span-2 text-sm font-bold text-slate-300">

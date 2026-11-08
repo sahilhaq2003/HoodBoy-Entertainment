@@ -46,6 +46,20 @@ const imageFields = {
   alcohol: ['image'],
   packages: ['image'],
 };
+const wholeNumberFields = {
+  slots: ['durationMinutes', 'totalQuantity', 'availableQuantity'],
+  seating: ['capacity', 'totalQuantity', 'availableQuantity'],
+  food: ['availableQuantity'],
+  alcohol: ['availableQuantity', 'minimumAge'],
+  packages: ['seatingCapacity', 'totalQuantity', 'availableQuantity', 'paymentDeadlineHours', 'checkoutHoldMinutes'],
+};
+const validateWholeNumbers = (name, input) => {
+  for (const field of wholeNumberFields[name] || []) {
+    if (input[field] !== undefined && input[field] !== '' && !Number.isInteger(Number(input[field]))) {
+      throw new Error(`${field.replace(/([A-Z])/g, ' $1')} must be a whole number`);
+    }
+  }
+};
 const recordImageUrls = (name, record) => {
   const value = record?.toJSON ? record.toJSON() : record || {};
   return (imageFields[name] || []).flatMap(field => Array.isArray(value[field]) ? value[field] : [value[field]]).filter(url => typeof url === 'string' && url.startsWith('/uploads/linkup/'));
@@ -152,6 +166,7 @@ const create = async (req, res) => {
       const eventDate = parsedEventDate ? parsedEventDate.toISOString().slice(0, 10) : '';
       if (eventDate && eventDate < calendarDateInZone(input.timeZone)) throw new Error('Event date cannot be in the past at the venue location');
     }
+    validateWholeNumbers(name, input);
     if (name === 'packages') input = await validatePackageData(input);
     const data = await Model.create(input);
     await LinkupAuditLog.create({ actor: req.user._id, action: 'create', entityType: name, entityId: data._id, details: { name: data.name || data.title || '' } });
@@ -170,6 +185,7 @@ const update = async (req, res) => {
     const previousImages = recordImageUrls(name, current);
     let input = pick(req.body, editableFields[name]);
     if (name === 'events' && input.timeZone !== undefined && !validTimeZone(input.timeZone)) throw new Error('Select a valid event time zone');
+    validateWholeNumbers(name, input);
     if (name === 'packages') {
       const existing = current.toJSON ? current.toJSON() : { ...current };
       const validated = await validatePackageData({ ...existing, ...input });
@@ -561,4 +577,4 @@ const uploadImage = async (req, res) => {
   } catch (error) { return fail(res, 400, error.message || 'Image optimization failed'); }
 };
 
-module.exports = { list, getOne, create, update, remove, overview, publicEvents, publicEvent, publicPackage, createBooking, completePackageBooking, createSlotBooking, submitReceipt, verifyTransfer, cancelBooking, expireHolds, exportBookings, receipt, bookingStatus, uploadImage, _priceBooking: priceBooking, _preparePackageCheckout: preparePackageCheckout, _releaseBookingInventory: releaseBookingInventory };
+module.exports = { list, getOne, create, update, remove, overview, publicEvents, publicEvent, publicPackage, createBooking, completePackageBooking, createSlotBooking, submitReceipt, verifyTransfer, cancelBooking, expireHolds, exportBookings, receipt, bookingStatus, uploadImage, _priceBooking: priceBooking, _preparePackageCheckout: preparePackageCheckout, _releaseBookingInventory: releaseBookingInventory, _validateWholeNumbers: validateWholeNumbers };
