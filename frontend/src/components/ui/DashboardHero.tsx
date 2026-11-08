@@ -80,7 +80,7 @@ const DashboardHero: React.FC<DashboardHeroProps> = ({
   const firstName = user?.name?.split(' ')[0] || 'there';
   const role = user?.role ? roleLabel[user.role] : undefined;
   const quickActions = includeAdminCheckIn && user?.role === 'admin'
-    ? [...quick, { label: 'QR Check-In', icon: <QrCode size={15} />, path: '/the-lnk-up?section=check-in', color: '#7C3AED' }]
+    ? [{ label: 'QR Check-In', icon: <QrCode size={15} />, path: '/the-lnk-up?section=check-in', color: '#7C3AED' }, ...quick]
     : quick;
 
   return (
