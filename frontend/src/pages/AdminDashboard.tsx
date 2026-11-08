@@ -104,6 +104,7 @@ const AdminDashboard: React.FC = () => {
         title="Label performance overview"
         eyebrow="Executive command"
         subtitle="Live operational data across the label"
+        includeAdminCheckIn
         actions={
           <div className="flex gap-2">
             {kpis.criticalIssues > 0 && (

@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Users, Radio, CheckSquare, DollarSign, TrendingUp,
-  Settings, RefreshCw, LayoutDashboard,
+  Settings, RefreshCw, LayoutDashboard, QrCode,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import type { HbeAccent } from './Card';
@@ -49,6 +49,7 @@ interface DashboardHeroProps {
   onRefresh?: () => void;
   refreshing?: boolean;
   actions?: React.ReactNode;
+  includeAdminCheckIn?: boolean;
 }
 
 const greeting = () => {
@@ -69,6 +70,7 @@ const DashboardHero: React.FC<DashboardHeroProps> = ({
   onRefresh,
   refreshing,
   actions,
+  includeAdminCheckIn = false,
 }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -77,6 +79,9 @@ const DashboardHero: React.FC<DashboardHeroProps> = ({
   const date = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
   const firstName = user?.name?.split(' ')[0] || 'there';
   const role = user?.role ? roleLabel[user.role] : undefined;
+  const quickActions = includeAdminCheckIn && user?.role === 'admin'
+    ? [...quick, { label: 'QR Check-In', icon: <QrCode size={15} />, path: '/the-lnk-up?section=check-in', color: '#7C3AED' }]
+    : quick;
 
   return (
     <div className="hbe-hero p-6 md:p-8">
@@ -150,10 +155,10 @@ const DashboardHero: React.FC<DashboardHeroProps> = ({
           </div>
         </div>
 
-        {quick && quick.length > 0 && (
+        {quickActions && quickActions.length > 0 && (
           <div className="mt-6 pt-5 border-t border-(--hbe-line-soft) flex flex-wrap items-center gap-2.5">
             <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--hbe-muted)] mr-1">Quick access</span>
-            {quick.map((q) => (
+            {quickActions.map((q) => (
               <button
                 key={q.path}
                 onClick={() => navigate(q.path)}

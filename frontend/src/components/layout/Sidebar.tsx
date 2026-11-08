@@ -5,7 +5,7 @@ import {
   Phone, CheckSquare, Settings, Star, TrendingUp, LogOut, X,
   Award, FolderOpen, Shield, Calendar, Disc, Megaphone,
   BarChart3, CreditCard, Receipt, Wallet, User, Home, FileClock,
-  Tv, UserCog, Activity,
+  Tv, UserCog, Activity, QrCode,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { preloadRoute, preloadRoutes } from '../../utils/routePreload';
@@ -22,6 +22,7 @@ const iconMap: Record<string, React.ReactNode> = {
   '/releases': <Radio size={17} />,
   '/distribution': <Disc size={17} />,
   '/the-lnk-up': <Tv size={17} />,
+  '/the-lnk-up?section=check-in': <QrCode size={17} />,
   '/projects': <FolderOpen size={17} />,
   '/contracts': <FileText size={17} />,
   '/finance': <DollarSign size={17} />,
@@ -98,8 +99,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         items.unshift({ path: '/system-health', label: 'System Health' });
       }
     }
+    if (user?.role === 'admin' && !items.some((item) => item.path === '/the-lnk-up?section=check-in')) {
+      const linkupIndex = items.findIndex((item) => item.path === '/the-lnk-up');
+      const checkInItem = { path: '/the-lnk-up?section=check-in', label: 'QR Check-In' };
+      if (linkupIndex >= 0) items.splice(linkupIndex + 1, 0, checkInItem);
+      else items.push(checkInItem);
+    }
     return items;
-  }, [nav, canAccess]);
+  }, [nav, canAccess, user?.role]);
 
   const grouped = SECTION_ORDER.map((section) => ({
     ...section,
@@ -139,10 +146,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             <p className="sidebar-section-label">{group.label}</p>
             <div className="space-y-[2px]">
               {group.items.map((item) => {
-                const isActive =
-                  location.pathname === item.path ||
-                  (item.path !== '/' && !item.path.endsWith('-dashboard') && location.pathname.startsWith(item.path)) ||
-                  (item.path.endsWith('-dashboard') && location.pathname === item.path);
+                const [itemPath, itemQuery = ''] = item.path.split('?');
+                const itemSection = new URLSearchParams(itemQuery).get('section');
+                const currentSection = new URLSearchParams(location.search).get('section');
+                const isActive = itemSection
+                  ? location.pathname === itemPath && currentSection === itemSection
+                  : (location.pathname === itemPath && !currentSection) ||
+                    (itemPath !== '/' && !itemPath.endsWith('-dashboard') && location.pathname.startsWith(`${itemPath}/`)) ||
+                    (itemPath.endsWith('-dashboard') && location.pathname === itemPath);
                 return (
                   <NavLink
                     key={item.path}

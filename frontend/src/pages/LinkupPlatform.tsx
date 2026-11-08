@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { BarChart3, CalendarDays, Armchair, Mic2, Store, Utensils, Wine, Package, Landmark, TicketCheck, BadgeDollarSign, Settings, Plus, Pencil, Trash2, RefreshCw, ExternalLink, Check, X, Search, Download, ArrowUpRight, ImagePlus, Loader2, MessageSquareText, ChevronLeft, ChevronRight, Cloud, WifiOff, QrCode } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { linkupPlatformApi } from '../services/api';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import EmailSettingsPanel from '../components/linkup/EmailSettingsPanel';
@@ -117,7 +117,10 @@ const PackageItemsEditor: React.FC<{ items:PackageSelection[]; food:RecordItem[]
 
 const LinkupPlatform: React.FC = () => {
   const { user } = useAuth();
-  const [active, setActive] = useState('overview');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedSection = searchParams.get('section');
+  const initialSection = requestedSection && sections.some(item => item.key === requestedSection) && (requestedSection !== 'check-in' || user?.role === 'admin') ? requestedSection : 'overview';
+  const [active, setActive] = useState(initialSection);
   const [records, setRecords] = useState<RecordItem[]>([]);
   const [overview, setOverview] = useState<Record<string,number>>({});
   const [relations, setRelations] = useState<Record<string,RecordItem[]>>({});
@@ -187,7 +190,18 @@ const LinkupPlatform: React.FC = () => {
     setLoading(true);
     setSearch('');
     setActive(key);
+    setSearchParams(key === 'overview' ? {} : { section: key }, { replace: true });
   };
+
+  useEffect(() => {
+    const next = searchParams.get('section') || 'overview';
+    const allowed = sections.some(item => item.key === next) && (next !== 'check-in' || user?.role === 'admin');
+    if (allowed && next !== active) {
+      setLoading(true);
+      setSearch('');
+      setActive(next);
+    }
+  }, [searchParams, user?.role, active]);
 
   useEffect(() => {
     if (!formOpen || editing) return;
