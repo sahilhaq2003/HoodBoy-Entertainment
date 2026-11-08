@@ -12,7 +12,11 @@ const LinkupCheckInPanel: React.FC = () => {
   const scannerRef = useRef<any>(null);
   const detailsRef = useRef<HTMLElement>(null);
   const scanLocked = useRef(false);
+  const latestDecoded = useRef<{ value: string; at: number }|null>(null);
+  const captureRequested = useRef(false);
+  const captureTimeout = useRef<number|null>(null);
   const [scanning, setScanning] = useState(false);
+  const [capturePending, setCapturePending] = useState(false);
   const [busy, setBusy] = useState(false);
   const [token, setToken] = useState('');
   const [details, setDetails] = useState<EntryDetails|null>(null);
@@ -25,7 +29,15 @@ const LinkupCheckInPanel: React.FC = () => {
     }, 100);
   };
 
+  const clearCaptureRequest = () => {
+    captureRequested.current = false;
+    setCapturePending(false);
+    if (captureTimeout.current !== null) window.clearTimeout(captureTimeout.current);
+    captureTimeout.current = null;
+  };
+
   const stopScanner = async () => {
+    clearCaptureRequest();
     const scanner = scannerRef.current;
     scannerRef.current = null;
     if (scanner) {
@@ -50,8 +62,32 @@ const LinkupCheckInPanel: React.FC = () => {
     } finally { setBusy(false); }
   };
 
+  const submitCapturedCode = (decodedText: string) => {
+    if (scanLocked.current) return;
+    scanLocked.current = true;
+    clearCaptureRequest();
+    void lookup(decodedText);
+    void stopScanner();
+  };
+
+  const captureAndScan = () => {
+    if (!scanning || busy || capturePending || scanLocked.current) return;
+    setError('');
+    captureRequested.current = true;
+    setCapturePending(true);
+    const recent = latestDecoded.current;
+    if (recent && Date.now() - recent.at < 1500) {
+      submitCapturedCode(recent.value);
+      return;
+    }
+    captureTimeout.current = window.setTimeout(() => {
+      clearCaptureRequest();
+      setError('No QR code was detected. Hold the code steady inside the frame and tap Capture & scan again.');
+    }, 5000);
+  };
+
   const startScanner = async () => {
-    setError(''); setDetails(null); scanLocked.current = false;
+    setError(''); setDetails(null); scanLocked.current = false; latestDecoded.current = null; clearCaptureRequest();
     try {
       await stopScanner();
       const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode');
@@ -66,10 +102,8 @@ const LinkupCheckInPanel: React.FC = () => {
         { facingMode: 'environment' },
         { fps: 20, qrbox: (width:number,height:number) => { const size=Math.max(50,Math.floor(Math.min(width,height)*0.9)); return { width:size, height:size }; }, aspectRatio: 1, disableFlip: true },
         decodedText => {
-          if (scanLocked.current) return;
-          scanLocked.current = true;
-          void lookup(decodedText);
-          void stopScanner();
+          latestDecoded.current = { value: decodedText, at: Date.now() };
+          if (captureRequested.current) submitCapturedCode(decodedText);
         },
         () => {},
       );
@@ -92,7 +126,7 @@ const LinkupCheckInPanel: React.FC = () => {
     } finally { setBusy(false); }
   };
 
-  const reset = () => { void stopScanner(); setToken(''); setDetails(null); setError(''); scanLocked.current=false; };
+  const reset = () => { void stopScanner(); setToken(''); setDetails(null); setError(''); scanLocked.current=false; latestDecoded.current=null; };
 
   return <div className="grid gap-6 xl:grid-cols-[minmax(0,1.05fr)_minmax(360px,.95fr)]">
     <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
@@ -102,7 +136,7 @@ const LinkupCheckInPanel: React.FC = () => {
           <div id="linkup-entry-reader" className="h-full w-full overflow-hidden [&>div]:!h-full [&_video]:!h-full [&_video]:!w-full [&_video]:!object-cover"/>
           {!scanning&&<div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center"><span className="grid h-16 w-16 place-items-center rounded-2xl bg-violet-100 text-violet-700"><Camera size={28}/></span><h3 className="mt-5 text-lg font-black text-slate-900">Ready to scan</h3><p className="mt-2 max-w-xs text-sm leading-6 text-slate-500">Ask the customer to open the QR code from their approval email or My Bookings page.</p><button type="button" onClick={()=>void startScanner()} className="mt-6 inline-flex h-12 items-center gap-2 rounded-xl bg-violet-600 px-6 text-sm font-black text-white shadow-lg shadow-violet-200 transition hover:bg-violet-700"><Camera size={17}/> Open camera</button></div>}
         </div>
-        {scanning&&<button type="button" onClick={()=>void stopScanner()} className="mx-auto mt-4 flex h-11 items-center gap-2 rounded-xl border border-slate-300 px-4 text-sm font-bold text-slate-700 hover:bg-slate-50">Stop camera</button>}
+        {scanning&&<div className="mt-4 flex flex-col items-stretch justify-center gap-2 sm:flex-row"><button type="button" disabled={capturePending||busy} onClick={captureAndScan} className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-violet-600 px-6 text-sm font-black text-white shadow-lg shadow-violet-200 transition hover:bg-violet-700 disabled:cursor-wait disabled:opacity-70">{capturePending?<RefreshCw size={17} className="animate-spin"/>:<Camera size={17}/>} {capturePending?'Scanning QR...':'Capture & scan'}</button><button type="button" onClick={()=>void stopScanner()} className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-slate-300 px-5 text-sm font-bold text-slate-700 hover:bg-slate-50">Stop camera</button></div>}
         <div className="my-6 flex items-center gap-3"><span className="h-px flex-1 bg-slate-200"/><span className="text-[10px] font-black uppercase tracking-[.18em] text-slate-400">Manual entry</span><span className="h-px flex-1 bg-slate-200"/></div>
         <div className="flex flex-col gap-2 sm:flex-row"><label className="relative min-w-0 flex-1"><Keyboard size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/><input value={token} onChange={event=>setToken(event.target.value)} onKeyDown={event=>event.key==='Enter'&&void lookup(token)} placeholder="Paste scanned HBE-LINKUP code" className="h-12 w-full rounded-xl border border-slate-300 pl-10 pr-3 text-sm outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-100"/></label><button type="button" disabled={!token.trim()||busy} onClick={()=>void lookup(token)} className="h-12 rounded-xl bg-slate-900 px-5 text-sm font-black text-white disabled:opacity-40">{busy?'Checking…':'Verify pass'}</button></div>
         {busy&&!details&&<div role="status" aria-live="polite" className="mt-4 flex items-center gap-3 rounded-2xl border border-violet-200 bg-violet-50 p-4 text-sm font-bold text-violet-700"><RefreshCw size={18} className="shrink-0 animate-spin"/><span>QR captured. Loading booking details...</span></div>}
