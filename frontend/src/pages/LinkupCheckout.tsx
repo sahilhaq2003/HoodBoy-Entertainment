@@ -12,7 +12,9 @@ import {
   Loader2,
   LockKeyhole,
   MapPin,
+  Minus,
   Package,
+  Plus,
   ShieldCheck,
   Upload,
   Users,
@@ -45,7 +47,7 @@ const LinkupCheckout: React.FC = () => {
     customerName: "",
     email: "",
     phone: "",
-    guestCount: 1,
+    guestCount: 1 as number | "",
     notes: "",
     ageConfirmed: false,
   });
@@ -876,22 +878,24 @@ const LinkupCheckout: React.FC = () => {
                   </label>
                   <label className="text-sm font-bold text-slate-300">
                     Number of guests
-                    <input
-                      type="number"
-                      min="1"
-                      step="1"
-                      inputMode="numeric"
-                      max={maxGuests}
-                      value={customer.guestCount}
-                      onWheel={(e) => e.currentTarget.blur()}
-                      onChange={(e) =>
-                        setCustomer({
-                          ...customer,
-                          guestCount: Math.max(1, Math.floor(Number(e.target.value) || 1)),
-                        })
-                      }
-                      className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-slate-950 px-4 outline-none focus:border-violet-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                    />
+                    <span className="mt-2 flex h-12 w-full overflow-hidden rounded-xl border border-white/10 bg-slate-950 transition focus-within:border-violet-400 focus-within:ring-2 focus-within:ring-violet-400/15">
+                      <button type="button" aria-label="Remove one guest" disabled={Number(customer.guestCount || 1) <= 1} onClick={()=>setCustomer(current=>({...current,guestCount:Math.max(1,Number(current.guestCount||1)-1)}))} className="grid w-12 shrink-0 place-items-center border-r border-white/10 text-slate-300 transition hover:bg-violet-500/15 hover:text-white disabled:cursor-not-allowed disabled:opacity-35"><Minus size={17}/></button>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        aria-label="Number of guests"
+                        value={customer.guestCount}
+                        onChange={(e) => {
+                          const digits=e.target.value.replace(/\D/g,'');
+                          setCustomer({...customer,guestCount:digits===''?'':Math.min(maxGuests,Math.max(1,Number(digits)))});
+                        }}
+                        onBlur={()=>setCustomer(current=>({...current,guestCount:Math.min(maxGuests,Math.max(1,Number(current.guestCount)||1))}))}
+                        className="min-w-0 flex-1 bg-transparent px-3 text-center text-base font-black text-white outline-none"
+                      />
+                      <button type="button" aria-label="Add one guest" disabled={Number(customer.guestCount || 1) >= maxGuests} onClick={()=>setCustomer(current=>({...current,guestCount:Math.min(maxGuests,Number(current.guestCount||1)+1)}))} className="grid w-12 shrink-0 place-items-center border-l border-white/10 text-slate-300 transition hover:bg-violet-500/15 hover:text-white disabled:cursor-not-allowed disabled:opacity-35"><Plus size={17}/></button>
+                    </span>
+                    <small className="mt-1.5 block text-xs font-medium text-slate-500">Maximum {maxGuests} {maxGuests===1?'guest':'guests'} for this package</small>
                   </label>
                   <label className="md:col-span-2 text-sm font-bold text-slate-300">
                     Special requests{" "}

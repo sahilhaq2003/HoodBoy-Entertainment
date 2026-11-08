@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { LinkupFoodVendor, LinkupAuditLog, LinkupBooking, LinkupBankTransfer } = require('../models/LinkupPlatform');
-const { create, customerBookings, _validateWholeNumbers } = require('../controllers/linkupPlatformController');
+const { create, remove, customerBookings, _validateWholeNumbers } = require('../controllers/linkupPlatformController');
 
 test('Linkup people and inventory counts must be whole numbers', () => {
   assert.doesNotThrow(() => _validateWholeNumbers('seating', { capacity: 6, totalQuantity: '12' }));
@@ -72,5 +72,48 @@ test('customer booking history is scoped to the authenticated customer', async (
   } finally {
     LinkupBooking.find = originalBookingFind;
     LinkupBankTransfer.find = originalTransferFind;
+  }
+});
+
+test('only administrators can permanently delete booking test records', async () => {
+  let responseStatus;
+  let responseBody;
+  await remove(
+    { params: { resource: 'bookings', id: 'booking-1' }, user: { _id: 'manager-1', role: 'manager' } },
+    { status(code) { responseStatus = code; return this; }, json(body) { responseBody = body; return this; } },
+  );
+  assert.equal(responseStatus, 403);
+  assert.match(responseBody.message, /only administrators/i);
+});
+
+test('deleting a booking test record also removes its payment verification records', async () => {
+  const originals = {
+    bookingFind: LinkupBooking.findById,
+    bookingDelete: LinkupBooking.findByIdAndDelete,
+    transferFind: LinkupBankTransfer.find,
+    transferDelete: LinkupBankTransfer.deleteMany,
+    auditCreate: LinkupAuditLog.create,
+  };
+  const booking = { _id: 'booking-1', inventoryReleased: true };
+  let deletedTransferFilter;
+  LinkupBooking.findById = async () => booking;
+  LinkupBooking.findByIdAndDelete = async () => booking;
+  LinkupBankTransfer.find = async () => [{ _id: 'transfer-1', receiptFile: 'missing-test-receipt.png' }];
+  LinkupBankTransfer.deleteMany = async filter => { deletedTransferFilter = filter; return { deletedCount: 1 }; };
+  LinkupAuditLog.create = async () => ({});
+  let responseBody;
+  try {
+    await remove(
+      { params: { resource: 'bookings', id: 'booking-1' }, user: { _id: 'admin-1', role: 'admin' } },
+      { status() { return this; }, json(body) { responseBody = body; return this; } },
+    );
+    assert.deepEqual(deletedTransferFilter, { booking: 'booking-1' });
+    assert.equal(responseBody.success, true);
+  } finally {
+    LinkupBooking.findById = originals.bookingFind;
+    LinkupBooking.findByIdAndDelete = originals.bookingDelete;
+    LinkupBankTransfer.find = originals.transferFind;
+    LinkupBankTransfer.deleteMany = originals.transferDelete;
+    LinkupAuditLog.create = originals.auditCreate;
   }
 });

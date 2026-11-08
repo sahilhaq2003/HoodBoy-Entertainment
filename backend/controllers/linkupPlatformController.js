@@ -65,6 +65,16 @@ const recordImageUrls = (name, record) => {
   const value = record?.toJSON ? record.toJSON() : record || {};
   return (imageFields[name] || []).flatMap(field => Array.isArray(value[field]) ? value[field] : [value[field]]).filter(url => typeof url === 'string' && url.startsWith('/uploads/linkup/'));
 };
+const receiptFilePath = receiptFile => receiptFile
+  ? path.join(__dirname, '..', 'private_uploads', 'linkup_receipts', path.basename(receiptFile))
+  : '';
+const removeReceiptFiles = async transfers => {
+  await Promise.all((transfers || []).map(async transfer => {
+    const file = receiptFilePath(transfer?.receiptFile);
+    if (!file) return;
+    try { await fs.promises.unlink(file); } catch (error) { if (error.code !== 'ENOENT') console.warn(`Linkup receipt cleanup warning: ${error.message}`); }
+  }));
+};
 const pick = (source, fields) => Object.fromEntries(fields.filter(key => source[key] !== undefined).map(key => [key, source[key]]));
 const populate = (query, name) => (population[name] || []).reduce((result, [field, select]) => result.populate(field, select), query);
 const fail = (res, status, message) => res.status(status).json({ success: false, message });
@@ -227,13 +237,33 @@ const update = async (req, res) => {
 const remove = async (req, res) => {
   try {
     const name = req.params.resource;
+    const historicalResource = ['bookings', 'transfers'].includes(name);
+    if (historicalResource && req.user.role !== 'admin') return fail(res, 403, 'Only administrators can delete booking and payment test records');
     if (name === 'bank-accounts' && req.user.role !== 'admin') return fail(res, 403, 'Only administrators can manage bank accounts');
     const Model = resources[name];
-    if (!Model || !editableFields[name]) return fail(res, 404, 'Unknown Linkup resource');
+    if (!Model || (!editableFields[name] && !historicalResource)) return fail(res, 404, 'Unknown Linkup resource');
     if (name === 'bank-accounts') {
       const used = await LinkupBankTransfer.exists({ bankAccount: req.params.id });
       const assigned = await LinkupPackage.exists({ bankAccounts: req.params.id });
       if (used || assigned) return fail(res, 409, 'Deactivate this account instead; it is assigned or has payment history');
+    }
+    const current = await Model.findById(req.params.id);
+    if (!current) return fail(res, 404, 'Record not found');
+    if (name === 'bookings') {
+      if (!current.inventoryReleased) await releaseBookingInventory(current);
+      const transfers = await LinkupBankTransfer.find({ booking: current._id });
+      await removeReceiptFiles(transfers);
+      await LinkupBankTransfer.deleteMany({ booking: current._id });
+    } else if (name === 'transfers') {
+      await removeReceiptFiles([current]);
+      const booking = await LinkupBooking.findById(current.booking);
+      if (booking && !(await LinkupBankTransfer.exists({ booking: booking._id, _id: { $ne: current._id } }))) {
+        booking.paymentStatus = 'unpaid';
+        if (!['cancelled', 'completed', 'expired'].includes(booking.bookingStatus)) booking.bookingStatus = 'awaiting_payment';
+        booking.checkedInAt = undefined;
+        booking.checkedInBy = undefined;
+        await booking.save();
+      }
     }
     const data = await Model.findByIdAndDelete(req.params.id);
     if (!data) return fail(res, 404, 'Record not found');
@@ -545,7 +575,7 @@ const receipt = async (req, res) => {
   try {
     const transfer = await LinkupBankTransfer.findById(req.params.id);
     if (!transfer) return fail(res, 404, 'Receipt not found');
-    const file = path.join(__dirname, '..', 'private_uploads', 'linkup_receipts', path.basename(transfer.receiptFile));
+    const file = receiptFilePath(transfer.receiptFile);
     if (!fs.existsSync(file)) return fail(res, 404, 'Receipt file missing');
     res.download(file, transfer.originalFileName || path.basename(file));
   } catch (error) { fail(res, 500, error.message); }
