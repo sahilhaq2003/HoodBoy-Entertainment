@@ -84,14 +84,14 @@ const DashboardHero: React.FC<DashboardHeroProps> = ({
     : quick;
 
   return (
-    <div className="hbe-hero p-6 md:p-8">
+    <div className="hbe-hero p-4 sm:p-6 md:p-8">
       <div className="hbe-glow" style={{ top: -60, right: '6%', width: 320, height: 320, background: c.dot, opacity: 0.16 }} />
 
       <div className="relative z-10">
-        <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-6">
-          <div className="flex items-start gap-4 min-w-0">
+        <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-4 sm:gap-6">
+          <div className="flex items-start gap-3 sm:gap-4 min-w-0">
             <div
-              className="hbe-icon-tile w-[52px] h-[52px] shrink-0"
+              className="hbe-icon-tile !h-11 !w-11 shrink-0 sm:!h-[52px] sm:!w-[52px]"
               style={{ background: c.bg, color: c.text, borderRadius: 14, width: 52, height: 52 }}
             >
               <span className="scale-125">{icon || <LayoutDashboard size={22} />}</span>
@@ -104,7 +104,7 @@ const DashboardHero: React.FC<DashboardHeroProps> = ({
                 </span>
                 {eyebrow}
               </div>
-              <h2 className="text-xl md:text-[26px] font-extrabold tracking-[-0.02em] text-[var(--hbe-text)] leading-tight">
+              <h2 className="text-lg sm:text-xl md:text-[26px] font-extrabold tracking-[-0.02em] text-[var(--hbe-text)] leading-tight">
                 {title || `${greeting()}, ${firstName}`}
               </h2>
               <p className="text-xs md:text-[13px] text-[var(--hbe-muted)] font-medium leading-relaxed">
@@ -156,13 +156,13 @@ const DashboardHero: React.FC<DashboardHeroProps> = ({
         </div>
 
         {quickActions && quickActions.length > 0 && (
-          <div className="mt-6 pt-5 border-t border-(--hbe-line-soft) flex flex-wrap items-center gap-2.5">
-            <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--hbe-muted)] mr-1">Quick access</span>
+          <div className="-mx-4 mt-5 flex flex-nowrap items-center gap-2 overflow-x-auto border-t border-(--hbe-line-soft) px-4 pt-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:mt-6 sm:flex-wrap sm:gap-2.5 sm:overflow-visible sm:px-0 sm:pt-5 sm:pb-0">
+            <span className="hidden text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--hbe-muted)] mr-1 sm:inline">Quick access</span>
             {quickActions.map((q) => (
               <button
                 key={q.path}
                 onClick={() => navigate(q.path)}
-                className="group inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-(--hbe-line) bg-(--hbe-fill-soft) hover:border-[#C4B5FD] hover:bg-(--hbe-fill) hover:-translate-y-0.5 transition-all duration-200 text-[12px] font-semibold text-[var(--hbe-text-soft)] hover:text-[var(--hbe-text)]"
+                className="group inline-flex shrink-0 items-center gap-2 px-3 py-2 rounded-xl border border-(--hbe-line) bg-(--hbe-fill-soft) hover:border-[#C4B5FD] hover:bg-(--hbe-fill) hover:-translate-y-0.5 transition-all duration-200 text-[12px] font-semibold text-[var(--hbe-text-soft)] hover:text-[var(--hbe-text)]"
               >
                 <span
                   className="hbe-icon-tile flex items-center justify-center transition-transform duration-200 group-hover:scale-110"

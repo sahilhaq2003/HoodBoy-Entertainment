@@ -98,7 +98,7 @@ const AdminDashboard: React.FC = () => {
   }));
 
   return (
-    <div className="mx-auto max-w-[1600px] space-y-5 pb-12">
+    <div className="mx-auto max-w-[1600px] space-y-4 pb-6 sm:space-y-5 sm:pb-12">
       {/* Hero */}
       <DashboardHero
         title="Label performance overview"
@@ -123,7 +123,7 @@ const AdminDashboard: React.FC = () => {
 
       {/* Row 1 — KPI Stat Cards */}
       <section className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
-        <div className="rounded-2xl border border-[var(--hbe-border-soft)] bg-[var(--hbe-panel)] p-5">
+        <div className="rounded-2xl border border-[var(--hbe-border-soft)] bg-[var(--hbe-panel)] p-4 sm:p-5">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-2">
               <span className={`grid h-9 w-9 place-items-center rounded-xl ${distributionHealth?.status === 'connected' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}`}>
@@ -143,7 +143,7 @@ const AdminDashboard: React.FC = () => {
           </div>
           <div className="mt-4 flex flex-wrap gap-2"><Link to="/distribution" className="rounded-lg bg-violet-600 px-3 py-2 text-xs font-bold text-white">Open distribution</Link><Link to="/system-health" className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-600 dark:text-emerald-400"><Activity size={12} className="mr-1 inline"/>System Health</Link><Link to="/settings?section=integrations" className="rounded-lg border border-[var(--hbe-border-soft)] px-3 py-2 text-xs font-semibold text-[var(--hbe-text)]"><RefreshCw size={12} className="mr-1 inline"/>Manage sync</Link></div>
         </div>
-        <div className="rounded-2xl border border-[var(--hbe-border-soft)] bg-[var(--hbe-panel)] p-5">
+        <div className="rounded-2xl border border-[var(--hbe-border-soft)] bg-[var(--hbe-panel)] p-4 sm:p-5">
           <div className="flex items-center justify-between"><div><h2 className="flex items-center gap-2 text-sm font-bold text-[var(--hbe-text)]"><Webhook size={15}/>Recent webhooks</h2><p className="mt-1 text-[10px] text-[var(--hbe-muted)]">Latest verified provider deliveries</p></div><Link to="/distribution?tab=webhooks" className="text-xs font-semibold text-[var(--hbe-accent)]">View history</Link></div>
           <div className="mt-4 space-y-2">
             {recentWebhooks.length ? recentWebhooks.map(item => <div key={item._id} className="flex items-center justify-between gap-3 rounded-xl bg-[var(--hbe-fill-soft)] px-3 py-2.5"><div className="min-w-0"><p className="truncate text-xs font-semibold text-[var(--hbe-text)]">{item.event}</p><p className="truncate text-[10px] text-[var(--hbe-muted)]">{item.releaseTitle || item.remoteReleaseId || item.message || 'Provider event'}</p></div><span className={`shrink-0 rounded-full px-2 py-1 text-[9px] font-bold capitalize ${item.status === 'processed' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}`}>{item.status}</span></div>) : <div className="flex h-24 items-center justify-center text-xs text-[var(--hbe-muted)]">No webhook deliveries recorded yet</div>}
@@ -183,7 +183,7 @@ const AdminDashboard: React.FC = () => {
       </section>
 
       {/* Row 2 — Performance Rings + Financial Pie */}
-      <section className="grid gap-5 xl:grid-cols-12">
+      <section className="grid gap-4 sm:gap-5 xl:grid-cols-12">
         <Card
           title="Performance overview"
           description="Key health metrics at a glance"
@@ -192,7 +192,7 @@ const AdminDashboard: React.FC = () => {
           className="xl:col-span-7"
           hover={false}
         >
-          <div className="grid grid-cols-4 gap-4 py-2">
+          <div className="grid grid-cols-2 gap-4 py-2 sm:grid-cols-4">
             {[
               { label: 'Task health', value: healthPercent, color: '#16A34A' },
               { label: 'On track', value: approvalPercent, color: '#7C3AED' },
@@ -205,7 +205,7 @@ const AdminDashboard: React.FC = () => {
               </div>
             ))}
           </div>
-          <div className="mt-4 grid grid-cols-4 gap-3">
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
               { label: 'Total tasks', value: kpis.totalTasks || 0, icon: <CheckCircle2 size={13} />, color: '#7C3AED' },
               { label: 'Overdue tasks', value: kpis.overdueTasks || 0, icon: <AlertTriangle size={13} />, color: '#EF4444' },
@@ -253,7 +253,7 @@ const AdminDashboard: React.FC = () => {
                   <Tooltip content={<CustomPieTooltip />} />
                 </PieChart>
               </ResponsiveContainer>
-              <div className="mt-2 flex items-center gap-5 text-[11px]">
+              <div className="mt-2 flex flex-wrap items-center justify-center gap-3 text-[11px] sm:gap-5">
                 <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: PIE_COLORS[0] }} /><span className="text-[var(--hbe-muted)]">Revenue</span> <span className="font-bold text-[var(--hbe-text)]">{formatCurrency(revenue)}</span></span>
                 <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: PIE_COLORS[1] }} /><span className="text-[var(--hbe-muted)]">Expenses</span> <span className="font-bold text-[var(--hbe-text)]">{formatCurrency(expenses)}</span></span>
               </div>
@@ -265,7 +265,7 @@ const AdminDashboard: React.FC = () => {
       </section>
 
       {/* Row 3 — Tasks Donut + Artist Donut + Approvals */}
-      <section className="grid gap-5 lg:grid-cols-12">
+      <section className="grid gap-4 sm:gap-5 lg:grid-cols-12">
         <Card
           title="Task distribution"
           icon={<AlertCircle size={16} />}
@@ -393,7 +393,7 @@ const AdminDashboard: React.FC = () => {
       </section>
 
       {/* Row 4 — Project Momentum + Needs Attention */}
-      <section className="grid gap-5 xl:grid-cols-12">
+      <section className="grid gap-4 sm:gap-5 xl:grid-cols-12">
         <Card
           title="Project momentum"
           description="Progress, owners and next deadlines"
@@ -449,7 +449,7 @@ const AdminDashboard: React.FC = () => {
       </section>
 
       {/* Row 5 — Releases + Campaigns + Activity */}
-      <section className="grid gap-5 lg:grid-cols-3">
+      <section className="grid gap-4 sm:gap-5 lg:grid-cols-3">
         <Card
           title="Release schedule"
           icon={<Radio size={16} />}
@@ -542,7 +542,7 @@ const AdminDashboard: React.FC = () => {
       </section>
 
       {/* Row 6 — Contract Alerts + Portfolio Table */}
-      <section className="grid gap-5 xl:grid-cols-12">
+      <section className="grid gap-4 sm:gap-5 xl:grid-cols-12">
         {contractAlerts.length > 0 && (
           <Card
             title="Contract alerts"
