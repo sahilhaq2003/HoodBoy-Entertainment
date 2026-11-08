@@ -4,9 +4,10 @@ const path = require('path');
 
 const port = Number(process.env.PORT || 3000);
 const distRoot = path.resolve(__dirname, 'dist');
-const immutableAsset = /-[A-Za-z0-9_-]{8,}\.(?:js|css|woff2?|png|jpe?g|gif|svg|webp|ico)$/i;
+const immutableAsset = /-[A-Za-z0-9_-]{8,}\.(?:m?js|css|woff2?|png|jpe?g|gif|svg|webp|ico|wasm)$/i;
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8', '.js': 'application/javascript; charset=utf-8',
+  '.mjs': 'application/javascript; charset=utf-8', '.wasm': 'application/wasm',
   '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8',
   '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
   '.gif': 'image/gif', '.webp': 'image/webp', '.ico': 'image/x-icon',
