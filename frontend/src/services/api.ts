@@ -496,7 +496,7 @@ export const linkupPlatformApi = {
   submitReceipt: (reference: string, data: FormData) => api.post(`/lnk-up/public/bookings/${reference}/receipt`, data, { headers: { 'Content-Type': 'multipart/form-data' } }),
   bookingStatus: (reference: string, email: string) => api.get(`/lnk-up/public/bookings/${reference}/status`, { params: { email } }),
   myBookings: () => api.get('/lnk-up/public/bookings'),
-  getEmailSettings: () => api.get('/lnk-up/platform/email/settings'),
+  getEmailSettings: (page = 1) => api.get('/lnk-up/platform/email/settings', { params: { page } }),
   updateEmailSettings: (data: object) => api.put('/lnk-up/platform/email/settings', data),
   sendTestEmail: (recipient: string) => api.post('/lnk-up/platform/email/test', { recipient }),
   retryEmail: (id: string) => api.post(`/lnk-up/platform/email/${id}/retry`),

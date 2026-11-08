@@ -13,15 +13,20 @@ const configuration = () => ({
   senderName: process.env.SMTP_FROM_NAME || 'HBE Live',
 });
 
-const getConfiguration = async (_req, res) => {
+const getConfiguration = async (req, res) => {
   try {
+    const limit = 25;
+    const requestedPage = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
     const settings = await getSettings();
-    const [recent, failed, pending] = await Promise.all([
-      EmailNotification.find({}).sort({ createdAt: -1 }).limit(50).select('-templateData'),
+    const [total, failed, pending] = await Promise.all([
+      EmailNotification.countDocuments({}),
       EmailNotification.countDocuments({ deliveryStatus: 'failed' }),
       EmailNotification.countDocuments({ deliveryStatus: { $in: ['pending', 'processing'] } }),
     ]);
-    res.json({ success: true, data: { settings, configuration: configuration(), recent, summary: { failed, pending } } });
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    const page = Math.min(requestedPage, totalPages);
+    const recent = await EmailNotification.find({}).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).select('-templateData');
+    res.json({ success: true, data: { settings, configuration: configuration(), recent, pagination: { page, limit, total, totalPages }, summary: { failed, pending } } });
   } catch (error) { res.status(500).json({ success: false, message: safeError(error) }); }
 };
 
