@@ -422,6 +422,7 @@ export interface DistributionRelease {
   providerReleaseId?: string;
   distribeatsReleaseId?: string;
   distribeatsRawStatus?: string;
+  providerPayload?: any;
   subGenre?: string;
   mixingEngineers?: string[];
   masteringEngineers?: string[];

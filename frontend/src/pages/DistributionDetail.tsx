@@ -125,8 +125,10 @@ const DistributionDetail: React.FC = () => {
   const isTestMode = connection?.testMode !== false;
   const canCorrectArtwork = ['submitted', 'processing', 'rejected', 'error'].includes(release.status) && Boolean(release.distribeatsReleaseId);
   const artworkCorrectionPending = canCorrectArtwork && ['preparing', 'uploading', 'failed'].includes(release.uploadState?.artwork || '');
-  const creditedArtistName = release.artist?.stageName || release.artist?.artistName || release.artist?.name || '';
-  const artworkConfirmationsReady = Object.values(artworkConfirmations).every(Boolean);
+  const leadPerformer = release.tracks.flatMap(track => track.performers || []).find(performer => /lead|primary/i.test(performer.role || ''))?.name;
+  const primaryContributor = release.tracks.flatMap(track => track.contributors || []).find(contributor => contributor.role === 'primary_artist')?.name;
+  const creditedArtistName = release.artist?.stageName || release.artist?.artistName || release.artist?.name || release.providerPayload?.displayArtist || release.providerPayload?.artist || leadPerformer || primaryContributor || '';
+  const artworkConfirmationsReady = Boolean(creditedArtistName.trim()) && Object.values(artworkConfirmations).every(Boolean);
   const confirmationItems = [
     { key: 'titleMatches' as const, label: `The cover title matches “${release.title}” exactly.` },
     { key: 'artistMatches' as const, label: `The credited artist matches “${creditedArtistName}” exactly.` },
@@ -139,8 +141,9 @@ const DistributionDetail: React.FC = () => {
         <div className="rounded-xl border border-[var(--hbe-line)] bg-[var(--hbe-fill-soft)] p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-[var(--hbe-muted)]">Exact credited artist</p><p className="mt-1 font-semibold text-[var(--hbe-text)]">{creditedArtistName}</p></div>
       </div>
       <div className="space-y-2">
-        {confirmationItems.map(item => <label key={item.key} className="flex cursor-pointer items-start gap-2 rounded-lg border border-[var(--hbe-line)] bg-[var(--hbe-surface)] p-3 text-xs leading-5 text-[var(--hbe-text-soft)]"><input type="checkbox" className="mt-1" checked={artworkConfirmations[item.key]} onChange={event => setArtworkConfirmations(current => ({ ...current, [item.key]: event.target.checked }))}/><span>{item.label}</span></label>)}
+        {confirmationItems.map(item => { const disabled = item.key === 'artistMatches' && !creditedArtistName.trim(); return <label key={item.key} className={`flex items-start gap-2 rounded-lg border border-[var(--hbe-line)] bg-[var(--hbe-surface)] p-3 text-xs leading-5 text-[var(--hbe-text-soft)] ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}><input type="checkbox" className="mt-1" disabled={disabled} checked={artworkConfirmations[item.key]} onChange={event => setArtworkConfirmations(current => ({ ...current, [item.key]: event.target.checked }))}/><span>{item.label}</span></label>; })}
       </div>
+      {!creditedArtistName.trim() && <p className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-xs font-semibold text-red-500">Credited artist could not be resolved. Artwork upload is blocked until the release artist is restored.</p>}
       <div className="flex flex-wrap items-center gap-3">
         <input ref={artworkInputRef} type="file" accept="image/jpeg,image/png,.jpg,.jpeg,.png" className="hidden" onChange={event => replaceArtwork(event.target.files?.[0])} />
         <button disabled={busy || !artworkConfirmationsReady} onClick={() => artworkInputRef.current?.click()} className="inline-flex items-center gap-2 rounded-lg border border-amber-500/40 px-3 py-2 text-xs font-bold text-amber-500 disabled:cursor-not-allowed disabled:opacity-50" title={!artworkConfirmationsReady ? 'Complete all three artwork confirmations first.' : ''}><ImagePlus size={14} /> {busy ? 'Uploading…' : artworkCorrectionPending ? 'Replace artwork again' : 'Select corrected artwork'}</button>
