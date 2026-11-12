@@ -5,7 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 
 const { DistribeatsClient } = require('../services/distribeats/distribeatsClient');
-const { uploadFile, findArtistInPage, remoteArtistCandidates } = require('../services/distribeats/distribeatsService');
+const { uploadFile, findArtistInPage, remoteArtistCandidates, releaseDateOnly, submitRelease, client: distribeatsClient } = require('../services/distribeats/distribeatsService');
 const { mapRelease } = require('../services/distribeats/distribeatsMapper');
 const { validateRelease, validateMappedPayload } = require('../services/distribeats/distribeatsValidation');
 const { parseReleaseBody, mergeDraft } = require('../services/distribeats/distributionDraft');
@@ -709,6 +709,52 @@ test('11. 300 MB audio upload boundary and multipart chunk planning', async () =
     );
   } finally {
     fs.unlinkSync(tmpFile);
+  }
+});
+
+test('resubmission release date is sent as a YYYY-MM-DD value', () => {
+  assert.equal(releaseDateOnly('2026-11-21'), '2026-11-21');
+  assert.equal(releaseDateOnly(new Date('2026-11-21T18:30:00.000Z')), '2026-11-21');
+  assert.equal(releaseDateOnly('not-a-date'), '');
+});
+
+test('an existing Unsubmitted release reuses its ID and posts the new release date', async () => {
+  const original = {
+    token: distribeatsClient.token,
+    get: distribeatsClient.get,
+    post: distribeatsClient.post,
+  };
+  const postCalls = [];
+  try {
+    distribeatsClient.token = 'db_test_resubmit';
+    distribeatsClient.get = async requestPath => requestPath === '/catalogue'
+      ? { masterLimitBytes: 300 * 1024 * 1024 }
+      : { id: 'api_existing', status: 'Unsubmitted', uploadUrls: { cover: 'https://uploads.example.test/cover' }, tracks: [] };
+    distribeatsClient.post = async (requestPath, body) => {
+      postCalls.push({ requestPath, body });
+      return { id: 'api_existing', status: 'Submitted' };
+    };
+    const release = {
+      _id: 'local_existing',
+      title: 'Sweet Nothings',
+      status: 'submitted',
+      distribeatsReleaseId: 'api_existing',
+      releaseDate: new Date('2026-11-21T00:00:00.000Z'),
+      uploadState: { artwork: 'uploaded' },
+      tracks: [],
+      syncErrors: [],
+      save: async () => {},
+    };
+
+    await submitRelease(release, null);
+
+    assert.deepEqual(postCalls, [{ requestPath: '/releases/api_existing/submit', body: { releaseDate: '2026-11-21' } }]);
+    assert.equal(release.distribeatsReleaseId, 'api_existing');
+    assert.equal(release.status, 'submitted');
+  } finally {
+    distribeatsClient.token = original.token;
+    distribeatsClient.get = original.get;
+    distribeatsClient.post = original.post;
   }
 });
 

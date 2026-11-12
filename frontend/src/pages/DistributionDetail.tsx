@@ -15,13 +15,21 @@ const DistributionDetail: React.FC = () => {
   const [connection, setConnection] = useState<any>();
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [resubmitReleaseDate, setResubmitReleaseDate] = useState('');
   const [artworkConfirmations, setArtworkConfirmations] = useState({ titleMatches: false, artistMatches: false, onlyPermittedText: false });
   const artworkInputRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
     try {
-      const [r, c] = await Promise.all([distributionApi.getById(id), distributionApi.getConnection()]);
+      const [r, c, referenceResponse] = await Promise.all([
+        distributionApi.getById(id),
+        distributionApi.getConnection(),
+        distributionApi.getReferenceData().catch(() => null),
+      ]);
       setRelease(r.data.data);
+      if (r.data.data.distribeatsReleaseId && r.data.data.status !== 'draft') {
+        setResubmitReleaseDate(current => current || referenceResponse?.data?.data?.policy?.earliestReleaseDate || '');
+      }
       setConnection(c.data.data);
     } catch (e: any) {
       toast.error(e.response?.data?.message || 'Failed to load release');
@@ -42,10 +50,19 @@ const DistributionDetail: React.FC = () => {
         else toast.error(`Found ${report.errors?.length || 1} validation issue(s).`);
         return;
       }
-      const r = type === 'submit' ? await distributionApi.submit(id) : type === 'distribute' ? await distributionApi.distribute(id) : await distributionApi.sync(id);
+      const isCorrectionResubmit = type === 'submit' && Boolean(release?.distribeatsReleaseId) && release?.status !== 'draft';
+      if (isCorrectionResubmit && !resubmitReleaseDate) {
+        toast.error('Select a new release date before resubmitting the correction.');
+        return;
+      }
+      const r = type === 'submit'
+        ? await distributionApi.submit(id, isCorrectionResubmit ? { releaseDate: resubmitReleaseDate } : undefined)
+        : type === 'distribute' ? await distributionApi.distribute(id) : await distributionApi.sync(id);
       setRelease(r.data.data);
       toast.success(type === 'submit' ? `Release submitted to DistriBeats${connection?.testMode ? ' (TEST MODE)' : ''}.` : 'DistriBeats status synchronized.');
     } catch (e: any) {
+      const minimumReleaseDate = e.response?.data?.minimumReleaseDate;
+      if (minimumReleaseDate) setResubmitReleaseDate(minimumReleaseDate);
       toast.error(e.response?.data?.errors?.map((x: any) => x.message || x).join(', ') || e.response?.data?.message || 'Action failed');
       await load();
     } finally {
@@ -143,6 +160,11 @@ const DistributionDetail: React.FC = () => {
       <div className="space-y-2">
         {confirmationItems.map(item => { const disabled = item.key === 'artistMatches' && !creditedArtistName.trim(); return <label key={item.key} className={`flex items-start gap-2 rounded-lg border border-[var(--hbe-line)] bg-[var(--hbe-surface)] p-3 text-xs leading-5 text-[var(--hbe-text-soft)] ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}><input type="checkbox" className="mt-1" disabled={disabled} checked={artworkConfirmations[item.key]} onChange={event => setArtworkConfirmations(current => ({ ...current, [item.key]: event.target.checked }))}/><span>{item.label}</span></label>; })}
       </div>
+      <div className="rounded-xl border border-violet-500/30 bg-violet-500/10 p-3">
+        <label htmlFor="resubmit-release-date" className="block text-xs font-bold text-[var(--hbe-text)]">New release date for resubmission</label>
+        <input id="resubmit-release-date" type="date" value={resubmitReleaseDate} onChange={event => setResubmitReleaseDate(event.target.value)} className="mt-2 w-full max-w-xs rounded-lg border border-[var(--hbe-line)] bg-[var(--hbe-surface)] px-3 py-2 text-sm text-[var(--hbe-text)]" />
+        <p className="mt-2 text-xs text-[var(--hbe-muted)]">The previous date cannot be kept. If DistriBeats requires a later date, the earliest permitted date will be filled in automatically.</p>
+      </div>
       {!creditedArtistName.trim() && <p className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-xs font-semibold text-red-500">Credited artist could not be resolved. Artwork upload is blocked until the release artist is restored.</p>}
       <div className="flex flex-wrap items-center gap-3">
         <input ref={artworkInputRef} type="file" accept="image/jpeg,image/png,.jpg,.jpeg,.png" className="hidden" onChange={event => replaceArtwork(event.target.files?.[0])} />
@@ -179,12 +201,12 @@ const DistributionDetail: React.FC = () => {
               <button disabled={busy} onClick={() => action('sync')} className="rounded-xl border border-[var(--hbe-line)] px-4 py-2.5 text-sm font-bold text-[var(--hbe-text)] flex items-center gap-2"><RefreshCw size={15} className={busy ? 'animate-spin' : ''} /> Sync status</button>
             )}
             {artworkCorrectionPending && release.status !== 'rejected' && (
-              <button disabled={busy || release.qcStatus !== 'ready_for_distribution'} onClick={() => action('submit')} className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-50" title={release.qcStatus !== 'ready_for_distribution' ? 'Wait for Content/QC approval before resubmitting.' : ''}><Send size={15} /> Resubmit correction</button>
+              <button disabled={busy || release.qcStatus !== 'ready_for_distribution' || !resubmitReleaseDate} onClick={() => action('submit')} className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-50" title={!resubmitReleaseDate ? 'Select a new release date first.' : release.qcStatus !== 'ready_for_distribution' ? 'Wait for Content/QC approval before resubmitting.' : ''}><Send size={15} /> Resubmit correction</button>
             )}
             {release.status === 'rejected' && release.distribeatsReleaseId && (
               <>
                 <button disabled={busy} onClick={() => action('sync')} className="rounded-xl border border-[var(--hbe-line)] px-4 py-2.5 text-sm font-bold text-[var(--hbe-text)] flex items-center gap-2"><RefreshCw size={15} className={busy ? 'animate-spin' : ''} /> Sync status</button>
-                <button disabled={busy || release.qcStatus !== 'ready_for_distribution' || !artworkCorrectionPending} onClick={() => action('submit')} className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-50" title={!artworkCorrectionPending ? 'Replace the rejected artwork first.' : release.qcStatus !== 'ready_for_distribution' ? 'Wait for Content/QC approval before resubmitting.' : ''}><Send size={15} /> Resubmit</button>
+                <button disabled={busy || release.qcStatus !== 'ready_for_distribution' || !artworkCorrectionPending || !resubmitReleaseDate} onClick={() => action('submit')} className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-50" title={!artworkCorrectionPending ? 'Replace the rejected artwork first.' : !resubmitReleaseDate ? 'Select a new release date first.' : release.qcStatus !== 'ready_for_distribution' ? 'Wait for Content/QC approval before resubmitting.' : ''}><Send size={15} /> Resubmit</button>
               </>
             )}
             {['approved', 'delivered', 'live'].includes(release.status) && release.distribeatsReleaseId && (

@@ -452,6 +452,17 @@ exports.submit = async (req, res) => {
     if (!release) return res.status(404).json({ success: false, message: 'Distribution release not found' });
     const artworkCorrectionPending = ['submitted', 'processing'].includes(release.status) && ['preparing', 'uploading', 'failed'].includes(release.uploadState?.artwork);
     if (!['draft', 'rejected', 'error'].includes(release.status) && !artworkCorrectionPending) return res.status(409).json({ success: false, message: 'Release has already been submitted' });
+    if (release.distribeatsReleaseId && release.status !== 'draft') {
+      const requestedReleaseDate = policy.parseDateOnly(req.body?.releaseDate);
+      if (!requestedReleaseDate) {
+        return res.status(422).json({
+          success: false,
+          message: 'Select a new release date before resubmitting the corrected release.',
+          errors: [{ field: 'releaseDate', message: 'A new release date is required (YYYY-MM-DD).', code: 'REQUIRED' }],
+        });
+      }
+      release.releaseDate = requestedReleaseDate;
+    }
     if (release.status === 'rejected' && /artwork|cover/i.test(release.rejectionReason || '') && !['preparing', 'uploading', 'failed'].includes(release.uploadState?.artwork)) {
       return res.status(409).json({
         success: false,
@@ -486,10 +497,12 @@ exports.submit = async (req, res) => {
     res.json({ success: true, data: release, integration: await distribeats.connectionStatus() });
   } catch (error) {
     const structured = error.details?.errors || error.details?.errors_structured;
+    const minimumReleaseDate = error.details?.minimumReleaseDate || error.details?.error?.minimumReleaseDate || error.details?.details?.minimumReleaseDate;
     res.status(error.status || 502).json({
       success: false,
       message: error.message,
       code: error.code,
+      minimumReleaseDate,
       errors: Array.isArray(structured) ? structured.map(item => typeof item === 'string' ? { field: 'release', message: item, code: error.code || 'PROVIDER_ERROR' } : item) : undefined,
     });
   }

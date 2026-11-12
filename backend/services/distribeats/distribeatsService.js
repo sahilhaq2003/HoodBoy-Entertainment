@@ -103,6 +103,10 @@ const uploadFile = async (releaseId, fileId, filePath, contentType, targetUrl, {
 };
 
 const validationFailure = errors => new DistribeatsError('Release metadata does not meet DistriBeats requirements.', { code: 'DISTRIBEATS_VALIDATION_ERROR', status: 422, details: { errors } });
+const releaseDateOnly = value => {
+  const parsed = policy.parseDateOnly(value);
+  return parsed ? parsed.toISOString().slice(0, 10) : '';
+};
 
 const submitRelease = async (release, artist) => {
   const previousStatus = release.status;
@@ -152,14 +156,6 @@ const submitRelease = async (release, artist) => {
       await release.save();
     } else {
       remote = await client.get(`/releases/${release.distribeatsReleaseId}`);
-      const remoteStatus = String(remote?.status || '').trim();
-      const artworkCorrectionPending = ['preparing', 'uploading', 'failed'].includes(release.uploadState?.artwork);
-      if (artworkCorrectionPending && ['rejected', 'unsubmitted'].includes(remoteStatus.toLowerCase())) {
-        throw new DistribeatsError(
-          `DistriBeats still has this release locked as ${remoteStatus}. Ask DistriBeats support to return the existing release to Draft or Pending Upload, then sync its status and resubmit; do not create a duplicate release.`,
-          { code: 'DISTRIBEATS_RETURN_TO_DRAFT_REQUIRED', status: 409 },
-        );
-      }
     }
 
     const uploadUrls = remote?.uploadUrls || {};
@@ -183,9 +179,11 @@ const submitRelease = async (release, artist) => {
         track.uploadStatus = 'uploaded'; await release.save();
       }
     }
+    const submitBody = { releaseDate: releaseDateOnly(release.releaseDate) };
+    if (!submitBody.releaseDate) throw validationFailure([{ field: 'releaseDate', message: 'A valid new release date is required for submission.', code: 'REQUIRED' }]);
     let submitted;
     try {
-      submitted = await client.post(`/releases/${release.distribeatsReleaseId}/submit`);
+      submitted = await client.post(`/releases/${release.distribeatsReleaseId}/submit`, submitBody);
     } catch (submitErr) {
       if (submitErr.status === 409 && Array.isArray(submitErr.details?.missing)) {
         const missing = submitErr.details.missing;
@@ -199,7 +197,7 @@ const submitRelease = async (release, artist) => {
             await uploadFile(release.distribeatsReleaseId, track.distribeatsTrackId, localFile(track.audioUrl), mimeType(track.audioFileName || track.audioUrl), retryUrls[track.distribeatsTrackId], { maxBytes: audioMax });
           }
         }
-        submitted = await client.post(`/releases/${release.distribeatsReleaseId}/submit`);
+        submitted = await client.post(`/releases/${release.distribeatsReleaseId}/submit`, submitBody);
       } else {
         throw submitErr;
       }
@@ -385,5 +383,5 @@ const findArtist = async (artist, { diagnostics } = {}) => {
 module.exports = {
   client, connectionStatus, submitRelease, syncReleaseStatus, requestTakedown,
   getReferenceData, getCatalogue, findArtist, findArtistInPage, remoteArtistCandidates, getReleaseDdex, listRemoteReleases,
-  listRemoteArtists, sendInboundWebhook, normalizeStatus, uploadFile,
+  listRemoteArtists, sendInboundWebhook, normalizeStatus, uploadFile, releaseDateOnly,
 };
