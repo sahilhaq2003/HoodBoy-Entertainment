@@ -14,8 +14,6 @@ const {
   keyMode,
   assertKeyAllowed,
   describeMode,
-  earliestReleaseDate,
-  releaseDateError,
   maxAudioBytes,
 } = require('../services/distribeats/distribeatsPolicy');
 const {
@@ -182,6 +180,12 @@ const makeValidRelease = (overrides = {}) => ({
   attestations: { age: true, rights: true },
   tracks: [makeValidTrack()],
   ...overrides,
+});
+
+test('Cordigs does not reject a release date based on lead time', () => {
+  const release = makeValidRelease({ releaseDate: new Date().toISOString().slice(0, 10) });
+  const result = validateRelease(release, { catalogue: CATALOGUE, mode: 'submit' });
+  assert.equal(result.errors.some(error => error.field === 'releaseDate'), false);
 });
 
 test('1. Valid original track passes submission validation with zero errors', () => {
@@ -851,7 +855,7 @@ test('14. Live keys (db_live_) are blocked in test-only mode while db_test_ keys
   }
 });
 
-test('15. Music Catalog import prefills track & release fields without mutating source records and release-date lead time is enforced', () => {
+test('15. Music Catalog import prefills track and release fields without mutating source records', () => {
   const song = Object.freeze({
     _id: 'song_abc123',
     title: 'Velvet Skyline',
@@ -909,8 +913,4 @@ test('15. Music Catalog import prefills track & release fields without mutating 
   assert.ok(imported.track.featuredArtists.includes('Neha Verma'));
   assert.ok(imported.suggestions.rightsProofUrls.some((d) => d.url === 'https://rights.example.com/beat.pdf'));
 
-  // Lead-time validation rejects yesterday/today and accepts >= earliestReleaseDate
-  const tooSoon = new Date().toISOString().slice(0, 10);
-  assert.ok(releaseDateError(tooSoon));
-  assert.equal(releaseDateError(earliestReleaseDate()), null);
 });

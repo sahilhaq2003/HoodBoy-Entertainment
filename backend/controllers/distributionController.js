@@ -50,6 +50,22 @@ const unlinkQuietly = async files => {
   await Promise.all((files || []).map(file => file?.path ? fs.unlink(file.path).catch(() => {}) : Promise.resolve()));
 };
 
+/** Remove lead-time errors saved by older Cordigs versions without hiding other validation issues. */
+const withoutLegacyLeadTimeError = release => {
+  const errors = release?.validationResult?.errors;
+  if (!Array.isArray(errors)) return release;
+  const currentErrors = errors.filter(item => item?.code !== 'LEAD_TIME');
+  if (currentErrors.length === errors.length) return release;
+  return {
+    ...release,
+    validationResult: {
+      ...release.validationResult,
+      errors: currentErrors,
+      ready: currentErrors.length === 0,
+    },
+  };
+};
+
 /** Ensure legacy `contributors` array has at least a `primary_artist` entry for internal QC & backwards compatibility. */
 const syncLegacyContributors = (release, artistDoc) => {
   const primaryName = displayName(artistDoc) || 'Artist';
@@ -213,7 +229,7 @@ exports.getAll = async (req, res) => {
       .populate('artist', 'name stageName artistName legalName image socialLinks distribeatsArtistId')
       .sort({ createdAt: -1 })
       .lean();
-    res.json({ success: true, data });
+    res.json({ success: true, data: data.map(withoutLegacyLeadTimeError) });
   } catch (error) { res.status(500).json({ success: false, message: error.message }); }
 };
 
@@ -223,7 +239,7 @@ exports.getOne = async (req, res) => {
       .populate('artist', 'name stageName artistName legalName image socialLinks distribeatsArtistId')
       .lean();
     if (!release) return res.status(404).json({ success: false, message: 'Distribution release not found' });
-    res.json({ success: true, data: release });
+    res.json({ success: true, data: withoutLegacyLeadTimeError(release) });
   } catch (error) { res.status(500).json({ success: false, message: error.message }); }
 };
 
@@ -266,7 +282,7 @@ exports.create = async (req, res) => {
     const artistDoc = merged.artist ? await Artist.findById(merged.artist).lean().catch(() => null) : null;
     syncLegacyContributors(merged, artistDoc);
 
-    const draftCheck = validateRelease(merged, { catalogue, mode: 'draft', enforceLeadTime: Boolean(merged.releaseDate) });
+    const draftCheck = validateRelease(merged, { catalogue, mode: 'draft' });
     if (draftCheck.errors.length) {
       await unlinkQuietly(req.files);
       return res.status(422).json({ success: false, message: draftCheck.errors[0].message, errors: draftCheck.errors });
@@ -304,7 +320,7 @@ exports.update = async (req, res) => {
     const artistDoc = merged.artist ? await Artist.findById(merged.artist).lean().catch(() => null) : null;
     syncLegacyContributors(merged, artistDoc);
 
-    const draftCheck = validateRelease(merged, { catalogue, mode: 'draft', enforceLeadTime: Boolean(merged.releaseDate) });
+    const draftCheck = validateRelease(merged, { catalogue, mode: 'draft' });
     if (draftCheck.errors.length) {
       await unlinkQuietly(req.files);
       return res.status(422).json({ success: false, message: draftCheck.errors[0].message, errors: draftCheck.errors });
@@ -326,7 +342,7 @@ exports.validateDraftPayload = async (req, res) => {
   try {
     const catalogue = await distribeats.getCatalogue().catch(() => ({}));
     const incoming = parseReleaseBody(req.body || {});
-    const report = validateRelease(incoming, { catalogue, mode: req.body?.mode === 'draft' ? 'draft' : 'submit', enforceLeadTime: true });
+    const report = validateRelease(incoming, { catalogue, mode: req.body?.mode === 'draft' ? 'draft' : 'submit' });
     res.json({ success: true, data: report });
   } catch (error) { res.status(400).json({ success: false, message: error.message }); }
 };

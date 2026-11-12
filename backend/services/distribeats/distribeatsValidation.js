@@ -7,7 +7,7 @@
  *
  * Modes
  *  - 'draft'  : rejects unsupported / malformed / contradictory values so they can never be saved.
- *  - 'submit' : everything in draft mode plus completeness (all provider-required fields, files, attestations, lead time).
+ *  - 'submit' : everything in draft mode plus completeness (all provider-required fields, files, attestations).
  *
  * Every error is { field, message, code } where `field` is a path such as "tracks[1].writers".
  */
@@ -138,14 +138,10 @@ const validateRelease = (input, ctx = {}) => {
   needs('language', Boolean(release.language), 'Release language is required.');
   if (release.language && sets.languages.size && !sets.languages.has(release.language)) errors.push(err('language', `Language "${release.language}" is not supported by DistriBeats.`, 'UNSUPPORTED_VALUE'));
 
-  // Release date + lead time (server-side configurable, never browser-only).
+  // A release date is required for submission, but Cordigs does not impose a minimum lead time.
   if (release.releaseDate) {
     const date = policy.parseDateOnly(release.releaseDate);
     if (!date) errors.push(err('releaseDate', 'Release date is not a valid date.', 'FORMAT'));
-    else if (submit || ctx.enforceLeadTime) {
-      const leadError = policy.releaseDateError(release.releaseDate, { now: ctx.now, config: ctx.leadTime });
-      if (leadError) errors.push(err('releaseDate', leadError, 'LEAD_TIME'));
-    }
   } else needs('releaseDate', false, 'Release date is required.');
 
   needs('copyright', Boolean(String(release.copyright || '').trim()), 'Copyright owner (c-line) is required.');

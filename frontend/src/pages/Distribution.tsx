@@ -74,12 +74,6 @@ const emptyTrack = (artistName = ''): TrackDraft => ({
   durationSeconds: 0,
 });
 
-const defaultEarliestDate = () => {
-  const d = new Date();
-  d.setUTCDate(d.getUTCDate() + 9);
-  return d.toISOString().slice(0, 10);
-};
-
 const splitCsv = (value: string) => value.split(',').map(s => s.trim()).filter(Boolean);
 const joinCsv = (value?: string[] | string) => Array.isArray(value) ? value.filter(Boolean).join(', ') : String(value || '');
 
@@ -311,9 +305,6 @@ const Distribution: React.FC = () => {
   const compositionOptions: Array<'Original' | 'Cover'> = useMemo(() => references?.compositionTypes || ['Original', 'Cover'], [references]);
   const recordingRightsOptions: Array<'Original' | 'Licensed'> = useMemo(() => references?.recordingRights || ['Original', 'Licensed'], [references]);
   const isoTerritories: Array<{ code: string; name: string }> = useMemo(() => references?.territories || [], [references]);
-  const earliestReleaseDate: string = references?.policy?.earliestReleaseDate || defaultEarliestDate();
-  const leadTimeDays: number = references?.policy?.leadTime?.days || 9;
-  const leadTimeUnit: string = references?.policy?.leadTime?.unit || 'calendar';
   const maxAudioBytes: number = references?.policy?.maxAudioBytes || 150_000_000;
 
   const hasAiTrack = useMemo(() => tracks.some(t => t.aiUsage === 'Partial' || t.aiUsage === 'Full'), [tracks]);
@@ -669,9 +660,6 @@ const Distribution: React.FC = () => {
     if (!form.subGenre) errs.push({ field: 'subGenre', message: 'Select a DistriBeats sub-genre.' });
     if (!form.language) errs.push({ field: 'language', message: 'Select a release language.' });
     if (!form.releaseDate) errs.push({ field: 'releaseDate', message: 'Release date is required.' });
-    else if (form.releaseDate < earliestReleaseDate) {
-      errs.push({ field: 'releaseDate', message: `Release date must be at least ${leadTimeDays} ${leadTimeUnit} days from today (earliest ${earliestReleaseDate}).` });
-    }
     if (form.distributionMode === 'catalog_transfer') {
       if (!form.sourceDistributor.trim()) errs.push({ field: 'sourceDistributor', message: 'Select the distributor currently delivering this release.' });
       if (!/^https:\/\/\S+$/i.test(form.sourceReleaseUrl.trim())) errs.push({ field: 'sourceReleaseUrl', message: 'Enter an HTTPS link to the existing release on DistroKid or a streaming store.' });
@@ -1004,7 +992,7 @@ const Distribution: React.FC = () => {
               )}
             </div>
             <p className="text-xs text-[var(--hbe-muted)] mt-0.5">
-              {form.distributionMode === 'catalog_transfer' ? 'Preserve the original metadata and recording identifiers. ' : 'All selections come from the live DistriBeats catalogue. '}Artwork: 3000×3000 px RGB JPG/PNG · Audio: WAV/FLAC · Delivery date: ≥ {leadTimeDays} {leadTimeUnit} days (earliest {earliestReleaseDate}).
+              {form.distributionMode === 'catalog_transfer' ? 'Preserve the original metadata and recording identifiers. ' : 'All selections come from the live DistriBeats catalogue. '}Artwork: 3000×3000 px RGB JPG/PNG · Audio: WAV/FLAC.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -1157,8 +1145,8 @@ const Distribution: React.FC = () => {
             </label>
 
             <label className="text-xs font-semibold text-[var(--hbe-muted)]">
-              Release date * <span className="font-normal text-[11px]">(min {earliestReleaseDate})</span>
-              <input type="date" min={earliestReleaseDate} className={`${fieldErrors.releaseDate ? errInput : input} mt-1`} value={form.releaseDate} onChange={e => setForm({ ...form, releaseDate: e.target.value })}/>
+              Release date *
+              <input type="date" className={`${fieldErrors.releaseDate ? errInput : input} mt-1`} value={form.releaseDate} onChange={e => setForm({ ...form, releaseDate: e.target.value })}/>
               {fieldErrors.releaseDate && <span className="mt-1 block text-[11px] text-red-500">{fieldErrors.releaseDate}</span>}
             </label>
 
