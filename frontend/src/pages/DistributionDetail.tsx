@@ -138,6 +138,7 @@ const DistributionDetail: React.FC = () => {
 
   if (loading) return <div className="grid min-h-64 place-items-center"><RefreshCw className="animate-spin text-violet-500" /></div>;
   if (!release) return <p className="text-[var(--hbe-muted)]">Release not found.</p>;
+  const unresolvedSyncErrors = (release.syncErrors || []).filter(item => !item.resolvedAt);
   const active = stages.indexOf(release.status);
   const isTestMode = connection?.testMode !== false;
   const canCorrectArtwork = ['submitted', 'processing', 'rejected', 'error'].includes(release.status) && Boolean(release.distribeatsReleaseId);
@@ -251,10 +252,10 @@ const DistributionDetail: React.FC = () => {
         </div>
       </div>
 
-      {(release.status === 'rejected' || release.status === 'error' || release.syncErrors?.length) && (
+      {(release.status === 'rejected' || release.status === 'error' || unresolvedSyncErrors.length > 0) && (
         <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-5">
           <h2 className="flex items-center gap-2 font-bold text-red-500"><AlertTriangle size={17} /> Distribution issue</h2>
-          <p className="mt-2 text-sm text-[var(--hbe-text-soft)]">{release.rejectionReason || release.syncErrors?.at(-1)?.message || 'The provider reported an error.'}</p>
+          <p className="mt-2 text-sm text-[var(--hbe-text-soft)]">{release.rejectionReason || unresolvedSyncErrors.at(-1)?.message || 'The provider reported an error.'}</p>
           {['rejected', 'error'].includes(release.status) && canAccess('distribution', 'write') && (
             <div className="mt-4 rounded-xl border border-red-500/20 bg-[var(--hbe-surface)] p-4">
               <p className="text-sm font-bold text-[var(--hbe-text)]">Correct the cover and resubmit this same release</p>

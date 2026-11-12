@@ -5,7 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 
 const { DistribeatsClient } = require('../services/distribeats/distribeatsClient');
-const { uploadFile, findArtistInPage, remoteArtistCandidates, releaseDateOnly, submitRelease, client: distribeatsClient } = require('../services/distribeats/distribeatsService');
+const { uploadFile, findArtistInPage, remoteArtistCandidates, releaseDateOnly, submitRelease, syncReleaseStatus, client: distribeatsClient } = require('../services/distribeats/distribeatsService');
 const { mapRelease } = require('../services/distribeats/distribeatsMapper');
 const { validateRelease, validateMappedPayload } = require('../services/distribeats/distribeatsValidation');
 const { parseReleaseBody, mergeDraft } = require('../services/distribeats/distributionDraft');
@@ -755,6 +755,29 @@ test('an existing Unsubmitted release reuses its ID and posts the new release da
     distribeatsClient.token = original.token;
     distribeatsClient.get = original.get;
     distribeatsClient.post = original.post;
+  }
+});
+
+test('a successful status sync resolves historical provider errors', async () => {
+  const originalGet = distribeatsClient.get;
+  try {
+    distribeatsClient.get = async () => ({ id: 'api_existing', status: 'Submitted', tracks: [] });
+    const release = {
+      _id: 'local_existing',
+      status: 'submitted',
+      distribeatsReleaseId: 'api_existing',
+      syncErrors: [{ message: 'Historical upload error', code: 'DISTRIBEATS_HTTP_409' }],
+      tracks: [],
+      save: async () => {},
+    };
+
+    await syncReleaseStatus(release);
+
+    assert.ok(release.syncErrors[0].resolvedAt instanceof Date);
+    assert.equal(release.lastSyncError, '');
+    assert.equal(release.syncStatus, 'synced');
+  } finally {
+    distribeatsClient.get = originalGet;
   }
 });
 

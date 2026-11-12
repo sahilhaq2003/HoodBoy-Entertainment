@@ -239,6 +239,9 @@ const syncReleaseStatus = async release => {
   release.lastSyncedAt = new Date();
   release.syncStatus = 'synced';
   release.lastSyncError = '';
+  (release.syncErrors || []).forEach(item => {
+    if (!item.resolvedAt) item.resolvedAt = release.lastSyncedAt;
+  });
   release.providerPayload = remote;
   if (release.status === 'delivered') release.deliveredAt ||= new Date();
   if (release.status === 'live') release.liveAt ||= new Date();
