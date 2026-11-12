@@ -313,7 +313,7 @@ function model(name, schema) {
       else if(spec.type===ObjectId)options.type=DataTypes.CHAR(24);
       else if(spec.enum?.length&&spec.enum.every(value=>typeof value==='string'))options.type=DataTypes.ENUM(...spec.enum);
       else if(/path/i.test(key))options.type=DataTypes.STRING(512);
-      else options.type=/(description|notes|bio|lyrics|content|details|terms|url)/i.test(key)?DataTypes.TEXT:DataTypes.STRING(191);
+      else options.type=/(description|notes|bio|lyrics|content|details|terms|url|reason|error)/i.test(key)?DataTypes.TEXT:DataTypes.STRING(191);
       if(spec.unique)options.unique=true;
       columns[key]=options;
     }

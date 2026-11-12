@@ -111,6 +111,14 @@ async function ensureSchema(sequelize) {
   if (ownershipsTable?.beatLicense && !String(ownershipsTable.beatLicense.type).toUpperCase().includes('JSON')) {
     await ignoreBenignSchemaError(() => query.changeColumn('ownerships', 'beatLicense', { type: DataTypes.JSON, allowNull: true }));
   }
+  // Provider and DSP explanations regularly exceed VARCHAR(191). Preserve the
+  // complete operational error/rejection text on both existing and new installs.
+  const distributionReleasesTable = await query.describeTable('distributionreleases').catch(() => null);
+  for (const field of ['lastSyncError', 'rejectionReason']) {
+    if (distributionReleasesTable?.[field] && !String(distributionReleasesTable[field].type).toUpperCase().includes('TEXT')) {
+      await ignoreBenignSchemaError(() => query.changeColumn('distributionreleases', field, { type: DataTypes.TEXT, allowNull: true }));
+    }
+  }
 
   // 3. Create missing many-to-many link tables
   for (const Model of models) {
