@@ -262,6 +262,7 @@ export const distributionApi = {
   updateQc: (id: string, data: { qcStatus: string; rightsStatus?: string; qcFeedback?: string }) => api.put(`/distribution/${id}/qc`, data),
   create: (data: FormData) => api.post('/distribution', data, { headers: { 'Content-Type': 'multipart/form-data' } }),
   update: (id: string, data: FormData) => api.put(`/distribution/${id}`, data, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  replaceArtwork: (id: string, data: FormData) => api.put(`/distribution/${id}/artwork`, data, { headers: { 'Content-Type': 'multipart/form-data' } }),
   submit: (id: string) => api.post(`/distribution/${id}/submit`),
   distribute: (id: string) => api.post(`/distribution/${id}/distribute`),
   takedown: (id: string, reason: string) => api.post(`/distribution/${id}/takedown`, { reason }),

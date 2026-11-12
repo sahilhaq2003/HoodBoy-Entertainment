@@ -338,6 +338,72 @@ exports.update = async (req, res) => {
   }
 };
 
+/**
+ * Replace only the artwork on a provider-rejected release.
+ * Submitted metadata and audio stay locked so the local record cannot drift from
+ * the existing DistriBeats release. The provider release id is deliberately kept.
+ */
+exports.replaceArtwork = async (req, res) => {
+  let saved = false;
+  try {
+    const release = await DistributionRelease.findOne({ _id: req.params.id, ...(await scope(req)) });
+    if (!release) {
+      await unlinkQuietly(req.files);
+      return res.status(404).json({ success: false, message: 'Distribution release not found' });
+    }
+    if (!['rejected', 'error'].includes(release.status) || !release.distribeatsReleaseId) {
+      await unlinkQuietly(req.files);
+      return res.status(409).json({
+        success: false,
+        message: 'Artwork correction is available only for a rejected DistriBeats release.',
+      });
+    }
+    if (!req.files?.length || req.files.length !== 1 || req.files[0].fieldname !== 'cover') {
+      await unlinkQuietly(req.files);
+      return res.status(422).json({
+        success: false,
+        message: 'Select one corrected JPG or PNG cover artwork file.',
+        errors: [{ field: 'cover', message: 'One corrected cover artwork file is required.', code: 'ART_REQUIRED' }],
+      });
+    }
+
+    const catalogue = await distribeats.getCatalogue().catch(() => ({}));
+    const { uploads, errors } = await processUploadedAssets(req, catalogue);
+    if (errors.length) return res.status(422).json({ success: false, message: errors[0].message, errors });
+    if (!uploads.cover) {
+      await unlinkQuietly(req.files);
+      return res.status(422).json({ success: false, message: 'Corrected cover artwork is required.' });
+    }
+
+    Object.assign(release, uploads.cover, {
+      uploadState: { ...(release.uploadState || {}), artwork: 'preparing' },
+      qcStatus: 'pending_qc',
+      updatedBy: req.user._id,
+      lastSyncError: '',
+    });
+    release.qcHistory.push({
+      action: 'Rejected artwork replaced',
+      status: 'pending_qc',
+      notes: 'Corrected artwork uploaded locally; provider release ID preserved for resubmission.',
+      performedBy: req.user._id,
+    });
+    release.validationResult = validateRelease(release, { catalogue, mode: 'submit' });
+    await release.save();
+    saved = true;
+
+    qcService.queueReleaseForQc(release._id);
+    emitRelease(release);
+    res.json({
+      success: true,
+      data: release,
+      message: 'Corrected artwork saved. Resubmit after Content/QC marks the release ready.',
+    });
+  } catch (error) {
+    if (!saved) await unlinkQuietly(req.files);
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
 exports.validateDraftPayload = async (req, res) => {
   try {
     const catalogue = await distribeats.getCatalogue().catch(() => ({}));
@@ -375,6 +441,14 @@ exports.submit = async (req, res) => {
     const release = await DistributionRelease.findOne({ _id: req.params.id, ...(await scope(req)) });
     if (!release) return res.status(404).json({ success: false, message: 'Distribution release not found' });
     if (!['draft', 'rejected', 'error'].includes(release.status)) return res.status(409).json({ success: false, message: 'Release has already been submitted' });
+    if (release.status === 'rejected' && /artwork|cover/i.test(release.rejectionReason || '') && release.uploadState?.artwork === 'uploaded') {
+      return res.status(409).json({
+        success: false,
+        message: 'Replace the rejected artwork before resubmitting this release.',
+        code: 'ARTWORK_CORRECTION_REQUIRED',
+        errors: [{ field: 'cover', message: 'A corrected cover artwork file is required.', code: 'ARTWORK_CORRECTION_REQUIRED' }],
+      });
+    }
 
     if (release.qcStatus !== 'ready_for_distribution') {
       return res.status(422).json({

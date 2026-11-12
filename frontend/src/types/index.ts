@@ -429,6 +429,7 @@ export interface DistributionRelease {
   aiDocumentUrl?: string;
   attestations?: { age?: boolean; rights?: boolean };
   validationResult?: { ready: boolean; errors: Array<{ field: string; message: string; code?: string }>; warnings?: string[] };
+  uploadState?: { artwork?: 'preparing' | 'uploading' | 'uploaded' | 'failed' };
   syncStatus?: 'not_synced' | 'syncing' | 'synced' | 'error';
   lastSyncError?: string;
   lastSyncedAt?: string;

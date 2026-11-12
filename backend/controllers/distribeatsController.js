@@ -188,6 +188,7 @@ exports.webhook = async (req, res) => {
     const previousStatus = release.status;
     release.distribeatsRawStatus = remote.status || release.distribeatsRawStatus;
     release.status = service.normalizeStatus(remote.status);
+    release.rejectionReason = release.status === 'rejected' ? (remote.rejectionReason || release.rejectionReason || '') : '';
     release.upc ||= remote.upc || '';
     release.lastSyncedAt = new Date();
     if (release.status === 'delivered') release.deliveredAt ||= new Date();

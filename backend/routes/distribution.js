@@ -17,6 +17,7 @@ router.get('/:id', checkPermission('distribution', 'read'), controller.getOne);
 router.post('/', checkPermission('distribution', 'write'), upload.any(), controller.create);
 router.put('/:id', checkPermission('distribution', 'write'), upload.any(), controller.update);
 router.post('/:id/validate', checkPermission('distribution', 'read'), controller.validate);
+router.put('/:id/artwork', checkPermission('distribution', 'write'), upload.any(), controller.replaceArtwork);
 router.post('/:id/submit', checkPermission('distribution', 'write'), controller.submit);
 router.post('/:id/distribute', checkPermission('distribution', 'write'), controller.distribute);
 router.post('/:id/takedown', checkPermission('distribution', 'write'), controller.takedown);

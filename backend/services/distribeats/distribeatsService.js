@@ -146,6 +146,12 @@ const submitRelease = async (release, artist) => {
       await release.save();
     } else {
       remote = await client.get(`/releases/${release.distribeatsReleaseId}`);
+      if (previousStatus === 'rejected' && normalizeStatus(remote?.status) === 'rejected' && release.uploadState?.artwork !== 'uploaded') {
+        throw new DistribeatsError(
+          'DistriBeats still has this release locked as Rejected. Ask DistriBeats support to return the existing release to Draft, then sync its status and resubmit; do not create a duplicate release.',
+          { code: 'DISTRIBEATS_RETURN_TO_DRAFT_REQUIRED', status: 409 },
+        );
+      }
     }
 
     const uploadUrls = remote?.uploadUrls || {};
@@ -192,6 +198,7 @@ const submitRelease = async (release, artist) => {
     }
     release.status = normalizeStatus(submitted?.status || 'Submitted');
     release.distribeatsRawStatus = submitted?.status || 'Submitted';
+    release.rejectionReason = '';
     release.syncStatus = 'synced';
     release.submittedAt = new Date();
     release.lastSyncedAt = new Date();
@@ -218,6 +225,7 @@ const syncReleaseStatus = async release => {
   const remote = await client.get(`/releases/${release.distribeatsReleaseId}`);
   release.distribeatsRawStatus = remote.status || release.distribeatsRawStatus;
   release.status = normalizeStatus(remote.status);
+  release.rejectionReason = release.status === 'rejected' ? (remote.rejectionReason || release.rejectionReason || '') : '';
   release.upc ||= remote.upc || '';
   (remote.tracks || []).forEach((item, index) => { if (release.tracks[index]) { release.tracks[index].isrc ||= item.isrc || ''; release.tracks[index].distribeatsTrackId ||= item.id || ''; } });
   release.lastSyncedAt = new Date();

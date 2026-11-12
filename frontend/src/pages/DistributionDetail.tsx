@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { AlertTriangle, ArrowLeft, CheckCircle2, Download, Edit3, Music2, RefreshCw, Send, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, CheckCircle2, Download, Edit3, ImagePlus, Music2, RefreshCw, Send, ShieldAlert } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { distributionApi } from '../services/api';
 import type { DistributionRelease } from '../types';
@@ -15,6 +15,7 @@ const DistributionDetail: React.FC = () => {
   const [connection, setConnection] = useState<any>();
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const artworkInputRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
     try {
@@ -69,6 +70,33 @@ const DistributionDetail: React.FC = () => {
     }
   };
 
+  const replaceArtwork = async (file?: File) => {
+    if (!file) return;
+    setBusy(true);
+    try {
+      const dimensions = await new Promise<{ width: number; height: number }>((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const image = new Image();
+        image.onload = () => { URL.revokeObjectURL(url); resolve({ width: image.naturalWidth, height: image.naturalHeight }); };
+        image.onerror = () => { URL.revokeObjectURL(url); reject(new Error('The selected artwork is not a readable image.')); };
+        image.src = url;
+      });
+      if (dimensions.width !== 3000 || dimensions.height !== 3000) {
+        throw new Error(`Artwork must be exactly 3000x3000 px (selected ${dimensions.width}x${dimensions.height}).`);
+      }
+      const data = new FormData();
+      data.append('cover', file);
+      const response = await distributionApi.replaceArtwork(id, data);
+      setRelease(response.data.data);
+      toast.success(response.data.message || 'Corrected artwork saved for review.');
+    } catch (e: any) {
+      toast.error(e.response?.data?.errors?.map((x: any) => x.message || x).join(', ') || e.response?.data?.message || e.message || 'Artwork replacement failed');
+    } finally {
+      if (artworkInputRef.current) artworkInputRef.current.value = '';
+      setBusy(false);
+    }
+  };
+
   if (loading) return <div className="grid min-h-64 place-items-center"><RefreshCw className="animate-spin text-violet-500" /></div>;
   if (!release) return <p className="text-[var(--hbe-muted)]">Release not found.</p>;
   const active = stages.indexOf(release.status);
@@ -98,6 +126,12 @@ const DistributionDetail: React.FC = () => {
             )}
             {!['draft', 'live', 'rejected'].includes(release.status) && release.distribeatsReleaseId && (
               <button disabled={busy} onClick={() => action('sync')} className="rounded-xl border border-[var(--hbe-line)] px-4 py-2.5 text-sm font-bold text-[var(--hbe-text)] flex items-center gap-2"><RefreshCw size={15} className={busy ? 'animate-spin' : ''} /> Sync status</button>
+            )}
+            {release.status === 'rejected' && release.distribeatsReleaseId && (
+              <>
+                <button disabled={busy} onClick={() => action('sync')} className="rounded-xl border border-[var(--hbe-line)] px-4 py-2.5 text-sm font-bold text-[var(--hbe-text)] flex items-center gap-2"><RefreshCw size={15} className={busy ? 'animate-spin' : ''} /> Sync status</button>
+                <button disabled={busy || release.qcStatus !== 'ready_for_distribution' || release.uploadState?.artwork === 'uploaded'} onClick={() => action('submit')} className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-50" title={release.uploadState?.artwork === 'uploaded' ? 'Replace the rejected artwork first.' : release.qcStatus !== 'ready_for_distribution' ? 'Wait for Content/QC approval before resubmitting.' : ''}><Send size={15} /> Resubmit</button>
+              </>
             )}
             {['approved', 'delivered', 'live'].includes(release.status) && release.distribeatsReleaseId && (
               <button disabled={busy} onClick={() => downloadDdex('4.2')} className="rounded-xl border border-[var(--hbe-line)] px-4 py-2.5 text-sm font-bold text-[var(--hbe-text)] flex items-center gap-2"><Download size={15} /> DDEX ERN 4.2</button>
@@ -145,6 +179,17 @@ const DistributionDetail: React.FC = () => {
         <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-5">
           <h2 className="flex items-center gap-2 font-bold text-red-500"><AlertTriangle size={17} /> Distribution issue</h2>
           <p className="mt-2 text-sm text-[var(--hbe-text-soft)]">{release.rejectionReason || release.syncErrors?.at(-1)?.message || 'The provider reported an error.'}</p>
+          {release.status === 'rejected' && canAccess('distribution', 'write') && (
+            <div className="mt-4 rounded-xl border border-red-500/20 bg-[var(--hbe-surface)] p-4">
+              <p className="text-sm font-bold text-[var(--hbe-text)]">Correct the cover and resubmit this same release</p>
+              <p className="mt-1 text-xs leading-5 text-[var(--hbe-muted)]">Use a 3000x3000 px RGB JPG or PNG. The cover may show only <strong>{release.title}</strong> and <strong>{release.artist?.stageName || release.artist?.artistName || release.artist?.name}</strong>; remove “Presents”, label names, logos, URLs, and other descriptive text. If DistriBeats still reports Rejected, ask support to return this existing release to Draft, then use Sync status—do not create a duplicate.</p>
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <input ref={artworkInputRef} type="file" accept="image/jpeg,image/png,.jpg,.jpeg,.png" className="hidden" onChange={event => replaceArtwork(event.target.files?.[0])} />
+                <button disabled={busy} onClick={() => artworkInputRef.current?.click()} className="inline-flex items-center gap-2 rounded-lg border border-red-500/40 px-3 py-2 text-xs font-bold text-red-500 disabled:opacity-50"><ImagePlus size={14} /> {busy ? 'Uploading…' : 'Replace artwork'}</button>
+                {release.uploadState?.artwork !== 'uploaded' && <span className="text-xs font-semibold text-amber-500">Corrected artwork saved; {release.qcStatus === 'ready_for_distribution' ? 'ready to resubmit.' : 'waiting for Content/QC approval.'}</span>}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
