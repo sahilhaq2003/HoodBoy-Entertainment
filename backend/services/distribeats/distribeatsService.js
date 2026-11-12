@@ -21,6 +21,12 @@ const cached = (key, ttl, loader) => {
 const localFile = url => path.join(__dirname, '..', '..', String(url || '').replace(/^\/?uploads\//, 'uploads/'));
 const mimeType = filename => ({ '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.wav': 'audio/wav', '.flac': 'audio/flac' })[path.extname(String(filename || '')).toLowerCase()] || 'application/octet-stream';
 const log = (event, details = {}) => console.info(JSON.stringify({ service: 'distribeats', event, at: new Date().toISOString(), ...details }));
+// MySQL stores lastSyncError in a VARCHAR(255). Keep a compact summary there and
+// retain the complete provider message in syncErrors and the API response.
+const compactSyncError = value => {
+  const text = String(value || 'DistriBeats synchronization failed.');
+  return text.length > 240 ? `${text.slice(0, 237)}...` : text;
+};
 
 // The catalogue is public and rarely changes. Serve the last good copy if a refresh fails so validation stays available.
 let lastGoodCatalogue = null;
@@ -213,7 +219,7 @@ const submitRelease = async (release, artist) => {
   } catch (error) {
     if (release.uploadState?.artwork === 'uploading') release.uploadState.artwork = 'failed';
     release.syncStatus = 'error';
-    release.lastSyncError = error.message;
+    release.lastSyncError = compactSyncError(error.message);
     release.syncErrors.push({ message: error.message, code: error.code || 'DISTRIBEATS_ERROR' });
     await release.save();
     await notifyDistribution(release, previousStatus, { reason: error.message });
