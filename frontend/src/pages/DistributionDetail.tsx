@@ -75,18 +75,36 @@ const DistributionDetail: React.FC = () => {
     if (!file) return;
     setBusy(true);
     try {
-      const dimensions = await new Promise<{ width: number; height: number }>((resolve, reject) => {
+      const image = await new Promise<HTMLImageElement>((resolve, reject) => {
         const url = URL.createObjectURL(file);
-        const image = new Image();
-        image.onload = () => { URL.revokeObjectURL(url); resolve({ width: image.naturalWidth, height: image.naturalHeight }); };
-        image.onerror = () => { URL.revokeObjectURL(url); reject(new Error('The selected artwork is not a readable image.')); };
-        image.src = url;
+        const loaded = new Image();
+        loaded.onload = () => { URL.revokeObjectURL(url); resolve(loaded); };
+        loaded.onerror = () => { URL.revokeObjectURL(url); reject(new Error('The selected artwork is not a readable image.')); };
+        loaded.src = url;
       });
-      if (dimensions.width !== 3000 || dimensions.height !== 3000) {
-        throw new Error(`Artwork must be exactly 3000x3000 px (selected ${dimensions.width}x${dimensions.height}).`);
+      let correctedFile = file;
+      if (image.naturalWidth !== 3000 || image.naturalHeight !== 3000 || !['image/jpeg', 'image/png'].includes(file.type)) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 3000;
+        canvas.height = 3000;
+        const context = canvas.getContext('2d');
+        if (!context) throw new Error('Could not prepare the artwork for resizing.');
+        context.fillStyle = '#000000';
+        context.fillRect(0, 0, 3000, 3000);
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = 'high';
+        const scale = Math.max(3000 / image.naturalWidth, 3000 / image.naturalHeight);
+        const width = image.naturalWidth * scale;
+        const height = image.naturalHeight * scale;
+        context.drawImage(image, (3000 - width) / 2, (3000 - height) / 2, width, height);
+        const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.94));
+        if (!blob) throw new Error('Could not convert the artwork to 3000x3000 px.');
+        const baseName = file.name.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9-_]+/g, '-') || 'corrected-artwork';
+        correctedFile = new File([blob], `${baseName}-3000x3000.jpg`, { type: 'image/jpeg', lastModified: Date.now() });
+        toast.success(`Artwork auto-resized from ${image.naturalWidth}x${image.naturalHeight} to 3000x3000 px RGB.`);
       }
       const data = new FormData();
-      data.append('cover', file);
+      data.append('cover', correctedFile);
       data.append('titleMatches', String(artworkConfirmations.titleMatches));
       data.append('artistMatches', String(artworkConfirmations.artistMatches));
       data.append('onlyPermittedText', String(artworkConfirmations.onlyPermittedText));
