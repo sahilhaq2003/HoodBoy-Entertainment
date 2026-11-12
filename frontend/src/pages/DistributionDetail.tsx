@@ -101,6 +101,8 @@ const DistributionDetail: React.FC = () => {
   if (!release) return <p className="text-[var(--hbe-muted)]">Release not found.</p>;
   const active = stages.indexOf(release.status);
   const isTestMode = connection?.testMode !== false;
+  const canCorrectArtwork = ['submitted', 'processing', 'rejected', 'error'].includes(release.status) && Boolean(release.distribeatsReleaseId);
+  const artworkCorrectionPending = canCorrectArtwork && ['preparing', 'uploading', 'failed'].includes(release.uploadState?.artwork || '');
 
   return (
     <div className="space-y-6 pb-12">
@@ -127,10 +129,13 @@ const DistributionDetail: React.FC = () => {
             {!['draft', 'live', 'rejected'].includes(release.status) && release.distribeatsReleaseId && (
               <button disabled={busy} onClick={() => action('sync')} className="rounded-xl border border-[var(--hbe-line)] px-4 py-2.5 text-sm font-bold text-[var(--hbe-text)] flex items-center gap-2"><RefreshCw size={15} className={busy ? 'animate-spin' : ''} /> Sync status</button>
             )}
+            {artworkCorrectionPending && release.status !== 'rejected' && (
+              <button disabled={busy || release.qcStatus !== 'ready_for_distribution'} onClick={() => action('submit')} className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-50" title={release.qcStatus !== 'ready_for_distribution' ? 'Wait for Content/QC approval before resubmitting.' : ''}><Send size={15} /> Resubmit correction</button>
+            )}
             {release.status === 'rejected' && release.distribeatsReleaseId && (
               <>
                 <button disabled={busy} onClick={() => action('sync')} className="rounded-xl border border-[var(--hbe-line)] px-4 py-2.5 text-sm font-bold text-[var(--hbe-text)] flex items-center gap-2"><RefreshCw size={15} className={busy ? 'animate-spin' : ''} /> Sync status</button>
-                <button disabled={busy || release.qcStatus !== 'ready_for_distribution' || release.uploadState?.artwork === 'uploaded'} onClick={() => action('submit')} className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-50" title={release.uploadState?.artwork === 'uploaded' ? 'Replace the rejected artwork first.' : release.qcStatus !== 'ready_for_distribution' ? 'Wait for Content/QC approval before resubmitting.' : ''}><Send size={15} /> Resubmit</button>
+                <button disabled={busy || release.qcStatus !== 'ready_for_distribution' || !artworkCorrectionPending} onClick={() => action('submit')} className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-50" title={!artworkCorrectionPending ? 'Replace the rejected artwork first.' : release.qcStatus !== 'ready_for_distribution' ? 'Wait for Content/QC approval before resubmitting.' : ''}><Send size={15} /> Resubmit</button>
               </>
             )}
             {['approved', 'delivered', 'live'].includes(release.status) && release.distribeatsReleaseId && (
@@ -179,7 +184,7 @@ const DistributionDetail: React.FC = () => {
         <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-5">
           <h2 className="flex items-center gap-2 font-bold text-red-500"><AlertTriangle size={17} /> Distribution issue</h2>
           <p className="mt-2 text-sm text-[var(--hbe-text-soft)]">{release.rejectionReason || release.syncErrors?.at(-1)?.message || 'The provider reported an error.'}</p>
-          {release.status === 'rejected' && canAccess('distribution', 'write') && (
+          {['rejected', 'error'].includes(release.status) && canAccess('distribution', 'write') && (
             <div className="mt-4 rounded-xl border border-red-500/20 bg-[var(--hbe-surface)] p-4">
               <p className="text-sm font-bold text-[var(--hbe-text)]">Correct the cover and resubmit this same release</p>
               <p className="mt-1 text-xs leading-5 text-[var(--hbe-muted)]">Use a 3000x3000 px RGB JPG or PNG. The cover may show only <strong>{release.title}</strong> and <strong>{release.artist?.stageName || release.artist?.artistName || release.artist?.name}</strong>; remove “Presents”, label names, logos, URLs, and other descriptive text. If DistriBeats still reports Rejected, ask support to return this existing release to Draft, then use Sync status—do not create a duplicate.</p>
@@ -190,6 +195,19 @@ const DistributionDetail: React.FC = () => {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {['submitted', 'processing'].includes(release.status) && canAccess('distribution', 'write') && (
+        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5">
+          <h2 className="flex items-center gap-2 font-bold text-amber-500"><AlertTriangle size={17} /> Received an artwork correction email?</h2>
+          <p className="mt-2 text-sm text-[var(--hbe-text-soft)]">DistriBeats can continue reporting <strong>{release.status}</strong> after a DSP requests corrected artwork. You can replace the cover here without creating another release.</p>
+          <p className="mt-2 text-xs leading-5 text-[var(--hbe-muted)]">Upload a 3000x3000 px RGB JPG or PNG showing only <strong>{release.title}</strong> and <strong>{release.artist?.stageName || release.artist?.artistName || release.artist?.name}</strong>. Remove “Presents”, label names, logos, URLs, and other descriptive text.</p>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <input ref={artworkInputRef} type="file" accept="image/jpeg,image/png,.jpg,.jpeg,.png" className="hidden" onChange={event => replaceArtwork(event.target.files?.[0])} />
+            <button disabled={busy} onClick={() => artworkInputRef.current?.click()} className="inline-flex items-center gap-2 rounded-lg border border-amber-500/40 px-3 py-2 text-xs font-bold text-amber-500 disabled:opacity-50"><ImagePlus size={14} /> {busy ? 'Uploading…' : artworkCorrectionPending ? 'Replace artwork again' : 'Replace rejected artwork'}</button>
+            {artworkCorrectionPending && <span className="text-xs font-semibold text-amber-500">Corrected artwork saved; {release.qcStatus === 'ready_for_distribution' ? 'use Resubmit correction above.' : 'waiting for Content/QC approval.'}</span>}
+          </div>
         </div>
       )}
 

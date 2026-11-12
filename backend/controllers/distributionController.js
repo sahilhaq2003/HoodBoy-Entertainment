@@ -351,11 +351,11 @@ exports.replaceArtwork = async (req, res) => {
       await unlinkQuietly(req.files);
       return res.status(404).json({ success: false, message: 'Distribution release not found' });
     }
-    if (!['rejected', 'error'].includes(release.status) || !release.distribeatsReleaseId) {
+    if (!['submitted', 'processing', 'rejected', 'error'].includes(release.status) || !release.distribeatsReleaseId) {
       await unlinkQuietly(req.files);
       return res.status(409).json({
         success: false,
-        message: 'Artwork correction is available only for a rejected DistriBeats release.',
+        message: 'Artwork correction is available only for a submitted release that is still under review or has been rejected.',
       });
     }
     if (!req.files?.length || req.files.length !== 1 || req.files[0].fieldname !== 'cover') {
@@ -440,8 +440,9 @@ exports.submit = async (req, res) => {
   try {
     const release = await DistributionRelease.findOne({ _id: req.params.id, ...(await scope(req)) });
     if (!release) return res.status(404).json({ success: false, message: 'Distribution release not found' });
-    if (!['draft', 'rejected', 'error'].includes(release.status)) return res.status(409).json({ success: false, message: 'Release has already been submitted' });
-    if (release.status === 'rejected' && /artwork|cover/i.test(release.rejectionReason || '') && release.uploadState?.artwork === 'uploaded') {
+    const artworkCorrectionPending = ['submitted', 'processing'].includes(release.status) && ['preparing', 'uploading', 'failed'].includes(release.uploadState?.artwork);
+    if (!['draft', 'rejected', 'error'].includes(release.status) && !artworkCorrectionPending) return res.status(409).json({ success: false, message: 'Release has already been submitted' });
+    if (release.status === 'rejected' && /artwork|cover/i.test(release.rejectionReason || '') && !['preparing', 'uploading', 'failed'].includes(release.uploadState?.artwork)) {
       return res.status(409).json({
         success: false,
         message: 'Replace the rejected artwork before resubmitting this release.',

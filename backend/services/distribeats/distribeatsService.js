@@ -209,6 +209,7 @@ const submitRelease = async (release, artist) => {
     log('release_submitted', { localReleaseId: String(release._id), distribeatsReleaseId: release.distribeatsReleaseId });
     return release;
   } catch (error) {
+    if (release.uploadState?.artwork === 'uploading') release.uploadState.artwork = 'failed';
     release.syncStatus = 'error';
     release.lastSyncError = error.message;
     release.syncErrors.push({ message: error.message, code: error.code || 'DISTRIBEATS_ERROR' });
