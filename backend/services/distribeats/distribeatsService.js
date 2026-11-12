@@ -146,9 +146,11 @@ const submitRelease = async (release, artist) => {
       await release.save();
     } else {
       remote = await client.get(`/releases/${release.distribeatsReleaseId}`);
-      if (previousStatus === 'rejected' && normalizeStatus(remote?.status) === 'rejected' && release.uploadState?.artwork !== 'uploaded') {
+      const remoteStatus = String(remote?.status || '').trim();
+      const artworkCorrectionPending = ['preparing', 'uploading', 'failed'].includes(release.uploadState?.artwork);
+      if (artworkCorrectionPending && ['rejected', 'unsubmitted'].includes(remoteStatus.toLowerCase())) {
         throw new DistribeatsError(
-          'DistriBeats still has this release locked as Rejected. Ask DistriBeats support to return the existing release to Draft, then sync its status and resubmit; do not create a duplicate release.',
+          `DistriBeats still has this release locked as ${remoteStatus}. Ask DistriBeats support to return the existing release to Draft or Pending Upload, then sync its status and resubmit; do not create a duplicate release.`,
           { code: 'DISTRIBEATS_RETURN_TO_DRAFT_REQUIRED', status: 409 },
         );
       }

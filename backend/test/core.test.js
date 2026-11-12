@@ -252,6 +252,7 @@ test('Distribeats mappings use documented OpenAPI fields and normalize documente
   assert.equal(normalizeStatus('Live'), 'live');
   assert.equal(normalizeStatus('Sent to Stores'), 'delivered');
   assert.equal(normalizeStatus('Rejected'), 'rejected');
+  assert.equal(normalizeStatus('Unsubmitted'), 'rejected');
 });
 
 test('Distribeats webhook verification checks HMAC and signed timestamp', () => {

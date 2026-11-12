@@ -159,7 +159,7 @@ const mapRelease = (releaseInput, artist) => {
 
 const normalizeStatus = value => ({
   draft: 'draft', 'pending upload': 'processing', 'awaiting payment': 'processing', submitted: 'submitted', 'in review': 'processing',
-  approved: 'approved', 'sent to stores': 'delivered', live: 'live', rejected: 'rejected', 'taken down': 'removed',
+  approved: 'approved', 'sent to stores': 'delivered', live: 'live', rejected: 'rejected', unsubmitted: 'rejected', 'taken down': 'removed',
 })[String(value?.status || value?.state || value || '').toLowerCase()] || 'processing';
 
 module.exports = {
