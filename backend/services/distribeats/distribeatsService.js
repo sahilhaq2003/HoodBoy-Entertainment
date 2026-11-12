@@ -220,10 +220,11 @@ const submitRelease = async (release, artist) => {
     if (release.uploadState?.artwork === 'uploading') release.uploadState.artwork = 'failed';
     release.syncStatus = 'error';
     release.lastSyncError = compactSyncError(error.message);
+    if (!Array.isArray(release.syncErrors)) release.syncErrors = [];
     release.syncErrors.push({ message: error.message, code: error.code || 'DISTRIBEATS_ERROR' });
-    await release.save();
-    await notifyDistribution(release, previousStatus, { reason: error.message });
-    await notifySystemAlert({ code: 'distribeats_submit_failed', title: 'DistriBeats submission failed', message: `Release ${release._id} could not be submitted: ${error.message}`, entityId: String(release._id) });
+    await release.save().catch(saveError => log('release_submit_error_persist_failed', { localReleaseId: String(release._id), error: saveError.message }));
+    await notifyDistribution(release, previousStatus, { reason: error.message }).catch(notificationError => log('release_submit_notification_failed', { localReleaseId: String(release._id), error: notificationError.message }));
+    await notifySystemAlert({ code: 'distribeats_submit_failed', title: 'DistriBeats submission failed', message: `Release ${release._id} could not be submitted: ${error.message}`, entityId: String(release._id) }).catch(notificationError => log('release_submit_alert_failed', { localReleaseId: String(release._id), error: notificationError.message }));
     throw error;
   }
 };
