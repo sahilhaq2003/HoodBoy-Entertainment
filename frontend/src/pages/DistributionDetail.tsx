@@ -15,6 +15,7 @@ const DistributionDetail: React.FC = () => {
   const [connection, setConnection] = useState<any>();
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [artworkConfirmations, setArtworkConfirmations] = useState({ titleMatches: false, artistMatches: false, onlyPermittedText: false });
   const artworkInputRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
@@ -86,6 +87,9 @@ const DistributionDetail: React.FC = () => {
       }
       const data = new FormData();
       data.append('cover', file);
+      data.append('titleMatches', String(artworkConfirmations.titleMatches));
+      data.append('artistMatches', String(artworkConfirmations.artistMatches));
+      data.append('onlyPermittedText', String(artworkConfirmations.onlyPermittedText));
       const response = await distributionApi.replaceArtwork(id, data);
       setRelease(response.data.data);
       toast.success(response.data.message || 'Corrected artwork saved for review.');
@@ -103,6 +107,30 @@ const DistributionDetail: React.FC = () => {
   const isTestMode = connection?.testMode !== false;
   const canCorrectArtwork = ['submitted', 'processing', 'rejected', 'error'].includes(release.status) && Boolean(release.distribeatsReleaseId);
   const artworkCorrectionPending = canCorrectArtwork && ['preparing', 'uploading', 'failed'].includes(release.uploadState?.artwork || '');
+  const creditedArtistName = release.artist?.stageName || release.artist?.artistName || release.artist?.name || '';
+  const artworkConfirmationsReady = Object.values(artworkConfirmations).every(Boolean);
+  const confirmationItems = [
+    { key: 'titleMatches' as const, label: `The cover title matches “${release.title}” exactly.` },
+    { key: 'artistMatches' as const, label: `The credited artist matches “${creditedArtistName}” exactly.` },
+    { key: 'onlyPermittedText' as const, label: 'The cover contains no “Presents” line, label name, logo, URL, social handle, or other descriptive text.' },
+  ];
+  const artworkCorrectionFields = (
+    <div className="mt-4 space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="rounded-xl border border-[var(--hbe-line)] bg-[var(--hbe-fill-soft)] p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-[var(--hbe-muted)]">Exact release title</p><p className="mt-1 font-semibold text-[var(--hbe-text)]">{release.title}</p></div>
+        <div className="rounded-xl border border-[var(--hbe-line)] bg-[var(--hbe-fill-soft)] p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-[var(--hbe-muted)]">Exact credited artist</p><p className="mt-1 font-semibold text-[var(--hbe-text)]">{creditedArtistName}</p></div>
+      </div>
+      <div className="space-y-2">
+        {confirmationItems.map(item => <label key={item.key} className="flex cursor-pointer items-start gap-2 rounded-lg border border-[var(--hbe-line)] bg-[var(--hbe-surface)] p-3 text-xs leading-5 text-[var(--hbe-text-soft)]"><input type="checkbox" className="mt-1" checked={artworkConfirmations[item.key]} onChange={event => setArtworkConfirmations(current => ({ ...current, [item.key]: event.target.checked }))}/><span>{item.label}</span></label>)}
+      </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <input ref={artworkInputRef} type="file" accept="image/jpeg,image/png,.jpg,.jpeg,.png" className="hidden" onChange={event => replaceArtwork(event.target.files?.[0])} />
+        <button disabled={busy || !artworkConfirmationsReady} onClick={() => artworkInputRef.current?.click()} className="inline-flex items-center gap-2 rounded-lg border border-amber-500/40 px-3 py-2 text-xs font-bold text-amber-500 disabled:cursor-not-allowed disabled:opacity-50" title={!artworkConfirmationsReady ? 'Complete all three artwork confirmations first.' : ''}><ImagePlus size={14} /> {busy ? 'Uploading…' : artworkCorrectionPending ? 'Replace artwork again' : 'Select corrected artwork'}</button>
+        <span className="text-xs text-[var(--hbe-muted)]">Required: RGB JPG/PNG, exactly 3000x3000 px.</span>
+        {artworkCorrectionPending && <span className="w-full text-xs font-semibold text-amber-500">Corrected artwork saved; {release.qcStatus === 'ready_for_distribution' ? 'use Resubmit correction above.' : 'waiting for Content/QC approval.'}</span>}
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-6 pb-12">
@@ -188,11 +216,7 @@ const DistributionDetail: React.FC = () => {
             <div className="mt-4 rounded-xl border border-red-500/20 bg-[var(--hbe-surface)] p-4">
               <p className="text-sm font-bold text-[var(--hbe-text)]">Correct the cover and resubmit this same release</p>
               <p className="mt-1 text-xs leading-5 text-[var(--hbe-muted)]">Use a 3000x3000 px RGB JPG or PNG. The cover may show only <strong>{release.title}</strong> and <strong>{release.artist?.stageName || release.artist?.artistName || release.artist?.name}</strong>; remove “Presents”, label names, logos, URLs, and other descriptive text. If DistriBeats still reports Rejected, ask support to return this existing release to Draft, then use Sync status—do not create a duplicate.</p>
-              <div className="mt-3 flex flex-wrap items-center gap-3">
-                <input ref={artworkInputRef} type="file" accept="image/jpeg,image/png,.jpg,.jpeg,.png" className="hidden" onChange={event => replaceArtwork(event.target.files?.[0])} />
-                <button disabled={busy} onClick={() => artworkInputRef.current?.click()} className="inline-flex items-center gap-2 rounded-lg border border-red-500/40 px-3 py-2 text-xs font-bold text-red-500 disabled:opacity-50"><ImagePlus size={14} /> {busy ? 'Uploading…' : 'Replace artwork'}</button>
-                {release.uploadState?.artwork !== 'uploaded' && <span className="text-xs font-semibold text-amber-500">Corrected artwork saved; {release.qcStatus === 'ready_for_distribution' ? 'ready to resubmit.' : 'waiting for Content/QC approval.'}</span>}
-              </div>
+              {artworkCorrectionFields}
             </div>
           )}
         </div>
@@ -202,12 +226,7 @@ const DistributionDetail: React.FC = () => {
         <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5">
           <h2 className="flex items-center gap-2 font-bold text-amber-500"><AlertTriangle size={17} /> Received an artwork correction email?</h2>
           <p className="mt-2 text-sm text-[var(--hbe-text-soft)]">DistriBeats can continue reporting <strong>{release.status}</strong> after a DSP requests corrected artwork. You can replace the cover here without creating another release.</p>
-          <p className="mt-2 text-xs leading-5 text-[var(--hbe-muted)]">Upload a 3000x3000 px RGB JPG or PNG showing only <strong>{release.title}</strong> and <strong>{release.artist?.stageName || release.artist?.artistName || release.artist?.name}</strong>. Remove “Presents”, label names, logos, URLs, and other descriptive text.</p>
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            <input ref={artworkInputRef} type="file" accept="image/jpeg,image/png,.jpg,.jpeg,.png" className="hidden" onChange={event => replaceArtwork(event.target.files?.[0])} />
-            <button disabled={busy} onClick={() => artworkInputRef.current?.click()} className="inline-flex items-center gap-2 rounded-lg border border-amber-500/40 px-3 py-2 text-xs font-bold text-amber-500 disabled:opacity-50"><ImagePlus size={14} /> {busy ? 'Uploading…' : artworkCorrectionPending ? 'Replace artwork again' : 'Replace rejected artwork'}</button>
-            {artworkCorrectionPending && <span className="text-xs font-semibold text-amber-500">Corrected artwork saved; {release.qcStatus === 'ready_for_distribution' ? 'use Resubmit correction above.' : 'waiting for Content/QC approval.'}</span>}
-          </div>
+          {artworkCorrectionFields}
         </div>
       )}
 

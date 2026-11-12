@@ -366,6 +366,16 @@ exports.replaceArtwork = async (req, res) => {
         errors: [{ field: 'cover', message: 'One corrected cover artwork file is required.', code: 'ART_REQUIRED' }],
       });
     }
+    const confirmations = ['titleMatches', 'artistMatches', 'onlyPermittedText'];
+    const missingConfirmations = confirmations.filter(field => String(req.body?.[field]).toLowerCase() !== 'true');
+    if (missingConfirmations.length) {
+      await unlinkQuietly(req.files);
+      return res.status(422).json({
+        success: false,
+        message: 'Confirm that the corrected artwork follows every DSP text requirement.',
+        errors: missingConfirmations.map(field => ({ field, message: 'This artwork confirmation is required.', code: 'ART_CONFIRMATION_REQUIRED' })),
+      });
+    }
 
     const catalogue = await distribeats.getCatalogue().catch(() => ({}));
     const { uploads, errors } = await processUploadedAssets(req, catalogue);
