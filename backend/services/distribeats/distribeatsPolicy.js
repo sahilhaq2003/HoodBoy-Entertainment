@@ -115,11 +115,12 @@ const maxCoverBytes = (env = process.env) => {
 };
 
 const ARTWORK_SPEC = Object.freeze({ width: 3000, height: 3000, formats: ['JPG', 'PNG'], colorSpace: 'RGB' });
+const requiresQcApproval = release => !(release?.distribeatsReleaseId && release?.status !== 'draft');
 
 module.exports = {
   keyMode, isLiveAllowed, assertKeyAllowed, describeMode,
   leadTimeConfig, earliestReleaseDate, releaseDateError, parseDateOnly,
-  maxAudioBytes, maxCoverBytes, ARTWORK_SPEC,
+  maxAudioBytes, maxCoverBytes, ARTWORK_SPEC, requiresQcApproval,
   DEFAULT_MIN_LEAD_DAYS, DEFAULT_MAX_AUDIO_BYTES,
 };
 

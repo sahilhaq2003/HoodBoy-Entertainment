@@ -387,26 +387,25 @@ exports.replaceArtwork = async (req, res) => {
 
     Object.assign(release, uploads.cover, {
       uploadState: { ...(release.uploadState || {}), artwork: 'preparing' },
-      qcStatus: 'pending_qc',
+      qcStatus: 'ready_for_distribution',
       updatedBy: req.user._id,
       lastSyncError: '',
     });
     release.qcHistory.push({
       action: 'Rejected artwork replaced',
-      status: 'pending_qc',
-      notes: 'Corrected artwork uploaded locally; provider release ID preserved for resubmission.',
+      status: 'ready_for_distribution',
+      notes: 'Corrected artwork confirmations completed; provider release ID preserved for immediate resubmission without another Admin QC approval.',
       performedBy: req.user._id,
     });
     release.validationResult = validateRelease(release, { catalogue, mode: 'submit' });
     await release.save();
     saved = true;
 
-    qcService.queueReleaseForQc(release._id);
     emitRelease(release);
     res.json({
       success: true,
       data: release,
-      message: 'Corrected artwork saved. Resubmit after Content/QC marks the release ready.',
+      message: 'Corrected artwork saved and ready to resubmit. Admin QC approval is not required for this correction.',
     });
   } catch (error) {
     if (!saved) await unlinkQuietly(req.files);
@@ -472,7 +471,7 @@ exports.submit = async (req, res) => {
       });
     }
 
-    if (release.qcStatus !== 'ready_for_distribution') {
+    if (policy.requiresQcApproval(release) && release.qcStatus !== 'ready_for_distribution') {
       return res.status(422).json({
         success: false,
         message: 'Release cannot be submitted to Distribeats until Content/QC review is completed.',

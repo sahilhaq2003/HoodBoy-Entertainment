@@ -15,6 +15,7 @@ const {
   assertKeyAllowed,
   describeMode,
   maxAudioBytes,
+  requiresQcApproval,
 } = require('../services/distribeats/distribeatsPolicy');
 const {
   validateAudioMeta,
@@ -716,6 +717,13 @@ test('resubmission release date is sent as a YYYY-MM-DD value', () => {
   assert.equal(releaseDateOnly('2026-11-21'), '2026-11-21');
   assert.equal(releaseDateOnly(new Date('2026-11-21T18:30:00.000Z')), '2026-11-21');
   assert.equal(releaseDateOnly('not-a-date'), '');
+});
+
+test('Admin QC is required for new drafts but not an existing provider correction', () => {
+  assert.equal(requiresQcApproval({ status: 'draft' }), true);
+  assert.equal(requiresQcApproval({ status: 'draft', distribeatsReleaseId: 'api_existing' }), true);
+  assert.equal(requiresQcApproval({ status: 'rejected', distribeatsReleaseId: 'api_existing' }), false);
+  assert.equal(requiresQcApproval({ status: 'processing', distribeatsReleaseId: 'api_existing' }), false);
 });
 
 test('an existing Unsubmitted release reuses its ID and posts the new release date', async () => {

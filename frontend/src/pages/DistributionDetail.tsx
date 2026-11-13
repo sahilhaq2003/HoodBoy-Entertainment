@@ -127,7 +127,7 @@ const DistributionDetail: React.FC = () => {
       data.append('onlyPermittedText', String(artworkConfirmations.onlyPermittedText));
       const response = await distributionApi.replaceArtwork(id, data);
       setRelease(response.data.data);
-      toast.success(response.data.message || 'Corrected artwork saved for review.');
+      toast.success(response.data.message || 'Corrected artwork saved and ready to resubmit.');
     } catch (e: any) {
       toast.error(e.response?.data?.errors?.map((x: any) => x.message || x).join(', ') || e.response?.data?.message || e.message || 'Artwork replacement failed');
     } finally {
@@ -171,7 +171,7 @@ const DistributionDetail: React.FC = () => {
         <input ref={artworkInputRef} type="file" accept="image/jpeg,image/png,.jpg,.jpeg,.png" className="hidden" onChange={event => replaceArtwork(event.target.files?.[0])} />
         <button disabled={busy || !artworkConfirmationsReady} onClick={() => artworkInputRef.current?.click()} className="inline-flex items-center gap-2 rounded-lg border border-amber-500/40 px-3 py-2 text-xs font-bold text-amber-500 disabled:cursor-not-allowed disabled:opacity-50" title={!artworkConfirmationsReady ? 'Complete all three artwork confirmations first.' : ''}><ImagePlus size={14} /> {busy ? 'Uploading…' : artworkCorrectionPending ? 'Replace artwork again' : 'Select corrected artwork'}</button>
         <span className="text-xs text-[var(--hbe-muted)]">Required: RGB JPG/PNG, exactly 3000x3000 px.</span>
-        {artworkCorrectionPending && <span className="w-full text-xs font-semibold text-amber-500">Corrected artwork saved; {release.qcStatus === 'ready_for_distribution' ? 'use Resubmit correction above.' : 'waiting for Content/QC approval.'}</span>}
+        {artworkCorrectionPending && <span className="w-full text-xs font-semibold text-amber-500">Corrected artwork saved; use Resubmit correction above. Admin QC approval is not required.</span>}
       </div>
     </div>
   );
@@ -202,12 +202,12 @@ const DistributionDetail: React.FC = () => {
               <button disabled={busy} onClick={() => action('sync')} className="rounded-xl border border-[var(--hbe-line)] px-4 py-2.5 text-sm font-bold text-[var(--hbe-text)] flex items-center gap-2"><RefreshCw size={15} className={busy ? 'animate-spin' : ''} /> Sync status</button>
             )}
             {artworkCorrectionPending && release.status !== 'rejected' && (
-              <button disabled={busy || release.qcStatus !== 'ready_for_distribution' || !resubmitReleaseDate} onClick={() => action('submit')} className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-50" title={!resubmitReleaseDate ? 'Select a new release date first.' : release.qcStatus !== 'ready_for_distribution' ? 'Wait for Content/QC approval before resubmitting.' : ''}><Send size={15} /> Resubmit correction</button>
+              <button disabled={busy || !resubmitReleaseDate} onClick={() => action('submit')} className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-50" title={!resubmitReleaseDate ? 'Select a new release date first.' : ''}><Send size={15} /> Resubmit correction</button>
             )}
             {release.status === 'rejected' && release.distribeatsReleaseId && (
               <>
                 <button disabled={busy} onClick={() => action('sync')} className="rounded-xl border border-[var(--hbe-line)] px-4 py-2.5 text-sm font-bold text-[var(--hbe-text)] flex items-center gap-2"><RefreshCw size={15} className={busy ? 'animate-spin' : ''} /> Sync status</button>
-                <button disabled={busy || release.qcStatus !== 'ready_for_distribution' || !artworkCorrectionPending || !resubmitReleaseDate} onClick={() => action('submit')} className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-50" title={!artworkCorrectionPending ? 'Replace the rejected artwork first.' : !resubmitReleaseDate ? 'Select a new release date first.' : release.qcStatus !== 'ready_for_distribution' ? 'Wait for Content/QC approval before resubmitting.' : ''}><Send size={15} /> Resubmit</button>
+                <button disabled={busy || !artworkCorrectionPending || !resubmitReleaseDate} onClick={() => action('submit')} className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-50" title={!artworkCorrectionPending ? 'Replace the rejected artwork first.' : !resubmitReleaseDate ? 'Select a new release date first.' : ''}><Send size={15} /> Resubmit</button>
               </>
             )}
             {['approved', 'delivered', 'live'].includes(release.status) && release.distribeatsReleaseId && (
