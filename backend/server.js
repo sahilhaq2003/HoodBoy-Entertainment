@@ -136,6 +136,7 @@ const start = async () => {
     const { ensureSchema } = require('./lib/ensureSchema');
     await ensureSchema(sequelize);
     require('./services/emailService').startEmailWorkers();
+    require('./services/distributionSyncWorker').startDistributionSyncWorker();
     const srv = listen();
     const holdTimer = setInterval(() => {
       require('./controllers/linkupPlatformController').expireHolds().catch(error => console.error(`Linkup hold expiry warning: ${error.message}`));

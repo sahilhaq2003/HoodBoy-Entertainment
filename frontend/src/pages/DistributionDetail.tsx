@@ -5,12 +5,14 @@ import toast from 'react-hot-toast';
 import { distributionApi } from '../services/api';
 import type { DistributionRelease } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { useSocket, type DistribeatsReleaseUpdate } from '../contexts/SocketContext';
 
 const stages = ['draft', 'submitted', 'processing', 'approved', 'delivered', 'live'];
 
 const DistributionDetail: React.FC = () => {
   const { id = '' } = useParams();
   const { canAccess } = useAuth();
+  const { connected, joinRelease, leaveRelease } = useSocket();
   const [release, setRelease] = useState<DistributionRelease | null>(null);
   const [connection, setConnection] = useState<any>();
   const [loading, setLoading] = useState(true);
@@ -38,6 +40,30 @@ const DistributionDetail: React.FC = () => {
     }
   };
   useEffect(() => { load(); }, [id]);
+  useEffect(() => {
+    if (!connected || !id) return;
+    joinRelease(id);
+    const handleUpdate = (event: Event) => {
+      const update = (event as CustomEvent<DistribeatsReleaseUpdate>).detail;
+      if (update.releaseId !== id) return;
+      setRelease(current => current ? {
+        ...current,
+        status: update.status as DistributionRelease['status'],
+        qcStatus: update.qcStatus as DistributionRelease['qcStatus'],
+        syncStatus: update.syncStatus as DistributionRelease['syncStatus'],
+        distribeatsRawStatus: update.distribeatsRawStatus,
+        storeStatuses: update.storeStatuses || current.storeStatuses,
+        uploadState: update.uploadState || current.uploadState,
+        lastSyncedAt: update.lastSyncedAt,
+        lastSyncError: update.lastSyncError,
+      } : current);
+    };
+    window.addEventListener('hbe:distribeats_release_updated', handleUpdate);
+    return () => {
+      window.removeEventListener('hbe:distribeats_release_updated', handleUpdate);
+      leaveRelease(id);
+    };
+  }, [connected, id, joinRelease, leaveRelease]);
 
   const action = async (type: 'submit' | 'distribute' | 'sync' | 'validate') => {
     setBusy(true);
