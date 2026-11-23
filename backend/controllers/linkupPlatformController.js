@@ -422,7 +422,9 @@ const completePackageBooking = async (req, res) => {
       return { booking, transfer };
     });
     await notifyAdmins({ type: 'approval_needed', title: 'Linkup payment awaiting verification', message: `${result.booking.bookingReference} submitted a bank transfer receipt`, link: '/the-lnk-up', priority: 'high', metadata: { bookingId: result.booking._id, transferId: result.transfer._id } });
-    await notifyBooking(result.booking, 'booking_created', { transitionKey: 'created' });
+    // Checkout creates the booking and submits its receipt in one action. The
+    // receipt email already contains the booking details, so sending a separate
+    // booking-created email here would duplicate the customer and admin email.
     await notifyBooking(result.booking, 'receipt_submitted', { transitionKey: String(result.transfer._id), bankAccount: bankView(account) });
     const refreshedPackage = await LinkupPackage.findById(pkg._id);
     if (Number(refreshedPackage?.availableQuantity || 0) === 0) {
