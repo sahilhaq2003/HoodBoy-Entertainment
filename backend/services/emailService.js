@@ -5,7 +5,7 @@ const User = require('../models/User');
 const Artist = require('../models/Artist');
 const { LinkupBooking, LinkupEvent, LinkupPackage } = require('../models/LinkupPlatform');
 const { renderEmail } = require('./emailTemplates');
-const { formatEventDate } = require('../lib/eventTime');
+const { formatEventDate, eventStartInstant } = require('../lib/eventTime');
 const { createBulkNotifications } = require('./notificationService');
 const { entryPassQrUrl } = require('./entryPassService');
 
@@ -13,6 +13,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 let transporter;
 let processing = false;
 let workerTimer;
+let reminderTimer;
 
 const enabledByEnvironment = () => String(process.env.EMAIL_NOTIFICATIONS_ENABLED || 'false').toLowerCase() === 'true';
 const smtpConfigured = () => Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASSWORD);
@@ -160,11 +161,15 @@ const bookingData = async (bookingOrId, extra = {}) => {
   } };
 };
 
-// Booking email is intentionally limited to one message per recipient group:
-// the administrator is notified when payment proof arrives, and the customer
-// receives the final approved booking with the entry QR code.
+const CUSTOMER_BOOKING_EVENTS = new Set([
+  'booking_created', 'payment_pending', 'receipt_submitted', 'payment_approved',
+  'payment_rejected', 'payment_information_requested', 'booking_cancelled', 'booking_reminder',
+]);
+
+// Customers receive every booking update. Administrators receive only the
+// payment-proof alert, preventing repeated booking-process emails in Gmail.
 const bookingEmailPolicy = eventType => ({
-  customer: eventType === 'payment_approved',
+  customer: CUSTOMER_BOOKING_EVENTS.has(eventType),
   admin: eventType === 'receipt_submitted',
 });
 
@@ -203,7 +208,23 @@ const notifySystemAlert = async ({ code, title, message, severity = 'high', enti
   catch (error) { console.error(`System alert email warning: ${safeError(error)}`); }
 };
 
-const sendBookingReminders = async () => 0;
+const sendBookingReminders = async () => {
+  const settings = await getSettings();
+  if (!categoryAllowed(settings, 'booking')) return 0;
+  const hours = Number(settings.reminderHours || 24);
+  const calendarStart = new Date(Date.now() - 24 * 3600000);
+  const calendarEnd = new Date(Date.now() + (hours + 48) * 3600000);
+  const events = await LinkupEvent.find({ status: 'published', eventDate: { $gte: calendarStart, $lte: calendarEnd } });
+  let count = 0;
+  for (const event of events) {
+    const start = eventStartInstant(event);
+    const hoursUntilStart = start ? (start.getTime() - Date.now()) / 3600000 : Number.POSITIVE_INFINITY;
+    if (Math.abs(hoursUntilStart - hours) > 0.5) continue;
+    const bookings = await LinkupBooking.find({ event: event._id, bookingStatus: 'confirmed', paymentStatus: 'paid' });
+    for (const booking of bookings) { await notifyBooking(booking, 'booking_reminder', { transitionKey: String(event.eventDate) }); count += 1; }
+  }
+  return count;
+};
 
 const verifyConnection = async () => {
   if (!enabledByEnvironment()) throw new Error('Email notifications are disabled');
@@ -215,7 +236,8 @@ const verifyConnection = async () => {
 const startEmailWorkers = () => {
   if (workerTimer) return;
   workerTimer = setInterval(() => processQueue().catch(error => console.error(`Email queue warning: ${safeError(error)}`)), Number(process.env.EMAIL_QUEUE_INTERVAL_MS || 30000));
-  workerTimer.unref?.();
+  reminderTimer = setInterval(() => sendBookingReminders().catch(error => console.error(`Booking reminder warning: ${safeError(error)}`)), 60 * 60 * 1000);
+  workerTimer.unref?.(); reminderTimer.unref?.();
   setTimeout(() => processQueue().catch(() => {}), 1000).unref?.();
 };
 

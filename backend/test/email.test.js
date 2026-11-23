@@ -63,11 +63,11 @@ test('administrator booking emails never include the customer entry QR pass', ()
   assert.match(rendered.html, /LNK-QR-ADMIN/);
 });
 
-test('booking email policy sends one receipt alert to admins and one final QR email to the customer', () => {
-  assert.deepEqual(_bookingEmailPolicy('receipt_submitted'), { customer: false, admin: true });
+test('booking email policy sends every update to customers but only one receipt alert to admins', () => {
+  assert.deepEqual(_bookingEmailPolicy('receipt_submitted'), { customer: true, admin: true });
   assert.deepEqual(_bookingEmailPolicy('payment_approved'), { customer: true, admin: false });
   for (const eventType of ['booking_created', 'payment_pending', 'payment_rejected', 'payment_information_requested', 'booking_cancelled', 'booking_reminder']) {
-    assert.deepEqual(_bookingEmailPolicy(eventType), { customer: false, admin: false });
+    assert.deepEqual(_bookingEmailPolicy(eventType), { customer: true, admin: false });
   }
 });
 
