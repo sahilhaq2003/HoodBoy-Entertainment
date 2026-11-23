@@ -7,7 +7,7 @@ const { decryptField } = require('../lib/fieldEncryption');
 const { validTimeZone, calendarDateInZone } = require('../lib/eventTime');
 const User = require('../models/User');
 const { createNotification, createBulkNotifications } = require('../services/notificationService');
-const { notifyBooking, queueAdmin } = require('../services/emailService');
+const { notifyBooking } = require('../services/emailService');
 const { optimizeImageBuffer } = require('../services/imageOptimizationService');
 const { removeLinkupImages } = require('../services/linkupImageCleanupService');
 const { verifyEntryPassToken, entryPassQrUrl, entryPassQrBuffer } = require('../services/entryPassService');
@@ -428,12 +428,10 @@ const completePackageBooking = async (req, res) => {
     await notifyBooking(result.booking, 'receipt_submitted', { transitionKey: String(result.transfer._id), bankAccount: bankView(account) });
     const refreshedPackage = await LinkupPackage.findById(pkg._id);
     if (Number(refreshedPackage?.availableQuantity || 0) === 0) {
-      await queueAdmin({ notificationType: 'package_sold_out', templateData: { title: 'Linkup package sold out', message: `${pkg.name} has reached zero available inventory.`, actionPath: '/the-lnk-up' }, relatedEntityType: 'package', relatedEntityId: pkg._id, dedupeKey: `package:${pkg._id}:sold_out`, category: 'booking' }).catch(() => {});
       const remaining = await LinkupPackage.countDocuments({ event: pkg.event, status: 'published', availableQuantity: { $gt: 0 } });
       if (!remaining) {
         const soldOutEvent = await LinkupEvent.findById(pkg.event);
         if (soldOutEvent && soldOutEvent.status === 'published') { soldOutEvent.status = 'sold_out'; await soldOutEvent.save(); }
-        await queueAdmin({ notificationType: 'event_sold_out', templateData: { title: 'Linkup event sold out', message: `${soldOutEvent?.title || 'An event'} has no remaining package inventory.`, actionPath: '/the-lnk-up' }, relatedEntityType: 'event', relatedEntityId: pkg.event, dedupeKey: `event:${pkg.event}:sold_out`, category: 'booking' }).catch(() => {});
       }
     }
     res.status(201).json({ success: true, data: result, message: 'Payment submitted. Your booking is pending verification.' });

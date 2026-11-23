@@ -5,7 +5,7 @@ const User = require('../models/User');
 const Artist = require('../models/Artist');
 const { LinkupBooking, LinkupEvent, LinkupPackage } = require('../models/LinkupPlatform');
 const { renderEmail } = require('./emailTemplates');
-const { formatEventDate, eventStartInstant } = require('../lib/eventTime');
+const { formatEventDate } = require('../lib/eventTime');
 const { createBulkNotifications } = require('./notificationService');
 const { entryPassQrUrl } = require('./entryPassService');
 
@@ -13,7 +13,6 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 let transporter;
 let processing = false;
 let workerTimer;
-let reminderTimer;
 
 const enabledByEnvironment = () => String(process.env.EMAIL_NOTIFICATIONS_ENABLED || 'false').toLowerCase() === 'true';
 const smtpConfigured = () => Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASSWORD);
@@ -161,13 +160,23 @@ const bookingData = async (bookingOrId, extra = {}) => {
   } };
 };
 
+// Booking email is intentionally limited to one message per recipient group:
+// the administrator is notified when payment proof arrives, and the customer
+// receives the final approved booking with the entry QR code.
+const bookingEmailPolicy = eventType => ({
+  customer: eventType === 'payment_approved',
+  admin: eventType === 'receipt_submitted',
+});
+
 const notifyBooking = async (bookingOrId, eventType, extra = {}) => {
   try {
+    const targets = bookingEmailPolicy(eventType);
+    if (!targets.customer && !targets.admin) return;
     const context = await bookingData(bookingOrId, extra);
     if (!context) return;
     const { booking, data } = context;
-    await queueEmail({ recipientEmail: booking.email, recipientUserId: booking.customer, notificationType: eventType, templateName: eventType, templateData: data, relatedEntityType: 'booking', relatedEntityId: booking._id, dedupeKey: `booking:${booking._id}:${eventType}:${extra.transitionKey || ''}`, category: 'booking' });
-    await queueAdmin({ notificationType: `admin_${eventType}`, templateData: { ...data, title: extra.adminTitle || `Booking update: ${booking.bookingReference}`, intro: extra.adminIntro || `A booking ${eventType.replaceAll('_', ' ')} event was recorded.`, actionPath: '/the-lnk-up' }, relatedEntityType: 'booking', relatedEntityId: booking._id, dedupeKey: `admin:booking:${booking._id}:${eventType}:${extra.transitionKey || ''}`, category: 'booking' });
+    if (targets.customer) await queueEmail({ recipientEmail: booking.email, recipientUserId: booking.customer, notificationType: eventType, templateName: eventType, templateData: data, relatedEntityType: 'booking', relatedEntityId: booking._id, dedupeKey: `booking:${booking._id}:${eventType}:${extra.transitionKey || ''}`, category: 'booking' });
+    if (targets.admin) await queueAdmin({ notificationType: `admin_${eventType}`, templateData: { ...data, title: extra.adminTitle || `Booking update: ${booking.bookingReference}`, intro: extra.adminIntro || `A booking ${eventType.replaceAll('_', ' ')} event was recorded.`, actionPath: '/the-lnk-up' }, relatedEntityType: 'booking', relatedEntityId: booking._id, dedupeKey: `admin:booking:${booking._id}:${eventType}:${extra.transitionKey || ''}`, category: 'booking' });
   } catch (error) { console.error(`Email notification warning: ${safeError(error)}`); }
 };
 
@@ -194,23 +203,7 @@ const notifySystemAlert = async ({ code, title, message, severity = 'high', enti
   catch (error) { console.error(`System alert email warning: ${safeError(error)}`); }
 };
 
-const sendBookingReminders = async () => {
-  const settings = await getSettings();
-  if (!categoryAllowed(settings, 'booking')) return 0;
-  const hours = Number(settings.reminderHours || 24);
-  const calendarStart = new Date(Date.now() - 24 * 3600000);
-  const calendarEnd = new Date(Date.now() + (hours + 48) * 3600000);
-  const events = await LinkupEvent.find({ status: 'published', eventDate: { $gte: calendarStart, $lte: calendarEnd } });
-  let count = 0;
-  for (const event of events) {
-    const start = eventStartInstant(event);
-    const hoursUntilStart = start ? (start.getTime() - Date.now()) / 3600000 : Number.POSITIVE_INFINITY;
-    if (Math.abs(hoursUntilStart - hours) > 0.5) continue;
-    const bookings = await LinkupBooking.find({ event: event._id, bookingStatus: 'confirmed', paymentStatus: 'paid' });
-    for (const booking of bookings) { await notifyBooking(booking, 'booking_reminder', { transitionKey: String(event.eventDate) }); count += 1; }
-  }
-  return count;
-};
+const sendBookingReminders = async () => 0;
 
 const verifyConnection = async () => {
   if (!enabledByEnvironment()) throw new Error('Email notifications are disabled');
@@ -222,11 +215,10 @@ const verifyConnection = async () => {
 const startEmailWorkers = () => {
   if (workerTimer) return;
   workerTimer = setInterval(() => processQueue().catch(error => console.error(`Email queue warning: ${safeError(error)}`)), Number(process.env.EMAIL_QUEUE_INTERVAL_MS || 30000));
-  reminderTimer = setInterval(() => sendBookingReminders().catch(error => console.error(`Booking reminder warning: ${safeError(error)}`)), 60 * 60 * 1000);
-  workerTimer.unref?.(); reminderTimer.unref?.();
+  workerTimer.unref?.();
   setTimeout(() => processQueue().catch(() => {}), 1000).unref?.();
 };
 
 const setTransporterForTest = value => { transporter = value; };
 
-module.exports = { queueEmail, queueAdmin, processQueue, notifyBooking, notifyDistribution, notifySystemAlert, sendBookingReminders, verifyConnection, getSettings, startEmailWorkers, safeError, _withoutCustomerEntryPass: withoutCustomerEntryPass, _setTransporterForTest: setTransporterForTest };
+module.exports = { queueEmail, queueAdmin, processQueue, notifyBooking, notifyDistribution, notifySystemAlert, sendBookingReminders, verifyConnection, getSettings, startEmailWorkers, safeError, _bookingEmailPolicy: bookingEmailPolicy, _withoutCustomerEntryPass: withoutCustomerEntryPass, _setTransporterForTest: setTransporterForTest };

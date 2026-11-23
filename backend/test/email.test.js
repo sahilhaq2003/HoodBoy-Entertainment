@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { renderEmail, escapeHtml } = require('../services/emailTemplates');
-const { safeError, _withoutCustomerEntryPass } = require('../services/emailService');
+const { safeError, _bookingEmailPolicy, _withoutCustomerEntryPass } = require('../services/emailService');
 const { calendarDateInZone, eventStartInstant, formatEventDate, validTimeZone } = require('../lib/eventTime');
 
 test('HBE email templates render responsive HTML and plain-text alternatives safely', () => {
@@ -61,6 +61,14 @@ test('administrator booking emails never include the customer entry QR pass', ()
   assert.doesNotMatch(rendered.html, /private-token|Booking entry QR code|secure event entry pass/i);
   assert.doesNotMatch(rendered.text, /secure entry QR code/i);
   assert.match(rendered.html, /LNK-QR-ADMIN/);
+});
+
+test('booking email policy sends one receipt alert to admins and one final QR email to the customer', () => {
+  assert.deepEqual(_bookingEmailPolicy('receipt_submitted'), { customer: false, admin: true });
+  assert.deepEqual(_bookingEmailPolicy('payment_approved'), { customer: true, admin: false });
+  for (const eventType of ['booking_created', 'payment_pending', 'payment_rejected', 'payment_information_requested', 'booking_cancelled', 'booking_reminder']) {
+    assert.deepEqual(_bookingEmailPolicy(eventType), { customer: false, admin: false });
+  }
 });
 
 test('email errors redact credential-like values before logging or API responses', () => {
