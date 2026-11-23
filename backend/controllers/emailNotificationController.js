@@ -55,7 +55,7 @@ const testEmail = async (req, res) => {
     await processQueue(20);
     const updated = await EmailNotification.findById(record._id);
     if (updated.deliveryStatus !== 'sent') return res.status(502).json({ success: false, message: updated.lastError || 'SMTP did not accept the test email' });
-    res.json({ success: true, message: 'Test email accepted by Gmail SMTP', data: { id: updated._id, status: updated.deliveryStatus, sentAt: updated.sentAt } });
+    res.json({ success: true, message: 'Test email accepted by the email server', data: { id: updated._id, status: updated.deliveryStatus, sentAt: updated.sentAt } });
   } catch (error) { res.status(502).json({ success: false, message: safeError(error) }); }
 };
 

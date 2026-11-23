@@ -20,6 +20,21 @@ test('HBE email templates render responsive HTML and plain-text alternatives saf
   assert.match(rendered.text, /USD 262\.50/);
 });
 
+test('email templates show the configured domain mailbox instead of a hard-coded Gmail address', () => {
+  const previousReplyTo = process.env.SMTP_REPLY_TO_EMAIL;
+  process.env.SMTP_REPLY_TO_EMAIL = 'booking@hbe.lol';
+  try {
+    const rendered = renderEmail('test_email', { customerName: 'Administrator', showAction: false });
+    assert.match(rendered.html, /booking@hbe\.lol/);
+    assert.match(rendered.text, /booking@hbe\.lol/);
+    assert.doesNotMatch(rendered.html, /bookinghbelive@gmail\.com/);
+    assert.match(rendered.text, /email server configuration/i);
+  } finally {
+    if (previousReplyTo === undefined) delete process.env.SMTP_REPLY_TO_EMAIL;
+    else process.env.SMTP_REPLY_TO_EMAIL = previousReplyTo;
+  }
+});
+
 test('email template HTML escaping covers user-controlled characters', () => {
   assert.equal(escapeHtml(`<&>"'`), '&lt;&amp;&gt;&quot;&#39;');
 });

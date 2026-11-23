@@ -100,6 +100,7 @@ const processQueue = async (limit = 10) => {
         const rendered = renderEmail(job.templateName, templateData);
         const result = await getTransporter().sendMail({
           from: { name: process.env.SMTP_FROM_NAME || 'HBE Live', address: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER },
+          replyTo: process.env.SMTP_REPLY_TO_EMAIL || process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER,
           to: job.recipientEmail,
           subject: job.subject || rendered.subject,
           text: rendered.text,
